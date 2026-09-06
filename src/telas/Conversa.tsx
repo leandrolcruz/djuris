@@ -140,11 +140,12 @@ export function Conversa({
   temChave,
   modelo,
 }: ConversaProps) {
-  const { estado, erro, abrindo, perguntar, cancelar, previsualizar, orcamento } =
+  const { estado, erro, abrindo, perguntar, cancelar, reiniciar, previsualizar, orcamento } =
     useConversa(ids, modelo);
   const [pergunta, setPergunta] = useState("");
   const [previa, setPrevia] = useState<string | null>(null);
   const [escolhendo, setEscolhendo] = useState(false);
+  const [recomecando, setRecomecando] = useState(false);
   const [avisosAbertos, setAvisosAbertos] = useState(false);
   const [custo, setCusto] = useState<Awaited<ReturnType<typeof orcamento>> | null>(null);
 
@@ -424,10 +425,19 @@ export function Conversa({
 
       <div className="shrink-0 px-6 pt-2 pb-5">
         <div className="mx-auto w-full max-w-3xl">
+          {/* A saída fica AQUI, fora do compositor, e não só na faixa dos
+              documentos: bloqueada, a moldura inteira do compositor recebe
+              `opacity-50`, e um botão só lá dentro apareceria apagado
+              justamente no caso em que ele é a única porta. */}
           {bloqueada && (
-            <p className="mb-2 font-serif text-sm text-danger">
-              Esta conversa foi marcada como comprometida e não aceita novos envios.
-            </p>
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+              <p className="font-serif text-sm text-danger">
+                Esta conversa foi marcada como comprometida e não aceita novos envios.
+              </p>
+              <Botao tipo="secundario" icone="conversa" onClick={() => setRecomecando(true)}>
+                Nova conversa
+              </Botao>
+            </div>
           )}
 
           {/* O campo, os documentos e o botão vivem numa moldura só, que acende
@@ -456,6 +466,18 @@ export function Conversa({
                 <Icone nome="mais" tamanho={11} />
                 {escolhidos.length === 0 ? "Escolher documentos" : "Trocar"}
               </button>
+              {/* Só com a conversa em andamento: recomeçar uma conversa vazia
+                  não quer dizer nada. */}
+              {!vazia && (
+                <button
+                  type="button"
+                  onClick={() => setRecomecando(true)}
+                  className="inline-flex min-h-6 items-center gap-1 rounded-full px-2 font-mono text-2xs text-accent transition-colors duration-[120ms] hover:bg-accent-muted"
+                >
+                  <Icone nome="conversa" tamanho={11} />
+                  Nova conversa
+                </button>
+              )}
             </div>
 
             <form
@@ -544,6 +566,42 @@ export function Conversa({
           aoEscolherDocumentos(novos);
         }}
       />
+
+      {/* Recomeçar apaga de verdade: a conversa vive só na memória do processo
+          principal e não é gravada em lugar nenhum — não há histórico para onde
+          voltar. Daí a mesma cerimônia do "apagar do cofre". */}
+      <Dialogo
+        aberto={recomecando}
+        aoFechar={() => setRecomecando(false)}
+        titulo="Começar uma conversa nova"
+        acoes={
+          <>
+            <Botao tipo="secundario" onClick={() => setRecomecando(false)}>
+              Cancelar
+            </Botao>
+            <Botao
+              tipo="perigo"
+              onClick={() => {
+                reiniciar();
+                setPergunta("");
+                setRecomecando(false);
+              }}
+            >
+              Recomeçar
+            </Botao>
+          </>
+        }
+      >
+        <p>
+          As perguntas e respostas desta conversa são descartadas. Elas não ficam gravadas em
+          lugar nenhum, então não há como voltar a elas depois — copie o que quiser guardar antes
+          de recomeçar.
+        </p>
+        <p className="mt-2">
+          {escolhidos.length === 1 ? "O mesmo documento continua" : "Os mesmos documentos continuam"}{" "}
+          carregado{escolhidos.length === 1 ? "" : "s"}, com pseudônimos renumerados do zero.
+        </p>
+      </Dialogo>
 
       <Dialogo aberto={previa !== null} aoFechar={() => setPrevia(null)} titulo="O que sai desta máquina">
         <p className="mb-3 font-serif text-sm text-text-secondary">

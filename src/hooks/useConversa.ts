@@ -27,6 +27,14 @@ const INTERVALO_MS = 120;
  *
  * Agora a conversa só é fechada quando a seleção de documentos (ou o modelo)
  * muda, ou quando o aplicativo fecha. Mesma seleção, mesma conversa.
+ *
+ * O preço disso é que "mesma seleção, mesma conversa" virou **sempre a mesma
+ * conversa**: com os mesmos documentos e o mesmo modelo, nenhum caminho da
+ * interface produzia uma conversa nova — nem sair da tela, nem os Ctrl+1…5.
+ * E quando a trava marca a conversa como comprometida, ela recusa todo envio
+ * dali em diante: a tela dizia "não aceita novos envios" sem oferecer saída
+ * nenhuma. Sair do beco exigia trocar a seleção, trocar o modelo ou fechar o
+ * aplicativo. Daí o `reiniciar` abaixo.
  */
 let viva: { chave: string; id: string } | null = null;
 
@@ -38,6 +46,11 @@ export function useConversa(ids: string[] | null, modelo?: string | null) {
   const [estado, setEstado] = useState<EstadoDaConversa | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [abrindo, setAbrindo] = useState(false);
+  /* Recomeçar é a mesma seleção de novo, então nada nas outras dependências
+     muda — é este contador que faz o efeito rodar outra vez. Ele volta a zero
+     numa remontagem, e tudo bem: montar já roda o efeito, e quem decide entre
+     retomar e abrir é o `viva`, que é de módulo. */
+  const [ciclo, setCiclo] = useState(0);
   const idRef = useRef<string | null>(null);
 
   /* Abre quando a seleção muda, e fecha a anterior. A conversa vive no
@@ -106,7 +119,7 @@ export function useConversa(ids: string[] | null, modelo?: string | null) {
          a tela voltar. Quem fecha é a próxima seleção diferente. */
       idRef.current = null;
     };
-  }, [ids, modelo]);
+  }, [ids, modelo, ciclo]);
 
   /* Sonda só enquanto há resposta chegando. Parado, não custa nada. */
   useEffect(() => {
@@ -148,6 +161,28 @@ export function useConversa(ids: string[] | null, modelo?: string | null) {
     if (id) void window.electronAPI?.chat.cancelar(id);
   }, []);
 
+  /**
+   * Descarta a conversa atual e abre outra com os mesmos documentos.
+   *
+   * Fechar aqui não é opcional. O efeito acima só fecha quando a chave muda
+   * (`viva.chave !== chave`), e recomeçar é justamente o caso em que ela não
+   * muda: sem esta chamada, o mapa de pseudônimos da conversa velha ficaria de
+   * pé no processo principal até o aplicativo morrer. `fechar` também aborta o
+   * envio em curso, então recomeçar no meio de uma resposta é legítimo.
+   */
+  const reiniciar = useCallback(() => {
+    const api = window.electronAPI?.chat;
+    /* O id sai antes de qualquer limpeza — zerado primeiro, não haveria o que
+       fechar. */
+    const id = idRef.current;
+    idRef.current = null;
+    viva = null;
+    setEstado(null);
+    setErro(null);
+    if (api && id) void api.fechar(id);
+    setCiclo((c) => c + 1);
+  }, []);
+
   const previsualizar = useCallback(async () => {
     const id = idRef.current;
     if (!id) return null;
@@ -160,5 +195,5 @@ export function useConversa(ids: string[] | null, modelo?: string | null) {
     return (await window.electronAPI?.chat.orcamento(id)) ?? null;
   }, []);
 
-  return { estado, erro, abrindo, perguntar, cancelar, previsualizar, orcamento };
+  return { estado, erro, abrindo, perguntar, cancelar, reiniciar, previsualizar, orcamento };
 }
