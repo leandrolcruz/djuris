@@ -1,275 +1,254 @@
-# Design system — papel de processo
+# Design system — segurança judicial
 
-A interface se comporta como a mesa em que autos judiciais são lidos: sulfite
-claro, tinta preta, caneta azul para o que é ação, carimbo vermelho para o que é
-grave.
+A interface é uma estação de trabalho para quem responde pelo sigilo: três
+painéis (trilho de operações, tela, inspetor), superfícies claras de tinta
+lavanda, cobalto para o que é ação, esmeralda para o que está selado, violeta
+para marcador estrutural.
 
 Tudo o que é valor vive em [`src/styles/tokens.css`](../src/styles/tokens.css).
 Este documento explica as decisões; o arquivo é a fonte da verdade.
 
 ---
 
-## A regra das duas vozes
+## De onde os valores vieram
 
-**Mono é o que a máquina diz.** Rótulo, botão, número, estado, código, CLI.
-**Serifa é o que se lê.** O texto do processo e a prosa do próprio aplicativo.
+Da referência `stitch_data_anonymization_platform_redesign`, que traz quatro
+telas em PNG e o HTML que as gerou.
 
-Não há sans no sistema, de propósito.
+**Ela discorda de si mesma em três lugares.** O frontmatter do `DESIGN.md` lista
+uma paleta, a prosa do mesmo arquivo descreve outra (`#F8F9FA`, `#1D4ED8`,
+tintas de entidade), e o `tailwind.config` embutido no `code.html` usa uma
+terceira, em Material 3. Foi o `code.html` que gerou as capturas — **é dele que
+os valores saem**, verbatim. A prosa continua valendo para intenção: regras de
+elevação, comportamento responsivo, e as âncoras de cor de entidade.
+
+O tema escuro não existe na referência e **não foi inventado**. Medindo o HCT de
+cada token do claro, as seis paletas tonais se revelaram recuperáveis:
+
+| família | matiz | croma |
+|---|---|---|
+| neutra | 270 | 16 |
+| neutra-variante | 276 | 13 |
+| primária | 275 | 69 |
+| secundária | 166 | 50 |
+| terciária | 302 | 79 |
+| erro | 25 | 84 |
+
+Reconstruir o esquema **claro** a partir delas erra no máximo 1,2 de distância
+HCT, o que não se vê. O escuro é a leitura dessas mesmas paletas nos tons que o
+Material 3 usa para fundo escuro. Menor contraste medido: 5,87:1
+(`outline` sobre `surface`).
+
+---
+
+## As três vozes
+
+| voz | fonte | o que carrega |
+|---|---|---|
+| **estrutura** | Plus Jakarta Sans (`font-display`) | título de tela, rótulo de botão, item de menu, cabeçalho de cartão |
+| **leitura** | Inter (`font-body`) | prosa do app, texto do processo, resposta do modelo |
+| **dado literal** | JetBrains Mono (`font-mono`) | número CNJ, nome de arquivo, chip de categoria, contagem, hash, caminho, comando |
 
 Num revisor de tarjas, confundir o texto do aplicativo com o texto do documento
-é o erro mais caro que existe — é a diferença entre conferir uma anonimização e
-conferir uma legenda. A distinção de fonte torna isso impossível de relance, sem
-depender de cor nem de borda.
+é o erro mais caro que existe. A terceira voz é a que mais protege disso: **o
+que está em mono é dado**, e dado não é opinião do programa.
 
-### A mono fala em caixa baixa
-
-Até 02/09/2026 todo botão, título de cartão, item do trilho e opção de grupo
-segmentado saía em **caixa alta com entreletra larga**. Era o que fazia a
-interface parecer um painel de terminal de dez anos atrás — mais do que
-qualquer cor ou fonte. A regra agora:
-
-| | caixa | onde |
-|---|---|---|
-| Botão, título, item de menu, opção | **baixa**, `text-sm`/`text-xs` | em toda parte |
-| Rótulo pequeno de seção ("eyebrow") | alta, `tracking-wide`, ≤ 12px | raro: sinalização, não fala |
-
-A voz continua sendo a mono; ela só parou de gritar. `Botao`, `Cartao`,
-`GrupoSegmentado`, `Tabela`, `Campo`, `Dialogo` e o trilho aplicam a regra por
-construção — uma tela nova não tem como voltar à caixa alta sem escrever a
-classe à mão.
-
-| Papel | Fonte | Por quê |
-|---|---|---|
-| Leitura | **Petrona Variable** | Serifa da Omnibus-Type, fundição latino-americana, desenhada para texto em português |
-| Máquina | **Azeret Mono Variable** | Mono quadrada que aguenta caixa-alta com entreletra em 12px; o documento que o app lê é datilografado — a mono é o material |
-
-Auto-hospedadas via `@fontsource-variable`, e isso é requisito e não preferência:
-um `@import` do Google Fonts faria o aplicativo telefonar para fora a cada
-abertura, e numa máquina de vara sem internet a identidade cairia em silêncio
-para `system-ui`. São fontes variáveis — um arquivo por família cobre o
-intervalo de peso inteiro.
+A caixa é baixa em tudo, exceto rótulo de seção com 12px ou menos. A versão
+anterior escrevia todo botão e item de menu em caixa alta com entreletra, e foi
+a única mudança que, sozinha, mudou a impressão do produto.
 
 ### Escala
 
-| Token | | Uso |
-|---|---|---|
-| `--text-2xs` | 11px | numeral em tabela densa |
-| `--text-xs` | 12px | metadado, rótulo de campo |
-| `--text-sm` | 14px | corpo da interface |
-| `--text-base` | 16px | **texto do documento**, entrelinha 1,75 |
-| `--text-lg` | 18px | título de seção |
-| `--text-xl` | 24px | título de tela |
-
-O piso subiu em relação à versão anterior: o corpo era 13px e o texto do
-documento 15px, ambos abaixo do confortável para ler páginas de autos.
+`display` 30/38 · `headline-lg` 22/28 · `headline-sm` 16/24 · `body-lg` 15/24 ·
+`body-md` 14/22 · `body-sm` 13/18 · `mono-code` 13/20 · `mono-tag` 11/14 ·
+`label` 12/16.
 
 ---
 
-## Duas camadas de token
+## Cor
 
-As **primitivas** (`--papel`, `--folha`, `--toner`, `--esferografica`…) carregam
-os valores e são a única coisa que a troca de tema mexe. Os **semânticos**
-(`--color-*`) apenas apontam para elas, e existem porque é deles que o Tailwind
-gera as utilities (`bg-surface`, `text-text`…).
+Quarenta tokens Material 3. Os que aparecem em quase toda tela:
 
-O bloco é `@theme inline`, **não** `@theme`, e a diferença decide se o alternador
-de tema funciona: com `@theme`, a utility referenciaria `var(--color-surface)` e
-o valor poderia ser resolvido em build, congelando o tema em que o CSS foi
-compilado. Com `inline`, a utility emite a referência à primitiva, e redefinir
-`--folha` repinta a interface na hora.
+- `surface` / `background` — o chão.
+- `surface-container-lowest` — o cartão. **Mais claro** que o fundo no tema
+  claro; mais escuro no tema noite, que é como o M3 trata elevação no escuro.
+- `surface-container-low` — campo de busca, linha de ajuste, área rebaixada.
+- `primary` — a ação. `primary-hover` acompanha, e existe porque a direção do
+  hover se inverte entre os temas (ver abaixo).
+- `secondary` — o que está selado, conferido, garantido.
+- `tertiary` — marcador estrutural e atenção que não é erro.
+- `error` — o que não tem volta.
+- `outline` / `on-surface-variant` — metadado e prosa secundária.
 
-**Regra que decorre disso: toda cor tem seu valor no `:root`.** Nenhuma cor pode
-ter sua única definição dentro de um `@media` ou de um `[data-tema]` — esses
-blocos só redefinem o que já existe. Um token que só nasce no modo escuro fica
-indefinido para quem está no claro, e o navegador não avisa: a cor não pinta.
+### `--color-primary-hover` não é token do M3
 
-### Paleta papel (padrão)
+O botão preenchido do desenho é `bg-primary hover:bg-primary-container`, e essa
+direção só está certa no claro. No escuro, `primary` é T80 (claro) e
+`primary-container` é T30 (escuro): o hover **apagaria** em vez de acender. Cada
+tema define o seu, e a receita do botão fica igual nos dois.
 
-```css
---papel:            #F2F1EC;  /* fundo — sulfite de cast frio */
---papel-fundo:      #E8E6DF;  /* área rebaixada, trilho */
---folha:            #FBFAF8;  /* cartão — MAIS claro que o fundo */
---pauta:            #D8D5CB;  /* fio de divisão */
---toner:            #16181D;  /* texto e preenchimento da tarja */
---toner-3:          #666B75;  /* metadado */
---esferografica:    #1B3FD1;  /* ação */
---carimbo:          #B3322A;  /* vazamento e perigo */
+### As 14 cores de entidade ficam fora do `@theme`
+
+O Tailwind v4 faz tree-shaking dos tokens de tema, emitindo no `:root` só os
+`--color-*` que alguma utility gerada referencia. O acesso a elas é sempre
+dinâmico — `corDaEntidade()` monta `var(--color-entity-${token})` por
+interpolação —, e uma string montada em runtime é invisível para quem escaneia
+arquivos. **Treze das catorze eram descartadas**, e o sintoma seria uma cor que
+não pinta, sem erro nenhum. Elas são declaradas à mão no `:root`.
+
+A rampa é uma volta completa em OKLCH: passo de 360/14 = 25,7°, ancorada em 27°
+para CPF cair no vermelho, e-mail no ciano, endereço no verde e telefone no
+violeta. A luminosidade é **intercalada de propósito**: com L constante, dezoito
+pares ficavam perceptualmente confundíveis.
+
+Ela atravessou a repaginação sem mudar, e não por descuido — melhorou nas
+superfícies novas:
+
+| | antes | agora |
+|---|---|---|
+| menor contraste sobre a superfície (claro) | 4,70:1 | **5,04:1** |
+| sobre o cartão, onde as tarjas vivem | — | 5,31:1 |
+| menor contraste (escuro) | 5,05:1 | **5,17:1** |
+| menor distância ΔOK entre pares | 0,086 | 0,086 |
+
+Ainda assim **a cor é canal secundário**: 14 categorias é mais do que a visão de
+cor separa com folga, e quem tem deficiência de cor não recebe nenhuma delas. O
+rótulo textual é o canal primário em toda a interface (WCAG 1.4.1) — nenhuma
+tela informa o tipo só pela cor.
+
+---
+
+## Forma
+
+A referência embaralha a escala do Tailwind: redefine `lg` para 4px e deixa `md`
+em 6px, de modo que `rounded-lg` sai **menor** que `rounded-md`. Os pixels estão
+certos — foram eles que geraram as capturas —, os nomes é que não. A escala foi
+reordenada preservando os valores:
+
+| classe na referência | px | classe aqui |
+|---|---|---|
+| `rounded` / `rounded-sm` | 2 | `rounded-xs` |
+| `rounded-lg` | 4 | `rounded-sm` |
+| `rounded-md` | 6 | `rounded-md` |
+| `rounded-xl` | 8 | `rounded-lg` |
+| `rounded-full` | 12 | `rounded-pill` |
+| `rounded-2xl` | 16 | `rounded-xl` |
+
+`rounded-full` fica com o padrão do Tailwind (infinito) e continua significando
+círculo de verdade — é o que os pontos indicadores usam.
+
+**Não há borda no sistema.** A separação entre camadas é diferença de tom mais
+sombra curta, em três níveis: cartão apoiado, painel flutuante, diálogo.
+
+---
+
+## Duas camadas de token, e por quê
+
+As **primitivas** (`--surface`, `--on-surface`, `--primary`…) carregam os valores
+e são a única coisa que a troca de tema mexe. Os **semânticos** (`--color-*`)
+apenas apontam para elas, e existem porque é deles que o Tailwind gera as
+utilities.
+
+O bloco é `@theme inline`, não `@theme`, e a diferença decide se o alternador de
+tema funciona: com `@theme`, a utility referenciaria `var(--color-surface)` e o
+valor poderia ser resolvido em tempo de build, congelando o tema em que o CSS foi
+compilado. Com `inline`, a utility emite a referência à primitiva, então
+redefinir `--surface` em `[data-tema="noite"]` repinta a interface na hora.
+
+Consequência prática, que é regra: **toda cor tem seu valor no `:root`.** Um
+token que só nasce dentro do modo escuro fica indefinido para quem está no claro,
+e o navegador não avisa — a cor simplesmente não pinta.
+
+---
+
+## A moldura da janela é do aplicativo
+
+`titleBarStyle: "hidden"` tira a barra do sistema e deixa só os três controles
+sobrepostos ao canto superior direito. O cabeçalho de 64px é o que resta, e é ele
+que arrasta a janela.
+
+Três coisas que não se deduzem olhando:
+
+1. **Todo controle no cabeçalho precisa de `.sem-arrasto`**, ou o clique vira
+   arrasto e o botão nunca dispara.
+2. **Os últimos ~140px pertencem ao sistema.** A referência põe exatamente ali um
+   cartão de usuário com avatar; aqui ele não existe, e o espaço fica reservado.
+3. **O bloco de marca no topo do trilho também arrasta.** Sem isso a janela fica
+   imóvel por toda a coluna esquerda.
+
+A cor da moldura é pintada pelo Electron, fora do CSS. `aplicarTema` lê
+`--fundo-moldura` e `--simbolo-moldura` do `:root` já pintado e as manda por IPC.
+**As duas têm de ser hexadecimal de seis dígitos**: `getPropertyValue` devolve o
+valor *autorado*, então `oklch()`, `rgb()` ou `color-mix()` fariam a validação do
+`main.ts` recusar em silêncio, e a moldura congelaria na cor do tema anterior —
+sem nada no console.
+
+---
+
+## Camadas
+
+Escrita uma vez, para não haver dúvida:
+
+```
+z-30   sub-barra grudada da Revisão
+z-40   cabeçalho do aplicativo
+z-50   trilho lateral
+z-100  popover e gaveta
+z-200  aviso (toast)
+       <dialog> vive na top-layer, acima de tudo
 ```
 
-`--folha` é **mais clara** que `--papel`, ao contrário do que sistemas escuros
-costumam fazer: uma folha apoiada numa mesa recebe mais luz que a mesa. Inverter
-faz o cartão parecer um buraco em vez de um objeto pousado.
+Os tokens `--z-*` **não** existem e não podem existir: o Tailwind v4 só gera
+utilities a partir dos namespaces que conhece, e `--z-*` não é um deles. Já
+houve `z-sticky`, `z-overlay` e `z-toast` no código, e as três nunca produziram
+uma linha de CSS.
 
-**Contraste medido, não estimado:**
+---
 
-| Par | Razão | |
+## Responsivo
+
+Regra da própria referência, e a janela pode chegar a 800px:
+
+| largura | trilho | inspetor |
 |---|---|---|
-| `--toner-3` sobre `--papel` | 4,73:1 | ✓ |
-| `#6B707B` (o valor que parece óbvio) | 4,39:1 | ✗ reprova, por pouco |
-| `--esferografica` sobre `--papel` | 6,93:1 | ✓ |
-| `--sobre-acao` sobre `--esferografica` | 7,84:1 | ✓ |
+| ≥ 1280px | 240px, com rótulos | coluna fixa |
+| 1024–1279px | 240px, com rótulos | gaveta |
+| < 1024px | rail de 64px, só ícones | gaveta |
 
-### Tema noite
-
-Mesmos papéis, tinta invertida — um escuro frio, para o azul continuar lendo
-como azul. Declarado **duas vezes**, e as duas precisam existir:
-
-1. `@media (prefers-color-scheme: dark)` guardada por `:root:not([data-tema="papel"])`
-   — atende quem nunca tocou no alternador e tem o sistema no escuro, sem
-   sequestrar quem escolheu papel de propósito;
-2. `:root[data-tema="noite"]` — faz o alternador vencer nos **dois** sentidos.
-   Sem ela, escolher "noite" num sistema claro não teria efeito.
-
-"Seguir o sistema" **remove** o atributo em vez de escrever um valor: é o que
-devolve a decisão ao `@media`.
+A janela abre em 1440×900 porque o desenho de três painéis só cabe inteiro a
+partir de 1280 — com 1100 o aplicativo abria sempre no modo colapsado, que é o
+plano B.
 
 ---
 
-## As 14 cores de entidade
+## Movimento
 
-Uma volta completa em OKLCH: 14 matizes com passo de 360/14 = 25,7°, ancorada em
-27° para que CPF caia no vermelho, e-mail no ciano, endereço no verde e telefone
-no violeta — perto do que o usuário já associa a eles.
+120 ms é o tempo canônico de toda transição de hover e foco. A única exceção
+orquestrada é a varredura das tarjas ao abrir a Revisão: 240 ms no total,
+escalonadas pela ordem da ocorrência — o documento sendo carimbado.
 
-**A luminosidade não é fixa, e isso é deliberado.** Com L constante, a única
-dimensão que separa 14 cores é o matiz, e 25,7° é pouco nas regiões onde o olho
-discrimina mal (o arco amarelo-verde e o ciano-azul). Medido: com L fixo em 0,45,
-**dezoito pares** ficavam perceptualmente confundíveis — `nit` e `email` a uma
-distância OK de 0,033, que é a mesma cor na prática. Todas passavam em contraste
-contra o fundo e mesmo assim falhavam no propósito de distinguir tipo de PII.
-
-| | L fixo | L intercalado |
-|---|---|---|
-| Menor distância entre pares (papel) | 0,033 | **0,086** |
-| Menor distância entre pares (noite) | 0,054 | **0,110** |
-| Menor contraste | ✓ | 4,70:1 / 5,05:1 ✓ |
-
-**A cor é canal secundário.** 14 categorias é mais do que a visão de cor separa
-com folga, e quem tem deficiência de cor não recebe nenhuma delas. O rótulo
-textual é o canal primário em toda a interface, por WCAG 1.4.1 — nenhuma tela
-informa o tipo só pela cor.
-
-### Onde elas moram
-
-Declaradas à mão no `:root`, **não** no `@theme`. O Tailwind faz tree-shaking
-dos tokens de tema, emitindo só os que alguma utility gerada referencia — e o
-acesso a estas é sempre dinâmico (`corDaEntidade()` monta
-`var(--color-entity-${token})` por interpolação). Uma string montada em runtime
-é invisível para quem escaneia arquivos: treze dos catorze tokens eram
-descartados, e o sintoma seria uma cor que não pinta, sem erro nenhum.
-
-`ALL_ENTITIES`, em `src/types/index.ts`, guarda o **nome** do token, nunca o
-valor. Antes havia duas paletas em desacordo: estes tokens, documentados e sem
-uso, e 14 cores default do Tailwind 3 cravadas no TypeScript — que eram as que o
-usuário via. Cor em constante de TypeScript não sabe que existe modo noturno.
+Quem pediu menos movimento no sistema operacional não recebe nenhum, pelo bloco
+`prefers-reduced-motion` do `tokens.css`.
 
 ---
 
-## Elementos de assinatura
+## Ícones
 
-### Tarja
+**Material Symbols Outlined**, a fonte variável, servida do pacote
+`material-symbols` instalado localmente — o CSP da janela tem `font-src 'self'` e
+nenhuma fonte entra pela rede. O glifo é escolhido por ligadura: o texto do
+`<span>` é o nome do ícone.
 
-Um documento tarjado de verdade é barra **preta** sobre papel. O preenchimento é
-sempre `--toner`; o tipo se identifica pelo filete de 2px na lateral. A versão
-anterior pintava a tarja inteira na cor da entidade, o que fazia a página parecer
-marcada a marca-texto em vez de censurada.
+O ícone é **sempre decoração**: `aria-hidden` é fixo em `Icone` e não há como
+desligá-lo. O nome acessível pertence ao elemento que envolve — o botão, o link,
+a linha da tabela.
 
-Cada tarja é um `<button>`: o revisor tem de alcançar **todas** as ocorrências
-por Tab, não só as que couberem no mouse. O nome acessível diz tipo e valor —
-para quem usa leitor de tela, a barra preta não comunica nada, e a cor do filete
-menos ainda.
+O eixo **FILL** separa o item ativo do inativo no trilho e a conversa aberta das
+outras. É canal redundante à cor, nunca o único. O eixo **opsz** acompanha o
+corpo do ícone, preso à faixa 20–48 que a fonte cobre — fora dela o valor é
+ignorado, e ignorado não é neutro: o traço volta ao padrão, que é o errado para o
+corpo pedido.
 
-### Carimbo
-
-A única ousadia do sistema, e só na biblioteca. Filete duplo, girado −3°, mono
-caixa-alta com entreletra. `--carimbo` é reservado ao grave: uma cor de alarme
-usada em botão comum perde o efeito.
-
-### Movimento
-
-**Um momento orquestrado só:** ao terminar o processamento, as tarjas entram
-varrendo da esquerda para a direita, escalonadas, 240 ms no total — o documento
-sendo carimbado. Todo o resto é 120 ms de hover e foco.
-
-`prefers-reduced-motion` desliga a varredura e endireita o carimbo.
-
----
-
-## Primitivas
-
-`src/ui/` — `Botao`, `Cartao`, `Campo`, `Selo`, `GrupoSegmentado`, `Tabela`,
-`Dialogo`, `Popover`, `Carimbo`, `Tarja`, `Marcacao`, `Marcador`, `Icone`, e as
-que chegaram com a repaginação de 02/09/2026: `CabecalhoDeTela`,
-`LinhaDeAjuste`, `Interruptor`, `Tecla`, `Vazio`.
-
-### A casca
-
-A janela nasce sem a moldura do sistema (`titleBarStyle: "hidden"` +
-`titleBarOverlay` no `main.ts`): o Electron desenha só os três controles no
-canto e o aplicativo desenha o resto — `BarraDeTitulo`, uma faixa de 40px com
-a marca à esquerda e o nome da tela ao centro, arrastável por
-`-webkit-app-region: drag`. A cor da moldura acompanha o tema: `aplicarTema`
-lê `--papel-fundo` e `--toner` do `:root` já pintado e manda por
-`janela.pintarBarra`, de modo que a fonte da verdade continua sendo o
-`tokens.css`. O menu nativo (File, Edit, View…) fica escondido
-(`autoHideMenuBar`) e volta pelo Alt.
-
-O trilho tem 240px, itens em `text-sm` com ícone de 16px, o ativo marcado por
-folha sobre o trilho **e** por uma barra de 2px na cor de ação, e os atalhos
-`Ctrl+1…5` escritos como `Tecla` ao lado do rótulo, visíveis só no hover. O
-rodapé de estado do motor continua lá, como cartão — é segurança, não enfeite.
-
-### O padrão de tela
-
-Todo destino começa com `CabecalhoDeTela`: título em mono, uma linha de
-contexto (uma contagem, um estado — nunca um parágrafo) e as ações à direita.
-Antes cada tela inventava o seu, e mesmas coisas em posições diferentes
-ensinam que cada tela é um lugar novo.
-
-### Ajustes em duas colunas
-
-Índice fixo à esquerda (acompanha a rolagem por `IntersectionObserver`),
-seções à direita. Cada ajuste é uma `LinhaDeAjuste`: nome em mono, explicação
-em serifa, controle à direita — ou embaixo, com `empilhado`, quando precisa
-da largura. Booleano é `Interruptor`; três ou mais opções é `GrupoSegmentado`.
-"Ligado / Desligado" em grupo segmentado, que era o padrão, ocupava o espaço de
-três opções para dizer uma coisa binária.
-
-### A conversa
-
-Coluna centrada de `max-w-3xl`, campo preso ao rodapé numa moldura
-`rounded-2xl` que acende inteira no foco, os documentos escolhidos como chips
-dentro dela e o botão de enviar redondo, só ícone (`Botao circular`). A
-escolha dos documentos mora na própria tela (`SeletorDeDocumentos`): o que sai
-dali são ids do cofre, pela mesma ação que Documentos despacha. Cada resposta
-leva o selo "S" à esquerda para os turnos se distinguirem de relance; o turno
-do usuário é balão à direita.
-
-Antes desta camada, cada tela montava seus próprios botões e cartões com classes
-soltas — dois botões com a mesma função tinham alturas diferentes, e o mesmo SVG
-de cadeado existia em três cópias.
-
-Notas que valem registro:
-
-- **`Dialogo` usa o `<dialog>` nativo** com `showModal()`, não uma `<div>` com
-  overlay. O elemento nativo entrega de graça o que uma reimplementação erra:
-  foco preso, Esc que fecha, `inert` no resto da página e a camada superior do
-  navegador — sem depender de z-index.
-- **`GrupoSegmentado` é um radiogroup**: Tab entra uma vez só e as setas trocam a
-  opção. Um grupo em que cada item é parada de Tab obriga quem usa teclado a
-  passar por todos para chegar ao próximo controle.
-- **`Campo` amarra rótulo e controle com `useId`**, por construção. Rótulo
-  desamarrado é a falha de acessibilidade mais comum em formulário, e não aparece
-  em nenhum teste que não seja de leitor de tela.
-- **Alvo mínimo de 24px**, inclusive no tamanho `mini` — piso de WCAG 2.2.
-
-### Camadas
-
-`z-10` fixo no topo de lista · `z-100` popover e diálogo · `z-200` aviso.
-
-Escala numérica do próprio Tailwind, e não token: existiam `--z-sticky`,
-`--z-overlay` e `--z-toast` no CSS, com `z-sticky`/`z-overlay`/`z-toast` usados
-no JSX. **Nunca foram classes** — o Tailwind v4 não gera utilities do namespace
-`--z-*`, e o navegador ignora classe inexistente sem reclamar. Passou
-despercebido porque, até o primeiro popover, a ordem do DOM já resolvia o
-empilhamento sozinha.
+`NomeIcone` é uma união curada. Ela custa uma linha por ícone novo e paga isso na
+hora em que alguém digita `visibilty`: com `string`, a ligadura não casa, a fonte
+desenha o nome cru na tela e nada acusa o erro.

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CliInstaller } from "../components/CliInstaller";
+import { InstaladorCli } from "../componentes/InstaladorCli";
 import { Botao, CabecalhoDeTela, Cartao, Dialogo, Selo } from "../ui";
 import type { ClientePareado } from "../hooks/usePythonBackend";
 
@@ -134,11 +134,7 @@ export function Conexoes({
           </p>
         </Cartao>
 
-        <CliInstaller
-          showToast={(mensagem, tipo) =>
-            avisar(mensagem, tipo === "error" ? "erro" : "sucesso")
-          }
-        />
+        <InstaladorCli avisar={avisar} />
 
         <Cartao
           titulo="Clientes pareados"

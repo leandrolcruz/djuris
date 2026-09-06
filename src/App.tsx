@@ -16,7 +16,7 @@ import { Conversa } from "./telas/Conversa";
 import { Conexoes } from "./telas/Conexoes";
 import { Ajustes } from "./telas/Ajustes";
 import { Revisao } from "./telas/Revisao";
-import { Toast } from "./components/Toast";
+import { Aviso } from "./componentes/Aviso";
 import type { EntityFound, ProcessedFile } from "./types";
 import type { ClientePareado } from "./hooks/usePythonBackend";
 
@@ -657,10 +657,10 @@ function Casca() {
       />
 
       {estado.aviso && (
-        <Toast
-          message={estado.aviso.mensagem}
-          type={estado.aviso.tipo === "erro" ? "error" : "success"}
-          onClose={() => despachar({ tipo: "fechar-aviso" })}
+        <Aviso
+          mensagem={estado.aviso.mensagem}
+          tipo={estado.aviso.tipo === "erro" ? "erro" : "sucesso"}
+          aoFechar={() => despachar({ tipo: "fechar-aviso" })}
         />
       )}
     </div>

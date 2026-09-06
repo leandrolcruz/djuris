@@ -954,7 +954,80 @@ significam que a requisição atravessou a autenticação. As públicas são qua
 estão numa lista branca com o motivo escrito: `/health`, `/v1/info` e as duas
 de `/v1/parear`, que não podem exigir token porque são a única forma de obter um.
 
-## A repaginação de 02/09/2026
+## A repaginação de 06/09/2026 — "segurança judicial"
+
+O desenho está em [`docs/design-system.md`](docs/design-system.md); a referência
+é a pasta `stitch_data_anonymization_platform_redesign` (quatro telas em PNG mais
+o HTML que as gerou). O que custou caro descobrir fica aqui.
+
+**A referência discorda de si mesma, e o HTML é quem manda.** O frontmatter do
+`DESIGN.md` lista uma paleta, a prosa do mesmo arquivo descreve outra, e o
+`tailwind.config` embutido no `code.html` usa uma terceira, em Material 3. Foi o
+`code.html` que gerou as capturas. Seguir a prosa produziria uma interface que
+não bate com nenhum PNG — e a diferença só apareceria comparando telas lado a
+lado.
+
+**A escala de raio da referência está embaralhada:** ela redefine `lg` para 4px
+e deixa `md` em 6px, então `rounded-lg` sai **menor** que `rounded-md`. Os
+pixels estão certos; os nomes não. Aqui a escala foi reordenada preservando os
+valores, com a tabela de porte escrita no `tokens.css`.
+
+**O tema escuro não foi inventado.** Medindo o HCT de cada token do claro, as
+seis paletas tonais se revelaram recuperáveis (neutra H270/C16, primária
+H275/C69, e assim por diante): reconstruir o claro a partir delas erra no máximo
+1,2 de distância HCT. O escuro é a leitura das mesmas paletas nos tons de fundo
+escuro do M3. Tentar gerar o esquema com `@material/material-color-utilities` a
+partir do seed **não funciona** — o melhor casamento deu 20 de 35 tokens, porque
+este não é um esquema M3 padrão (`primary-container` é mais escuro que
+`primary-fixed`, coisa que o gerador nunca produz).
+
+**A rampa de 14 cores de entidade atravessou intacta, e isso foi medido, não
+suposto.** Sobre as superfícies novas o menor contraste subiu de 4,70:1 para
+5,04:1 (5,31:1 sobre o cartão, que é onde as tarjas vivem). Ela também já
+satisfazia as três âncoras visíveis do desenho novo — nome em âmbar, local em
+azul, número dos autos em fúcsia.
+
+**`--color-primary-hover` não é token do M3, e precisa existir.** O botão
+preenchido do desenho é `bg-primary hover:bg-primary-container`, e essa direção
+só está certa no claro: no escuro o container é mais escuro que o primary, e o
+hover apagaria em vez de acender.
+
+**A moldura da janela passou a 64px** para os controles do Windows caírem
+centrados no cabeçalho novo. `ALTURA_MOLDURA` no `main.ts` é a constante única;
+ela tem de casar com `h-cabecalho` (`--spacing-cabecalho`). E as duas cores que
+o IPC leva saíram para tokens próprios — `--fundo-moldura` e `--simbolo-moldura`
+— porque carregam uma restrição que o resto da paleta não tem: **hexadecimal de
+seis dígitos**, senão a validação recusa em silêncio.
+
+**Duas mudanças de modelo, não de pintura**, e são elas que valem mais que o
+layout:
+
+- **Na Revisão, tirar a tarja aqui ≠ nunca mais mascarar.** Existia uma forma
+  só, e era a permanente (grava na deny-list, vale para todos os documentos
+  seguintes). Sem alternativa, o revisor usava a permanente para resolver o caso
+  pontual. O olho libera a ocorrência só naquele documento, é reversível e entra
+  na pilha de desfazer; "não é dado pessoal" continua gravando política.
+- **A pilha de desfazer quase nasceu morta.** Ela era zerada por um efeito que
+  dependia de `estado.revisao`, e cada máscara aplicada despacha
+  `substituir-em-revisao`, que devolve um objeto novo: o efeito rodaria depois
+  de toda ação e o botão ficaria permanentemente apagado, sem erro nenhum. A
+  dependência é o **caminho do arquivo aberto**.
+
+**A conversa passou a guardar várias sessões vivas.** O hook guardava uma só, e
+trocar de seleção fechava a anterior — com a barra lateral, isso listaria
+sessões que já não existem. Quem limita é o teto de doze no processo principal,
+que descarta a **menos ativa** (não a mais antiga: quem volta a uma conversa o
+dia inteiro não deve perdê-la para outra aberta e abandonada). Elas continuam
+morrendo com o aplicativo, de propósito.
+
+**Onde a referência mente, a tela diz o contrário.** O mockup anuncia "GPU
+Local: RTX 4090", "AES-256", "0.00% (Airgap)" e — na tela de Conversa —
+"processamento sigiloso 100% local · sem upload para nuvem", sobre o único
+recurso que manda dado para fora. Num anonimizador, essa última é a pior frase
+que se pode escrever numa interface. Cada uma foi trocada pelo indicador
+verdadeiro equivalente, e a lista está nos comentários de cada arquivo.
+
+## A repaginação de 02/09/2026 (substituída)
 
 O desenho está em [`docs/design-system.md`](docs/design-system.md). O que
 custou caro descobrir fica aqui.
@@ -969,14 +1042,14 @@ menos. Antes de redesenhar uma tela, conferir se o problema não é só esse.
 
 **A moldura da janela é do aplicativo.** `titleBarStyle: "hidden"` +
 `titleBarOverlay` no `main.ts` tiram a barra do sistema e deixam só os três
-controles no canto; `BarraDeTitulo` (40px, `-webkit-app-region: drag`) faz o
-resto. Duas armadilhas: a cor da moldura é pintada pelo Electron, fora do
-CSS, então `aplicarTema` lê `--papel-fundo` e `--toner` do `:root` já pintado
-e manda por IPC (`barra-de-titulo`, que só aceita hexadecimal de seis
-dígitos) — sem isso, trocar o tema deixa a moldura na cor antiga; e os
-controles cobrem os últimos ~140px da faixa, então nada pode morar ali. O
-menu nativo ficou em `autoHideMenuBar` (volta pelo Alt), porque `View →
-Toggle DevTools` ainda serve em desenvolvimento.
+controles no canto. Na v1.5.0 quem fazia o resto era a `BarraDeTitulo` de 40px;
+hoje é o `CabecalhoDoApp` de 64px, e a altura vive em `ALTURA_MOLDURA`. Duas
+armadilhas continuam valendo: a cor da moldura é pintada pelo Electron, fora do
+CSS (`aplicarTema` lê os tokens do `:root` já pintado e manda por IPC, que só
+aceita hexadecimal de seis dígitos), e os controles cobrem os últimos ~140px da
+faixa, então nada pode morar ali. O menu nativo ficou em `autoHideMenuBar`
+(volta pelo Alt), porque `View → Toggle DevTools` ainda serve em
+desenvolvimento.
 
 **A conversa morria ao trocar de tela.** `useConversa` fechava a conversa no
 desmonte, e `Conversa` desmonta a cada navegação — ir aos Ajustes trocar o
@@ -1077,6 +1150,21 @@ Tailwind para dentro do vídeo.
 
 ## Pendências
 
+- **Histórico de conversas em disco.** A barra lateral de sessões lista o que
+  está vivo na memória, e as conversas morrem com o aplicativo — decisão de
+  privacidade, não limitação. Persistir exige duas coisas antes: reconstruir o
+  mapa de pseudônimos ao reabrir (`pseudonimos.incorporar` sobre os mesmos ids
+  do cofre; sem ele a conversa volta mostrando `[PESSOA_1]` cru, e sessão cujo
+  documento saiu do cofre tem de aparecer como não-retomável) e uma decisão
+  explícita sobre gravar só os turnos pseudonimizados, sob o mesmo
+  consentimento/DPAPI/expurgo do Cofre.
+- **`video/src/tokens.ts` é cópia manual dos tokens e envelheceu.** Ele ainda
+  descreve a paleta "papel de processo" com Petrona e Azeret Mono, que saíram do
+  aplicativo em 06/09/2026 — o vídeo explicativo passou a mostrar uma interface
+  que não existe mais. As capturas do README e do FAQ institucional idem.
+- **O tema escuro não tem referência visual.** Ele é derivação medida das
+  paletas tonais do claro (contraste mínimo 5,87:1), mas nenhuma tela do
+  desenho o mostra: vale uma passada de olho humano antes da próxima release.
 - **A deny-list do app instalado mora dentro da pasta de instalação.** O
   `config_loader.py` resolve `Path(__file__).parent / "config"`, que no
   instalado é `resources/python-backend/config/deny_list.json`, e o NSIS remove
