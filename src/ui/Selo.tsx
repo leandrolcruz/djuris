@@ -34,7 +34,7 @@ const POR_TOM: Record<Exclude<TomSelo, "entidade">, string> = {
   neutro: "text-on-surface-variant bg-surface-container",
   acao: "text-on-primary-fixed-variant bg-primary-fixed",
   perigo: "text-on-error-container bg-error-container/70",
-  atencao: "text-on-tertiary-container bg-tertiary-fixed",
+  atencao: "text-on-tertiary-fixed-variant bg-tertiary-fixed",
   deferido: "text-on-secondary-container bg-secondary-container/60",
 };
 

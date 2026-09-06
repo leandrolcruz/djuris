@@ -299,6 +299,15 @@
   --on-secondary-fixed: #002114;
   --on-secondary-fixed-variant: #005137;
 
+  /* ATENÇÃO ao par terciário: neste esquema o `tertiary-container` é ESCURO
+     (#712ae2), ao contrário do M3 padrão, e por isso o `on-tertiary-container`
+     do tema claro é CLARO. Ele só serve de tinta sobre o próprio
+     `tertiary-container`. Usado como "roxo para texto" sobre superfície neutra
+     ou sobre `tertiary-fixed`, some — foi o que aconteceu com o selo "LEVE" e
+     com o aviso de degradação do motor, que ficaram invisíveis no tema claro
+     com contraste de 1,05:1. Para tinta terciária sobre superfície neutra use
+     `--tertiary`; sobre `tertiary-fixed`, use `--on-tertiary-fixed-variant`.
+     Os dois invertem junto com o tema; este não. */
   --tertiary: #5700c0;
   --on-tertiary: #ffffff;
   --tertiary-container: #712ae2;

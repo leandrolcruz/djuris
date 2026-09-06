@@ -329,13 +329,13 @@ export function AreaDeSoltar({
       />
 
       {noLimite && (
-        <p role="status" className="font-body text-body-sm text-on-tertiary-container">
+        <p role="status" className="font-body text-body-sm text-tertiary">
           Limite de {MAX_ARQUIVOS} arquivos por lote atingido.
         </p>
       )}
 
       {recusados.length > 0 && (
-        <p role="status" className="font-body text-body-sm text-on-tertiary-container">
+        <p role="status" className="font-body text-body-sm text-tertiary">
           Não dá para ler {recusados.join(", ")}. São aceitos PDF, DOCX, XLSX,
           PPTX, imagens digitalizadas, TXT, MD e RTF.
         </p>

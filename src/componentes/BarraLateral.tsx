@@ -77,7 +77,7 @@ function rotuloDoMotor(estado: EstadoMotor, modoNlp: string): string {
 function seloDoMotor(estado: EstadoMotor, degradado: boolean) {
   if (estado === "carregando") return { texto: "SUBINDO", classe: "text-outline bg-surface-container" };
   if (estado === "erro") return { texto: "FORA", classe: "text-error bg-error-container/60" };
-  if (degradado) return { texto: "LEVE", classe: "text-on-tertiary-container bg-tertiary-fixed" };
+  if (degradado) return { texto: "LEVE", classe: "text-on-tertiary-fixed-variant bg-tertiary-fixed" };
   return { texto: "ATIVO", classe: "text-on-secondary-container bg-secondary-container/60" };
 }
 
@@ -193,7 +193,7 @@ export function BarraLateral({
                quando ela surge — é informação de segurança, não decoração. */
             <p
               role="status"
-              className="hidden font-body text-body-sm leading-snug text-on-tertiary-container lg:block"
+              className="hidden font-body text-body-sm leading-snug text-tertiary lg:block"
             >
               Modelo leve: menos nomes e locais serão encontrados. Revise com atenção redobrada.
             </p>
