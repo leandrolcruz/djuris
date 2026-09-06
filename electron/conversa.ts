@@ -49,6 +49,8 @@ export interface Turno {
 
 export interface EstadoDaConversa {
   id: string;
+  /** Nome da sessão na barra lateral. Derivado da primeira pergunta, editável. */
+  titulo: string;
   documentos: { id: string; nome: string }[];
   avisos: Aviso[];
   turnos: Turno[];
@@ -63,8 +65,26 @@ export interface EstadoDaConversa {
   modelo: string;
 }
 
+/** Uma linha da barra lateral. Sem turno nenhum — só o que a lista mostra. */
+export interface ResumoDaConversa {
+  id: string;
+  titulo: string;
+  documentos: { id: string; nome: string }[];
+  modelo: string;
+  /** ISO 8601. */
+  abertaEm: string;
+  ultimaAtividade: string;
+  totalTurnos: number;
+  comprometida: boolean;
+}
+
 interface Conversa {
   id: string;
+  titulo: string;
+  /** Título ainda não escolhido por gente: a próxima pergunta o substitui. */
+  tituloAutomatico: boolean;
+  abertaEm: string;
+  ultimaAtividade: string;
   mapa: MapaDeSessao;
   documentos: { id: string; nome: string }[];
   /** O texto de cada peça, já no espaço de numeração comum. */
@@ -211,8 +231,18 @@ export function abrir(ids: string[], modelo = MODELO_PADRAO): EstadoDaConversa {
     });
   }
 
+  const agora = new Date().toISOString();
   const conversa: Conversa = {
     id: randomUUID(),
+    /* Até a primeira pergunta, a sessão se identifica pelas peças que carrega —
+       é a única coisa que a distingue de outra recém-aberta. */
+    titulo:
+      documentos.length === 1
+        ? documentos[0].nome
+        : `${documentos.length} peças`,
+    tituloAutomatico: true,
+    abertaEm: agora,
+    ultimaAtividade: agora,
     mapa,
     documentos,
     textos,
@@ -231,7 +261,33 @@ export function abrir(ids: string[], modelo = MODELO_PADRAO): EstadoDaConversa {
   };
 
   conversas.set(conversa.id, conversa);
+  descartarExcedentes();
   return exportar(conversa);
+}
+
+/**
+ * Teto de sessões vivas.
+ *
+ * Cada conversa segura o texto de todas as peças e o mapa de pseudônimos na
+ * memória deste processo — um processo do PJe inteiro passa de 240 mil
+ * caracteres. Sem teto, uma tarde de trabalho acumularia dezenas delas, e a
+ * barra lateral (que passou a manter as sessões vivas em vez de fechar a
+ * anterior) tornou isso fácil de fazer sem perceber.
+ *
+ * Sai a menos ativa, e não a mais antiga: quem abriu uma conversa cedo e voltou
+ * a ela o dia inteiro não deve perdê-la para uma que foi aberta e abandonada.
+ */
+const TETO_DE_SESSOES = 12;
+
+function descartarExcedentes(): void {
+  if (conversas.size <= TETO_DE_SESSOES) return;
+  const porAtividade = [...conversas.values()].sort((a, b) =>
+    a.ultimaAtividade.localeCompare(b.ultimaAtividade)
+  );
+  for (const velha of porAtividade.slice(0, conversas.size - TETO_DE_SESSOES)) {
+    velha.cancelador?.abort();
+    conversas.delete(velha.id);
+  }
 }
 
 /**
@@ -333,6 +389,47 @@ function avisarSobre(
   }
 
   return avisos;
+}
+
+/**
+ * As conversas vivas, da mais recente para a mais antiga.
+ *
+ * Elas moram só na memória deste processo e **morrem com o aplicativo**. Isso é
+ * decisão de privacidade, não limitação: gravar as perguntas de um magistrado
+ * sobre autos sigilosos criaria em disco justamente o índice pesquisável que o
+ * produto existe para não criar. A barra lateral diz isso na cara do usuário.
+ */
+export function listar(): ResumoDaConversa[] {
+  return [...conversas.values()]
+    .map((c) => ({
+      id: c.id,
+      titulo: c.titulo,
+      documentos: c.documentos,
+      modelo: c.modelo,
+      abertaEm: c.abertaEm,
+      ultimaAtividade: c.ultimaAtividade,
+      totalTurnos: c.turnos.length,
+      comprometida: c.comprometida,
+    }))
+    .sort((a, b) => b.ultimaAtividade.localeCompare(a.ultimaAtividade));
+}
+
+/** Renomeia a sessão. Título vazio devolve o automático. */
+export function renomear(id: string, titulo: string): ResumoDaConversa | null {
+  const conversa = conversas.get(id);
+  if (!conversa) return null;
+  const limpo = titulo.trim().replace(/\s+/g, " ").slice(0, 120);
+  if (limpo) {
+    conversa.titulo = limpo;
+    conversa.tituloAutomatico = false;
+  } else {
+    conversa.titulo =
+      conversa.documentos.length === 1
+        ? conversa.documentos[0].nome
+        : `${conversa.documentos.length} peças`;
+    conversa.tituloAutomatico = true;
+  }
+  return listar().find((c) => c.id === id) ?? null;
 }
 
 export function estado(id: string): EstadoDaConversa | null {
@@ -469,6 +566,18 @@ export async function perguntar(
       [INSTRUCAO]
     );
 
+    /* O título vem da pergunta como digitada, não da versão pseudonimizada: é
+       assim que o usuário reconhece a própria sessão na lista. Ele vive só na
+       memória deste processo, como o resto da conversa — nada disto vai para o
+       disco. */
+    if (conversa.tituloAutomatico) {
+      const limpa = pergunta.trim().replace(/\s+/g, " ");
+      if (limpa) {
+        conversa.titulo = limpa.length > 64 ? `${limpa.slice(0, 63)}…` : limpa;
+        conversa.tituloAutomatico = false;
+      }
+    }
+
     conversa.turnos.push({
       papel: "usuario",
       trechos: reidratar(fechada.texto, conversa.mapa),
@@ -494,6 +603,7 @@ export async function perguntar(
       papel: "assistente",
       trechos: reidratar(resultado.texto, conversa.mapa),
     });
+    conversa.ultimaAtividade = new Date().toISOString();
     conversa.parcial = [];
     conversa.provedor = resultado.provedor;
     if (resultado.custo !== null) conversa.gastoDolares += resultado.custo;
@@ -514,6 +624,7 @@ export async function perguntar(
 function exportar(c: Conversa): EstadoDaConversa {
   return {
     id: c.id,
+    titulo: c.titulo,
     documentos: c.documentos,
     avisos: c.avisos,
     turnos: c.turnos,

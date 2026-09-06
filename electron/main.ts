@@ -800,6 +800,10 @@ ipcMain.handle("chat-modelos", () => MODELOS);
 ipcMain.handle("chat-abrir", (_e, ids: string[], modelo?: string) =>
   conversa.abrir(ids, modelo)
 );
+ipcMain.handle("chat-listar", () => conversa.listar());
+ipcMain.handle("chat-renomear", (_e, id: string, titulo: string) =>
+  conversa.renomear(id, titulo)
+);
 ipcMain.handle("chat-estado", (_e, id: string) => conversa.estado(id));
 ipcMain.handle("chat-orcamento", (_e, id: string) => conversa.orcamento(id));
 ipcMain.handle("chat-previsualizar", (_e, id: string) =>

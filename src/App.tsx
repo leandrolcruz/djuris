@@ -547,6 +547,8 @@ function Casca() {
             aoEscolherDocumentos={(ids) => despachar({ tipo: "abrir-conversa", ids })}
             temChave={temChave}
             modelo={prefs.modeloDaNuvem}
+            aoTrocarModelo={(m) => definirPref("modeloDaNuvem", m)}
+            avisar={avisar}
             aoIrParaAjustes={() =>
               despachar({ tipo: "ir-para", destino: "ajustes" })
             }

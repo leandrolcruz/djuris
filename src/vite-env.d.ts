@@ -164,6 +164,7 @@ interface TurnoDaConversa {
 
 interface EstadoDaConversa {
   id: string;
+  titulo: string;
   documentos: { id: string; nome: string }[];
   avisos: { grave: boolean; texto: string }[];
   turnos: TurnoDaConversa[];
@@ -185,9 +186,32 @@ interface EstadoDaConversa {
  * pseudônimo a nome real também não atravessa — as respostas chegam já
  * re-hidratadas, em pedaços prontos para desenhar.
  */
+/**
+ * Uma linha da barra lateral de conversas.
+ *
+ * As conversas vivem só na memória do processo principal e morrem com o
+ * aplicativo. É decisão de privacidade: gravar as perguntas de um magistrado
+ * sobre autos sigilosos criaria em disco justamente o índice pesquisável que o
+ * produto existe para não criar.
+ */
+interface ResumoDaConversa {
+  id: string;
+  titulo: string;
+  documentos: { id: string; nome: string }[];
+  modelo: string;
+  /** ISO 8601. */
+  abertaEm: string;
+  ultimaAtividade: string;
+  totalTurnos: number;
+  comprometida: boolean;
+}
+
 interface ChatAPI {
   modelos: () => Promise<ModeloDaNuvem[]>;
   abrir: (ids: string[], modelo?: string) => Promise<EstadoDaConversa>;
+  /** As sessões vivas, da mais recente para a mais antiga. */
+  listar: () => Promise<ResumoDaConversa[]>;
+  renomear: (id: string, titulo: string) => Promise<ResumoDaConversa | null>;
   estado: (id: string) => Promise<EstadoDaConversa | null>;
   orcamento: (id: string) => Promise<{
     tokensEntrada: number;

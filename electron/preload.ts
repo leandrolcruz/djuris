@@ -50,6 +50,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
     modelos: () => ipcRenderer.invoke("chat-modelos"),
     abrir: (ids: string[], modelo?: string) =>
       ipcRenderer.invoke("chat-abrir", ids, modelo),
+    listar: () => ipcRenderer.invoke("chat-listar"),
+    renomear: (id: string, titulo: string) =>
+      ipcRenderer.invoke("chat-renomear", id, titulo),
     estado: (id: string) => ipcRenderer.invoke("chat-estado", id),
     orcamento: (id: string) => ipcRenderer.invoke("chat-orcamento", id),
     previsualizar: (id: string) => ipcRenderer.invoke("chat-previsualizar", id),
