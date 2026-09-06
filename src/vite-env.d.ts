@@ -1,5 +1,8 @@
 /// <reference types="vite/client" />
 
+/** Versão do `package.json`, injetada pelo Vite em tempo de build. */
+declare const __VERSAO_DO_APP__: string;
+
 interface CliStatusResult {
   backendDir: string;
   windows: { installed: boolean; onPath: boolean };

@@ -4,8 +4,8 @@ import { useLote, mensagemDoLote } from "./hooks/useLote";
 import { useSalvamento } from "./hooks/useSalvamento";
 import { useBiblioteca } from "./hooks/useBiblioteca";
 import { ProvedorEstado, useApp } from "./estado/AppEstado";
-import { DESTINOS, TrilhoNavegacao } from "./componentes/TrilhoNavegacao";
-import { BarraDeTitulo } from "./componentes/BarraDeTitulo";
+import { DESTINOS, BarraLateral } from "./componentes/BarraLateral";
+import { CabecalhoDoApp } from "./componentes/CabecalhoDoApp";
 import { MotorCarregando, MotorComFalha } from "./componentes/PainelMotor";
 import { ConsentimentoCofre } from "./componentes/ConsentimentoCofre";
 import { AprovacaoDePareamento } from "./componentes/AprovacaoDePareamento";
@@ -465,10 +465,12 @@ function Casca() {
   };
 
   return (
-    <div className="flex h-screen flex-col bg-bg">
-      <BarraDeTitulo titulo={tituloDaTela} />
-      <div className="flex min-h-0 flex-1">
-      <TrilhoNavegacao
+    /* Casca de três faixas: trilho fixo à esquerda, cabeçalho no topo da
+       coluna restante, e a tela abaixo dele. A rolagem vive dentro de cada
+       tela, nunca aqui — a janela do Electron tem altura fixa e `body` está
+       com `overflow: hidden`. */
+    <div className="flex h-screen bg-background text-on-surface">
+      <BarraLateral
         destino={estado.destino}
         aoNavegar={(destino) => despachar({ tipo: "ir-para", destino })}
         estadoMotor={estadoMotor}
@@ -478,13 +480,20 @@ function Casca() {
       />
 
       {/* `min-w-0` porque um item flex tem `min-width: auto` e não encolhe
-          abaixo do próprio conteúdo. Hoje sobra espaço (o main mede 1316 e a
-          tabela pede 1086), mas sem isto uma tabela mais larga — outra coluna,
-          uma janela menor — empurraria o main para fora em vez de deixar o
+          abaixo do próprio conteúdo. Sem isto uma tabela mais larga que a
+          janela empurraria a coluna para fora em vez de deixar o
           `overflow-x-auto` da Tabela rolar por dentro. */}
-      <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        {conteudo()}
-      </main>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <CabecalhoDoApp
+          titulo={tituloDaTela}
+          tema={prefs.tema}
+          aoTrocarTema={(t) => definirPref("tema", t)}
+          cofreDisponivel={biblioteca.disponivel}
+          cofreLigado={prefs.cofreLigado}
+        />
+        <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
+          {conteudo()}
+        </main>
       </div>
 
       {/* Na casca, não na tela de Conexões: quem roda `tecjustica-sigilo
