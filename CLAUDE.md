@@ -992,6 +992,19 @@ preenchido do desenho é `bg-primary hover:bg-primary-container`, e essa direç�
 só está certa no claro: no escuro o container é mais escuro que o primary, e o
 hover apagaria em vez de acender.
 
+**O par terciário está invertido em relação ao M3, e some no tema claro.**
+Aqui o `tertiary-container` é **escuro** (`#712ae2`), o contrário do que o
+Material 3 produz, então o `on-tertiary-container` do tema claro é **claro**
+(`#dfccff`) — tinta que só serve sobre o próprio container. Usado como "roxo
+para texto" sobre superfície neutra ou sobre `tertiary-fixed` (também claro),
+ele desaparece: contraste de **1,05:1**. Estava em cinco lugares, e o pior
+deles era o aviso de motor degradado na barra lateral — a frase que existe
+para impedir alguém de anonimizar com qualidade de spaCy achando que tem BERT.
+No escuro os mesmos pares têm contraste de sobra, e é por isso que a coisa
+atravessou 141 testes verdes e uma revisão inteira: **só apareceu abrindo o
+app e alternando o tema**. Tinta terciária sobre neutro é `--tertiary`; sobre
+`tertiary-fixed` é `--on-tertiary-fixed-variant`. As duas invertem com o tema.
+
 **A moldura da janela passou a 64px** para os controles do Windows caírem
 centrados no cabeçalho novo. `ALTURA_MOLDURA` no `main.ts` é a constante única;
 ela tem de casar com `h-cabecalho` (`--spacing-cabecalho`). E as duas cores que
