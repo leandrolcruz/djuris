@@ -47,7 +47,7 @@ export function Markdown({
   const blocos = analisarBlocos(texto);
 
   return (
-    <div className="markdown space-y-3 font-serif text-sm leading-relaxed text-text">
+    <div className="markdown space-y-3 font-body text-sm leading-relaxed text-on-surface">
       {blocos.map((bloco, i) => (
         <BlocoRender
           key={i}
@@ -72,7 +72,7 @@ function Cursor() {
   return (
     <span
       aria-hidden="true"
-      className="ml-0.5 inline-block h-[1em] w-[0.45em] translate-y-[0.12em] animate-pulse bg-accent"
+      className="ml-0.5 inline-block h-[1em] w-[0.45em] translate-y-[0.12em] animate-pulse bg-primary"
     />
   );
 }
@@ -98,7 +98,7 @@ function BlocoRender({
         return (
           <h3
             className={[
-              "mt-5 border-b border-border-subtle pb-1 font-serif font-semibold text-text first:mt-0",
+              "mt-5 border-b border-surface-container-high pb-1 font-body font-semibold text-on-surface first:mt-0",
               bloco.nivel === 1 ? "text-base" : "text-sm",
             ].join(" ")}
           >
@@ -108,7 +108,7 @@ function BlocoRender({
         );
       }
       return (
-        <h4 className="mt-4 font-mono text-2xs font-medium uppercase tracking-wide text-text-tertiary first:mt-0">
+        <h4 className="mt-4 font-mono text-mono-tag font-medium uppercase tracking-wide text-outline first:mt-0">
           <Linha filhos={bloco.filhos} nomes={nomes} />
           {fim}
         </h4>
@@ -126,7 +126,7 @@ function BlocoRender({
               <span
                 aria-hidden="true"
                 className={[
-                  "shrink-0 select-none font-mono text-2xs text-text-tertiary",
+                  "shrink-0 select-none font-mono text-mono-tag text-outline",
                   bloco.ordenada
                     ? "w-[1.6em] pt-[0.28em] text-right tabular-nums"
                     : "pt-[0.35em]",
@@ -145,7 +145,7 @@ function BlocoRender({
 
     case "citacao":
       return (
-        <blockquote className="border-l-2 border-border pl-3 italic text-text-secondary">
+        <blockquote className="border-l-2 border-outline-variant pl-3 italic text-on-surface-variant">
           <Linha filhos={bloco.filhos} nomes={nomes} />
           {fim}
         </blockquote>
@@ -155,7 +155,7 @@ function BlocoRender({
       return (
         /* Rola dentro da própria caixa. A conversa nunca rola de lado, por mais
            larga que seja a linha de código. */
-        <pre className="overflow-x-auto rounded-md bg-surface-sunken p-3 font-mono text-2xs leading-relaxed text-text-secondary">
+        <pre className="overflow-x-auto rounded-md bg-surface-container-low p-3 font-mono text-mono-tag leading-relaxed text-on-surface-variant">
           <code>{bloco.texto}</code>
         </pre>
       );
@@ -165,12 +165,12 @@ function BlocoRender({
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-left">
             <thead>
-              <tr className="border-b border-border-subtle">
+              <tr className="border-b border-surface-container-high">
                 {bloco.cabecalho.map((celula, i) => (
                   <th
                     key={i}
                     scope="col"
-                    className="px-2 py-1.5 font-mono text-2xs font-medium uppercase tracking-wide text-text-tertiary"
+                    className="px-2 py-1.5 font-mono text-mono-tag font-medium uppercase tracking-wide text-outline"
                   >
                     <Linha filhos={celula} nomes={nomes} />
                   </th>
@@ -179,7 +179,7 @@ function BlocoRender({
             </thead>
             <tbody>
               {bloco.linhas.map((linha, i) => (
-                <tr key={i} className="border-b border-border-subtle last:border-0">
+                <tr key={i} className="border-b border-surface-container-high last:border-0">
                   {linha.map((celula, j) => (
                     <td key={j} className="px-2 py-1.5 align-top text-sm">
                       <Linha filhos={celula} nomes={nomes} />
@@ -193,7 +193,7 @@ function BlocoRender({
       );
 
     case "regra":
-      return <hr className="border-t border-border-subtle" />;
+      return <hr className="border-t border-surface-container-high" />;
 
     case "paragrafo":
       return (
@@ -225,7 +225,7 @@ function NoRender({ no, nomes }: { no: Inline; nomes: MapaDeNomes }) {
       return <>{repor(no.texto, nomes)}</>;
     case "forte":
       return (
-        <strong className="font-semibold text-text">
+        <strong className="font-semibold text-on-surface">
           <Linha filhos={no.filhos} nomes={nomes} />
         </strong>
       );
@@ -237,13 +237,13 @@ function NoRender({ no, nomes }: { no: Inline; nomes: MapaDeNomes }) {
       );
     case "riscado":
       return (
-        <s className="text-text-tertiary">
+        <s className="text-outline">
           <Linha filhos={no.filhos} nomes={nomes} />
         </s>
       );
     case "codigo":
       return (
-        <code className="rounded-[3px] bg-surface-sunken px-1 py-px font-mono text-2xs text-text-secondary">
+        <code className="rounded-[3px] bg-surface-container-low px-1 py-px font-mono text-mono-tag text-on-surface-variant">
           {repor(no.texto, nomes)}
         </code>
       );

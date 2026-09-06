@@ -177,10 +177,10 @@ export function Documentos({
                   {`${i.paginasComErro} falha${i.paginasComErro > 1 ? "s" : ""}`}
                 </Selo>
               )}
-              <span className="truncate text-sm text-text">{i.nome}</span>
+              <span className="truncate text-sm text-on-surface">{i.nome}</span>
             </div>
             <div className="mt-1 flex min-w-0 items-center gap-2">
-              <span className="truncate font-mono text-2xs text-text-tertiary">
+              <span className="truncate font-mono text-mono-tag text-outline">
                 {i.cnj ?? "Avulsos"} · {dataCurta(i.gravadoEm)}
                 {i.totalPaginas > 0 && ` · fls. 1–${i.totalPaginas}`}
               </span>
@@ -262,12 +262,12 @@ export function Documentos({
           "inline-flex min-h-7 items-center gap-1.5 rounded-full border px-3 font-mono text-xs",
           "transition-colors duration-[120ms]",
           ativo
-            ? "border-border bg-surface text-text shadow-sm"
-            : "border-transparent text-text-secondary hover:bg-surface-hover hover:text-text",
+            ? "border-outline-variant bg-surface-container-lowest text-on-surface shadow-sm"
+            : "border-transparent text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface",
         ].join(" ")}
       >
         {rotulo}
-        <span className="text-text-tertiary">{quantidade}</span>
+        <span className="text-outline">{quantidade}</span>
       </button>
     );
   };
@@ -299,7 +299,7 @@ export function Documentos({
 
         {cofreDisponivel === false && (
           <Cartao className="mt-6" titulo="Cofre indisponível">
-            <p className="text-sm text-text-secondary">
+            <p className="text-sm text-on-surface-variant">
               O sistema não oferece cifragem para esta conta, e o cofre não grava em claro.
               Documentos anonimizados continuam podendo ser salvos onde você escolher — só não
               ficam guardados aqui para reabrir.
@@ -308,7 +308,7 @@ export function Documentos({
         )}
 
         {expurgados > 0 && (
-          <p role="status" className="mt-4 text-xs text-text-tertiary">
+          <p role="status" className="mt-4 text-xs text-outline">
             {expurgados} documento{expurgados > 1 ? "s" : ""} saíram do cofre por terem passado
             do prazo de guarda.
           </p>
@@ -364,14 +364,14 @@ export function Documentos({
             quem marca o vigésimo não deveria ter de subir até o topo para
             agir. Só existe quando há seleção. */}
         {marcados.size > 0 && (
-          <div className="sticky bottom-0 -mx-8 mt-2 border-t border-border-subtle bg-surface/95 px-8 py-3 backdrop-blur">
+          <div className="sticky bottom-0 -mx-8 mt-2 border-t border-surface-container-high bg-surface-container-lowest/95 px-8 py-3 backdrop-blur">
             <div className="mx-auto flex max-w-6xl items-center gap-3">
-              <span className="font-mono text-xs text-text-secondary">
+              <span className="font-mono text-xs text-on-surface-variant">
                 {marcados.size} marcado{marcados.size > 1 ? "s" : ""}
               </span>
               <button
                 onClick={() => setMarcados(new Set())}
-                className="font-mono text-xs text-text-tertiary underline-offset-2 hover:text-text-secondary hover:underline"
+                className="font-mono text-xs text-outline underline-offset-2 hover:text-on-surface-variant hover:underline"
               >
                 desmarcar
               </button>
@@ -442,7 +442,7 @@ export function Documentos({
           }
         >
           <p>
-            <strong className="text-text">{paraApagar?.nome}</strong> sai do cofre e não poderá
+            <strong className="text-on-surface">{paraApagar?.nome}</strong> sai do cofre e não poderá
             ser reaberto. Os arquivos que você já salvou em disco não são afetados.
           </p>
         </Dialogo>

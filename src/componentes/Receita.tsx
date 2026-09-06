@@ -40,7 +40,7 @@ const Trecho = forwardRef<
       ref={ref}
       type="button"
       className={[
-        "mx-0.5 rounded-sm font-mono text-sm font-medium text-accent",
+        "mx-0.5 rounded-sm font-mono text-sm font-medium text-primary",
         "underline decoration-accent/40 decoration-2 underline-offset-4",
         "transition-colors duration-[120ms] hover:decoration-accent",
       ].join(" ")}
@@ -83,7 +83,7 @@ export function Receita() {
        dentro de parágrafo. O navegador "conserta" fechando o `<p>` sozinho no
        meio da frase, o que quebra a hidratação do React e embaralha o layout.
        Serifa e entrelinha de leitura vêm das classes. */
-    <div className="text-base leading-loose text-text">
+    <div className="text-base leading-loose text-on-surface">
       Mascarar{" "}
       <Popover
         rotulo="Tipos de dado a mascarar"
@@ -131,19 +131,19 @@ export function Receita() {
               className={[
                 "w-full rounded-md border p-2.5 text-left transition-colors duration-[120ms]",
                 prefs.formato === opcao.id
-                  ? "border-accent bg-accent-muted"
-                  : "border-transparent hover:bg-surface-hover",
+                  ? "border-primary bg-primary-fixed"
+                  : "border-transparent hover:bg-surface-container-low",
               ].join(" ")}
             >
-              <span className="font-mono text-2xs font-semibold text-text">
+              <span className="font-mono text-mono-tag font-semibold text-on-surface">
                 {opcao.titulo}
               </span>
-              <span className="mt-0.5 block text-2xs text-text-tertiary">
+              <span className="mt-0.5 block text-mono-tag text-outline">
                 {opcao.desc}
               </span>
             </button>
           ))}
-          <p className="pt-1 text-2xs leading-normal text-text-tertiary">
+          <p className="pt-1 text-mono-tag leading-normal text-outline">
             A saída é sempre texto, nunca o formato de entrada — um PDF
             anonimizado sai como documento de texto.
           </p>
@@ -161,11 +161,11 @@ export function Receita() {
         )}
       >
         <div className="w-[320px] space-y-2">
-          <p className="text-xs leading-normal text-text-secondary">
+          <p className="text-xs leading-normal text-on-surface-variant">
             {prefs.pastaDeSaida ? (
               <>
                 Salvando em{" "}
-                <code className="font-mono text-2xs break-all text-text">
+                <code className="font-mono text-mono-tag break-all text-on-surface">
                   {prefs.pastaDeSaida}
                 </code>
               </>
@@ -202,7 +202,7 @@ export function Receita() {
       </Popover>
       .
       {qtdEntidades === 0 && (
-        <span className="mt-2 flex items-center gap-1.5 text-xs text-danger">
+        <span className="mt-2 flex items-center gap-1.5 text-xs text-error">
           <Icone nome="warning" tamanho={13} />
           Escolha ao menos um tipo de dado.
         </span>

@@ -6,6 +6,7 @@ import { useBiblioteca } from "./hooks/useBiblioteca";
 import { ProvedorEstado, useApp } from "./estado/AppEstado";
 import { DESTINOS, BarraLateral } from "./componentes/BarraLateral";
 import { CabecalhoDoApp } from "./componentes/CabecalhoDoApp";
+import { FaixaDeAndamento } from "./componentes/Andamento";
 import { MotorCarregando, MotorComFalha } from "./componentes/PainelMotor";
 import { ConsentimentoCofre } from "./componentes/ConsentimentoCofre";
 import { AprovacaoDePareamento } from "./componentes/AprovacaoDePareamento";
@@ -403,7 +404,8 @@ function Casca() {
             motorPronto={estadoMotor === "pronto"}
             recentes={[...biblioteca.itens]
               .sort((a, b) => b.gravadoEm.localeCompare(a.gravadoEm))
-              .slice(0, 5)}
+              .slice(0, 3)}
+            totalNoCofre={biblioteca.itens.length}
             aoAbrirRecente={abrirDaBiblioteca}
             aoVerTodos={() => despachar({ tipo: "ir-para", destino: "documentos" })}
           />
@@ -490,6 +492,18 @@ function Casca() {
           aoTrocarTema={(t) => definirPref("tema", t)}
           cofreDisponivel={biblioteca.disponivel}
           cofreLigado={prefs.cofreLigado}
+          /* A faixa vive na casca, não na Mesa: sem isso, navegar durante um
+             lote fazia o andamento sumir e parecia ter cancelado o trabalho. */
+          andamento={
+            estado.progresso && (
+              <FaixaDeAndamento
+                current={estado.progresso.atual}
+                total={estado.progresso.total}
+                fileName={estado.progresso.nomeArquivo}
+                phase={estado.progresso.etapa}
+              />
+            )
+          }
         />
         <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
           {conteudo()}

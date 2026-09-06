@@ -102,11 +102,11 @@ function Copiar({ trechos }: { trechos: TrechoDaConversa[] }) {
          que de fato trafegou. */
       title="Copia com os pseudônimos, como trafegou"
       className={[
-        "font-mono text-2xs transition-opacity duration-[120ms]",
+        "font-mono text-mono-tag transition-opacity duration-[120ms]",
         "focus-visible:opacity-100",
         copiado
-          ? "text-success opacity-100"
-          : "text-text-tertiary opacity-0 hover:text-text-secondary group-hover:opacity-100",
+          ? "text-secondary opacity-100"
+          : "text-outline opacity-0 hover:text-on-surface-variant group-hover:opacity-100",
       ].join(" ")}
     >
       {copiado ? "copiado" : "copiar"}
@@ -119,7 +119,7 @@ function Selo_S() {
   return (
     <span
       aria-hidden="true"
-      className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-full bg-accent font-mono text-xs font-bold text-on-accent"
+      className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-full bg-primary font-mono text-xs font-bold text-on-primary"
     >
       S
     </span>
@@ -215,7 +215,7 @@ export function Conversa({
           {(erro || estado?.erro) && (
             <p
               role="alert"
-              className="mb-4 rounded-lg border border-danger/40 bg-danger/5 px-3 py-2 font-serif text-sm text-danger"
+              className="mb-4 rounded-lg border border-error/40 bg-error/5 px-3 py-2 font-body text-sm text-error"
             >
               {erro ?? estado?.erro}
             </p>
@@ -224,7 +224,7 @@ export function Conversa({
           {graves.map((a, i) => (
             <p
               key={i}
-              className="mb-3 rounded-lg border border-danger/40 bg-danger/5 px-3 py-2 font-serif text-sm text-danger"
+              className="mb-3 rounded-lg border border-error/40 bg-error/5 px-3 py-2 font-body text-sm text-error"
             >
               <strong>Atenção: </strong>
               {a.texto}
@@ -238,16 +238,16 @@ export function Conversa({
             <div className="mb-4">
               <button
                 onClick={() => setAvisosAbertos((v) => !v)}
-                className="font-mono text-2xs text-text-tertiary hover:text-text-secondary"
+                className="font-mono text-mono-tag text-outline hover:text-on-surface-variant"
                 aria-expanded={avisosAbertos}
               >
                 {avisosAbertos ? "▾" : "▸"} {leves.length} nota
                 {leves.length > 1 ? "s" : ""} sobre a procedência dos documentos
               </button>
               {avisosAbertos && (
-                <ul className="mt-2 space-y-1.5 border-l-2 border-border-subtle pl-3">
+                <ul className="mt-2 space-y-1.5 border-l-2 border-surface-container-high pl-3">
                   {leves.map((a, i) => (
-                    <li key={i} className="font-serif text-sm leading-relaxed text-text-secondary">
+                    <li key={i} className="font-body text-sm leading-relaxed text-on-surface-variant">
                       {a.texto}
                     </li>
                   ))}
@@ -260,17 +260,17 @@ export function Conversa({
             <div className="flex min-h-[46vh] flex-col items-center justify-center py-10 text-center">
               <span
                 aria-hidden="true"
-                className="grid size-12 place-items-center rounded-full bg-accent font-mono text-base font-bold text-on-accent"
+                className="grid size-12 place-items-center rounded-full bg-primary font-mono text-base font-bold text-on-primary"
               >
                 S
               </span>
-              <h1 className="mt-5 font-mono text-xl font-semibold tracking-tight text-text">
+              <h1 className="mt-5 font-mono text-xl font-semibold tracking-tight text-on-surface">
                 Conversar com os autos
               </h1>
 
               {!temChave ? (
                 <>
-                  <p className="mt-3 max-w-md font-serif text-sm leading-relaxed text-text-secondary">
+                  <p className="mt-3 max-w-md font-body text-sm leading-relaxed text-on-surface-variant">
                     A conversa usa o OpenRouter e precisa de uma credencial sua, guardada cifrada
                     nesta máquina. Sem ela, o aplicativo não fala com a internet.
                   </p>
@@ -280,11 +280,11 @@ export function Conversa({
                 </>
               ) : semDocumentos ? (
                 <>
-                  <p className="mt-3 max-w-md font-serif text-sm leading-relaxed text-text-secondary">
+                  <p className="mt-3 max-w-md font-body text-sm leading-relaxed text-on-surface-variant">
                     Escolha peças do cofre. O que sai desta máquina é o{" "}
-                    <strong className="text-text">texto anonimizado</strong> — nomes, CPFs e
+                    <strong className="text-on-surface">texto anonimizado</strong> — nomes, CPFs e
                     endereços já substituídos por pseudônimos —, e só para modelos com{" "}
-                    <strong className="text-text">retenção zero</strong>, como a Resolução CNJ
+                    <strong className="text-on-surface">retenção zero</strong>, como a Resolução CNJ
                     615/2025 exige. Os nomes reais voltam só aqui na tela.
                   </p>
                   <Botao
@@ -297,22 +297,22 @@ export function Conversa({
                     Escolher documentos
                   </Botao>
                   {documentos.length === 0 && (
-                    <p className="mt-3 font-mono text-xs text-text-tertiary">
+                    <p className="mt-3 font-mono text-xs text-outline">
                       O cofre está vazio. Anonimize um documento e guarde-o para conversar.
                     </p>
                   )}
                 </>
               ) : (
                 <>
-                  <p className="mt-3 max-w-md font-serif text-sm leading-relaxed text-text-secondary">
+                  <p className="mt-3 max-w-md font-body text-sm leading-relaxed text-on-surface-variant">
                     {escolhidos.length === 1
                       ? "Um documento carregado."
                       : `${escolhidos.length} documentos carregados, com um espaço de pseudônimos comum.`}{" "}
-                    A anonimização mede <strong className="text-text">99,94% por ocorrência</strong>{" "}
+                    A anonimização mede <strong className="text-on-surface">99,94% por ocorrência</strong>{" "}
                     — alta, e não 100%.{" "}
                     <button
                       onClick={() => void previsualizar().then(setPrevia)}
-                      className="text-accent underline decoration-accent/30 underline-offset-2 hover:decoration-accent"
+                      className="text-primary underline decoration-accent/30 underline-offset-2 hover:decoration-accent"
                     >
                       Veja o que sai
                     </button>{" "}
@@ -326,7 +326,7 @@ export function Conversa({
                             setPergunta(s);
                             campo.current?.focus();
                           }}
-                          className="rounded-full border border-border-subtle bg-surface px-3.5 py-1.5 font-serif text-sm text-text-secondary transition-colors duration-[120ms] hover:border-accent hover:text-text"
+                          className="rounded-full border border-surface-container-high bg-surface-container-lowest px-3.5 py-1.5 font-body text-sm text-on-surface-variant transition-colors duration-[120ms] hover:border-primary hover:text-on-surface"
                         >
                           {s}
                         </button>
@@ -339,8 +339,8 @@ export function Conversa({
           )}
 
           {abrindo && (
-            <p className="flex items-center gap-2 font-mono text-xs text-text-tertiary">
-              <span className="inline-block h-[1em] w-[0.45em] animate-pulse bg-accent" />
+            <p className="flex items-center gap-2 font-mono text-xs text-outline">
+              <span className="inline-block h-[1em] w-[0.45em] animate-pulse bg-primary" />
               Preparando os documentos…
             </p>
           )}
@@ -355,14 +355,14 @@ export function Conversa({
                   <article key={i} className="group flex flex-col items-end">
                     {/* Sem `<p>` em volta: `Markdown` já emite blocos, e um
                         `<div>` dentro de `<p>` é HTML inválido. */}
-                    <div className="max-w-[80%] rounded-2xl rounded-br-md bg-surface-sunken px-4 py-2.5">
+                    <div className="max-w-[80%] rounded-2xl rounded-br-md bg-surface-container-low px-4 py-2.5">
                       <Markdown texto={texto} nomes={nomes} />
                     </div>
                     <div className="mt-1 flex items-center gap-2 pr-1">
                       <Copiar trechos={turno.trechos} />
                     </div>
                     {turno.trocas && turno.trocas.length > 0 && (
-                      <p className="mt-1 max-w-[80%] text-right font-mono text-2xs leading-relaxed text-text-tertiary">
+                      <p className="mt-1 max-w-[80%] text-right font-mono text-mono-tag leading-relaxed text-outline">
                         trocado antes de sair:{" "}
                         {turno.trocas.map((t) => `"${t.valor}" → ${t.rotulo}`).join(" · ")}
                       </p>
@@ -390,14 +390,14 @@ export function Conversa({
                 <Selo_S />
                 <div className="min-w-0 flex-1">
                   <div className="mb-1.5 flex items-center gap-2">
-                    <span className="font-mono text-2xs tabular-nums text-text-tertiary">
+                    <span className="font-mono text-mono-tag tabular-nums text-outline">
                       {estado && estado.parcial.length > 0
                         ? `escrevendo · ${segundos}s`
                         : `consultando ${estado?.modelo ?? "o modelo"} · ${segundos}s`}
                     </span>
                     <button
                       onClick={cancelar}
-                      className="font-mono text-2xs text-text-tertiary underline underline-offset-2 hover:text-danger"
+                      className="font-mono text-mono-tag text-outline underline underline-offset-2 hover:text-error"
                     >
                       parar
                     </button>
@@ -410,8 +410,8 @@ export function Conversa({
                     />
                   ) : (
                     <div className="flex items-center gap-2">
-                      <span className="inline-block h-[1em] w-[0.45em] animate-pulse bg-accent" />
-                      <span className="font-serif text-sm italic text-text-tertiary">
+                      <span className="inline-block h-[1em] w-[0.45em] animate-pulse bg-primary" />
+                      <span className="font-body text-sm italic text-outline">
                         lendo os documentos
                       </span>
                     </div>
@@ -431,7 +431,7 @@ export function Conversa({
               justamente no caso em que ele é a única porta. */}
           {bloqueada && (
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-              <p className="font-serif text-sm text-danger">
+              <p className="font-body text-sm text-error">
                 Esta conversa foi marcada como comprometida e não aceita novos envios.
               </p>
               <Botao tipo="secundario" icone="forum" onClick={() => setRecomecando(true)}>
@@ -445,8 +445,8 @@ export function Conversa({
               pessoa olha primeiro. */}
           <div
             className={[
-              "rounded-2xl border bg-surface shadow-sm transition-[border-color,box-shadow] duration-[120ms]",
-              "border-border-subtle focus-within:border-accent focus-within:shadow-md",
+              "rounded-2xl border bg-surface-container-lowest shadow-sm transition-[border-color,box-shadow] duration-[120ms]",
+              "border-surface-container-high focus-within:border-primary focus-within:shadow-md",
               bloqueada ? "opacity-50" : "",
             ].join(" ")}
           >
@@ -461,7 +461,7 @@ export function Conversa({
                 type="button"
                 onClick={() => setEscolhendo(true)}
                 disabled={documentos.length === 0}
-                className="inline-flex min-h-6 items-center gap-1 rounded-full px-2 font-mono text-2xs text-accent transition-colors duration-[120ms] hover:bg-accent-muted disabled:opacity-40"
+                className="inline-flex min-h-6 items-center gap-1 rounded-full px-2 font-mono text-mono-tag text-primary transition-colors duration-[120ms] hover:bg-primary-fixed disabled:opacity-40"
               >
                 <Icone nome="add" tamanho={11} />
                 {escolhidos.length === 0 ? "Escolher documentos" : "Trocar"}
@@ -472,7 +472,7 @@ export function Conversa({
                 <button
                   type="button"
                   onClick={() => setRecomecando(true)}
-                  className="inline-flex min-h-6 items-center gap-1 rounded-full px-2 font-mono text-2xs text-accent transition-colors duration-[120ms] hover:bg-accent-muted"
+                  className="inline-flex min-h-6 items-center gap-1 rounded-full px-2 font-mono text-mono-tag text-primary transition-colors duration-[120ms] hover:bg-primary-fixed"
                 >
                   <Icone nome="forum" tamanho={11} />
                   Nova conversa
@@ -507,7 +507,7 @@ export function Conversa({
                       : "Pergunte sobre os documentos…"
                 }
                 aria-label="Pergunta"
-                className="max-h-[200px] min-h-[28px] flex-1 resize-none bg-transparent px-1 py-1 font-serif text-base leading-relaxed text-text placeholder:text-text-tertiary focus:outline-none disabled:cursor-not-allowed"
+                className="max-h-[200px] min-h-[28px] flex-1 resize-none bg-transparent px-1 py-1 font-body text-base leading-relaxed text-on-surface placeholder:text-outline focus:outline-none disabled:cursor-not-allowed"
               />
               {enviando ? (
                 <Botao
@@ -530,7 +530,7 @@ export function Conversa({
             </form>
           </div>
 
-          <div className="mt-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-1 font-mono text-2xs text-text-tertiary">
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-1 font-mono text-mono-tag text-outline">
             <span className="flex flex-wrap items-center gap-x-2">
               {estado?.modelo && <span>{estado.modelo}</span>}
               {estado?.provedor && (
@@ -543,7 +543,7 @@ export function Conversa({
               {!semDocumentos && (
                 <button
                   onClick={() => void previsualizar().then(setPrevia)}
-                  className="underline underline-offset-2 hover:text-text-secondary"
+                  className="underline underline-offset-2 hover:text-on-surface-variant"
                 >
                   ver o que sai
                 </button>
@@ -604,12 +604,12 @@ export function Conversa({
       </Dialogo>
 
       <Dialogo aberto={previa !== null} aoFechar={() => setPrevia(null)} titulo="O que sai desta máquina">
-        <p className="mb-3 font-serif text-sm text-text-secondary">
+        <p className="mb-3 font-body text-sm text-on-surface-variant">
           É este o conteúdo que seria enviado ao modelo. Os dados pessoais já estão substituídos
           por pseudônimos. A anonimização mede <strong>99,94% por ocorrência</strong> no gate do
           produto — alta, e não 100%.
         </p>
-        <pre className="max-h-[50vh] overflow-auto rounded-md bg-surface-sunken p-3 font-mono text-2xs leading-relaxed text-text-secondary">
+        <pre className="max-h-[50vh] overflow-auto rounded-md bg-surface-container-low p-3 font-mono text-mono-tag leading-relaxed text-on-surface-variant">
           {previa}
         </pre>
       </Dialogo>

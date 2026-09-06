@@ -238,9 +238,9 @@ export function Revisao({
    */
   const painelOcorrencias = (
     <>
-      <div className="sticky top-0 z-10 border-b border-border-subtle bg-surface px-4 py-3">
+      <div className="sticky top-0 z-10 border-b border-surface-container-high bg-surface-container-lowest px-4 py-3">
         <div className="flex items-center justify-between gap-2">
-          <h2 className="font-mono text-sm font-semibold text-text">
+          <h2 className="font-mono text-sm font-semibold text-on-surface">
             {total} {total === 1 ? "ocorrência" : "ocorrências"}
           </h2>
           {total > 1 && (
@@ -259,7 +259,7 @@ export function Revisao({
             </Botao>
           )}
         </div>
-        <p className="mt-1 text-xs leading-normal text-text-tertiary">
+        <p className="mt-1 text-xs leading-normal text-outline">
           Confira cada item. O que não for dado pessoal pode ser liberado — e
           deixa de ser mascarado daqui em diante.
         </p>
@@ -281,7 +281,7 @@ export function Revisao({
                   })
                 }
                 aria-expanded={!recolhido}
-                className="flex min-h-8 w-full items-center gap-2 border-b border-border-subtle bg-surface-sunken px-4 py-1.5 text-left font-mono text-xs text-text-secondary transition-colors duration-[120ms] hover:text-text"
+                className="flex min-h-8 w-full items-center gap-2 border-b border-surface-container-high bg-surface-container-low px-4 py-1.5 text-left font-mono text-xs text-on-surface-variant transition-colors duration-[120ms] hover:text-on-surface"
               >
                 <span
                   aria-hidden="true"
@@ -291,11 +291,11 @@ export function Revisao({
                 <span className="min-w-0 flex-1 truncate">
                   {rotuloDaEntidade(tipo)}
                 </span>
-                <span className="text-text-tertiary">{itens.length}</span>
+                <span className="text-outline">{itens.length}</span>
                 <Icone
                   nome="arrow_forward"
                   tamanho={12}
-                  className={`shrink-0 text-text-tertiary transition-transform duration-[120ms] ${
+                  className={`shrink-0 text-outline transition-transform duration-[120ms] ${
                     recolhido ? "" : "rotate-90"
                   }`}
                 />
@@ -303,23 +303,23 @@ export function Revisao({
             </h3>
 
             {!recolhido && (
-              <ul className="divide-y divide-border-subtle">
+              <ul className="divide-y divide-surface-container">
                 {itens.map(({ entidade, indice }) => (
                   <li
                     key={indice}
                     className={`group flex items-center gap-2 px-4 py-2 ${
-                      ocorrenciaAtiva === indice ? "bg-surface-hover" : ""
+                      ocorrenciaAtiva === indice ? "bg-surface-container-low" : ""
                     }`}
                   >
                     <button
                       onClick={() => irParaOcorrencia(indice)}
                       className="min-w-0 flex-1 rounded-md text-left"
                     >
-                      <span className="block truncate font-mono text-xs text-text">
+                      <span className="block truncate font-mono text-xs text-on-surface">
                         {entidade.text}
                       </span>
                     </button>
-                    <span className="shrink-0 font-mono text-2xs text-text-tertiary tabular-nums">
+                    <span className="shrink-0 font-mono text-mono-tag text-outline tabular-nums">
                       {Math.round(entidade.score * 100)}%
                     </span>
                     <Botao
@@ -343,7 +343,7 @@ export function Revisao({
       })}
 
       {total === 0 && (
-        <p className="px-4 py-6 text-center text-xs text-text-tertiary">
+        <p className="px-4 py-6 text-center text-xs text-outline">
           Nenhuma entidade encontrada neste arquivo.
         </p>
       )}
@@ -372,7 +372,7 @@ export function Revisao({
       {/* `relative` não é decoração: sem `position`, o `z-10` que estava
           aqui não fazia nada — e o popover de ações, que nasce dentro
           desta faixa, era coberto pelo painel de ocorrências. */}
-      <div className="relative z-100 shrink-0 border-b border-border-subtle bg-surface px-5 py-3">
+      <div className="relative z-100 shrink-0 border-b border-surface-container-high bg-surface-container-lowest px-5 py-3">
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             <Botao
@@ -383,7 +383,7 @@ export function Revisao({
               Voltar
             </Botao>
 
-            <span className="min-w-0 truncate font-mono text-sm text-text">
+            <span className="min-w-0 truncate font-mono text-sm text-on-surface">
               {arquivo.originalName}
             </span>
 
@@ -399,7 +399,7 @@ export function Revisao({
                 />
                 <span
                   aria-live="polite"
-                  className="font-mono text-xs text-text-tertiary tabular-nums"
+                  className="font-mono text-xs text-outline tabular-nums"
                 >
                   {indiceSeguro + 1} de {arquivos.length}
                 </span>
@@ -445,7 +445,7 @@ export function Revisao({
             >
               <div className="flex flex-col gap-3">
                 <div>
-                  <p className="mb-1.5 font-mono text-xs text-text-secondary">
+                  <p className="mb-1.5 font-mono text-xs text-on-surface-variant">
                     Formato do arquivo salvo
                   </p>
                   {/* A saída é texto — nunca o formato de entrada. Gravar
@@ -460,7 +460,7 @@ export function Revisao({
                     valor={prefs.formato}
                     onChange={(f) => definirPref("formato", f)}
                   />
-                  <p className="mt-1.5 truncate font-mono text-2xs text-text-tertiary">
+                  <p className="mt-1.5 truncate font-mono text-mono-tag text-outline">
                     {saida}
                   </p>
                 </div>
@@ -490,8 +490,8 @@ export function Revisao({
             role={ocr.paginas_com_erro > 0 ? "alert" : "status"}
             className={`mt-3 flex items-start gap-2 rounded-md border px-3 py-2 text-xs ${
               ocr.paginas_com_erro > 0
-                ? "border-danger text-danger"
-                : "border-warning text-warning"
+                ? "border-error text-error"
+                : "border-tertiary text-on-tertiary-container"
             }`}
           >
             <Icone nome="warning" tamanho={14} className="mt-0.5 shrink-0" />
@@ -529,20 +529,20 @@ export function Revisao({
             {/* Só o destino: o nome de origem já está na barra, três
                 centímetros acima, e repeti-lo aqui gastava a linha inteira
                 para dizer de novo onde estamos. */}
-            <div className="mb-3 flex items-center gap-1.5 font-mono text-2xs text-text-tertiary">
+            <div className="mb-3 flex items-center gap-1.5 font-mono text-mono-tag text-outline">
               <span aria-hidden="true">→</span>
-              <span className="truncate text-accent">{saida}</span>
+              <span className="truncate text-primary">{saida}</span>
             </div>
 
             {modo === "revisar" && (
-              <p className="mb-4 text-xs text-text-tertiary">
+              <p className="mb-4 text-xs text-outline">
                 Cada tarja esconde um dado detectado. Passe o cursor ou navegue
                 por teclado para conferir o valor original por baixo.
               </p>
             )}
 
             <Cartao>
-              <div className="texto-documento whitespace-pre-wrap text-text">
+              <div className="texto-documento whitespace-pre-wrap text-on-surface">
                 {modo === "resultado"
                   ? arquivo.anonymizedContent
                   : segmentos.map((seg, i) =>
@@ -573,7 +573,7 @@ export function Revisao({
         {/* Painel de ocorrências: coluna fixa a partir de 1024px. */}
         <aside
           aria-label="Ocorrências detectadas"
-          className="hidden w-80 shrink-0 overflow-y-auto border-l border-border-subtle bg-surface lg:block"
+          className="hidden w-80 shrink-0 overflow-y-auto border-l border-surface-container-high bg-surface-container-lowest lg:block"
         >
           {painelOcorrencias}
         </aside>
@@ -590,7 +590,7 @@ export function Revisao({
           <div
             role="dialog"
             aria-label="Ocorrências detectadas"
-            className="flex w-[min(20rem,90vw)] flex-col overflow-y-auto border-l border-border bg-surface"
+            className="flex w-[min(20rem,90vw)] flex-col overflow-y-auto border-l border-outline-variant bg-surface-container-lowest"
           >
             <div className="flex justify-end p-2">
               <Botao
@@ -628,11 +628,11 @@ export function Revisao({
         }
       >
         <p>
-          <strong className="text-text">“{aRejeitar?.text}”</strong> deixa de ser
-          mascarado — neste e em <strong className="text-text">todos</strong> os
+          <strong className="text-on-surface">“{aRejeitar?.text}”</strong> deixa de ser
+          mascarado — neste e em <strong className="text-on-surface">todos</strong> os
           documentos seguintes, até você removê-lo nos Ajustes.
         </p>
-        <p className="mt-2 text-text-tertiary">
+        <p className="mt-2 text-outline">
           Use quando for mesmo um falso positivo: um nome de vara, um termo
           técnico, um nome de instituição. Se for dado de uma pessoa, mantenha a
           tarja.

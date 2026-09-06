@@ -73,16 +73,16 @@ export class BarreiraDeErro extends Component<Props, Estado> {
     return (
       <div className="flex h-full items-center justify-center p-8">
         <div className="w-full max-w-xl">
-          <h1 className="font-mono text-lg font-semibold tracking-tight text-danger">
+          <h1 className="font-mono text-lg font-semibold tracking-tight text-error">
             O aplicativo encontrou um erro
           </h1>
-          <p className="mt-2 text-sm text-text-secondary">
+          <p className="mt-2 text-sm text-on-surface-variant">
             Nada foi enviado para fora da sua máquina. Os arquivos que você já
             salvou em disco não foram afetados; um lote em andamento foi
             interrompido e precisa ser refeito.
           </p>
 
-          <pre className="mt-4 max-h-64 overflow-auto rounded-lg border border-border-subtle bg-surface-sunken p-3 font-mono text-2xs leading-relaxed text-text">
+          <pre className="mt-4 max-h-64 overflow-auto rounded-lg border border-surface-container-high bg-surface-container-low p-3 font-mono text-mono-tag leading-relaxed text-on-surface">
             {erro.name}: {erro.message}
             {erro.stack ? `\n\n${erro.stack}` : ""}
           </pre>
@@ -90,19 +90,19 @@ export class BarreiraDeErro extends Component<Props, Estado> {
           <div className="mt-4 flex gap-2">
             <button
               onClick={this.copiar}
-              className="min-h-9 rounded-md border border-border bg-surface px-3.5 py-2 font-mono text-sm font-medium text-text hover:bg-surface-hover"
+              className="min-h-9 rounded-md border border-outline-variant bg-surface-container-lowest px-3.5 py-2 font-mono text-sm font-medium text-on-surface hover:bg-surface-container-low"
             >
               Copiar o erro
             </button>
             <button
               onClick={() => window.location.reload()}
-              className="min-h-9 rounded-md bg-accent px-3.5 py-2 font-mono text-sm font-medium text-on-accent hover:bg-accent-hover"
+              className="min-h-9 rounded-md bg-primary px-3.5 py-2 font-mono text-sm font-medium text-on-primary hover:bg-primary-hover"
             >
               Recarregar
             </button>
           </div>
 
-          <p className="mt-4 text-xs text-text-tertiary">
+          <p className="mt-4 text-xs text-outline">
             Copie o texto acima ao relatar o problema — é ele que diz onde
             procurar.
           </p>

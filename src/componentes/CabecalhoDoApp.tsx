@@ -74,7 +74,7 @@ export function CabecalhoDoApp({
       : { icone: "lock_open", texto: "Cofre desligado", classe: "text-on-surface-variant", dica: "Nada é guardado depois de anonimizar. A revisão não pode ser reaberta." } as const;
 
   return (
-    <header className="arrasto z-40 flex h-cabecalho shrink-0 items-center justify-between gap-gutter-md bg-surface/85 px-gutter-lg shadow-sm backdrop-blur-xl">
+    <header className="arrasto z-40 flex h-cabecalho shrink-0 items-center justify-between gap-gutter-md bg-surface-container-lowest/85 px-gutter-lg shadow-sm backdrop-blur-xl">
       <div className="flex min-w-0 items-center gap-gutter-sm">
         <span className="hidden font-mono text-mono-code text-outline sm:inline">
           TecJustiça Sigilo

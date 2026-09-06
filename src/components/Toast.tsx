@@ -41,15 +41,15 @@ export function Toast({ message, type = "success", onClose, duration }: ToastPro
          some atrás de outra coisa não é aviso. */
       className={[
         "fixed right-6 bottom-6 z-200 flex max-w-md items-start gap-3 rounded-lg border",
-        "border-border-subtle bg-surface px-4 py-3 shadow-lg",
+        "border-surface-container-high bg-surface-container-lowest px-4 py-3 shadow-lg",
         "transition-[opacity,transform] duration-200",
         visible ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0",
       ].join(" ")}
     >
-      <span className={sucesso ? "mt-0.5 text-success" : "mt-0.5 text-danger"}>
+      <span className={sucesso ? "mt-0.5 text-secondary" : "mt-0.5 text-error"}>
         <Icone nome={sucesso ? "check_circle" : "warning"} tamanho={16} />
       </span>
-      <span className="text-sm leading-snug text-text">{message}</span>
+      <span className="text-sm leading-snug text-on-surface">{message}</span>
     </div>
   );
 }

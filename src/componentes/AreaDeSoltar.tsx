@@ -1,19 +1,23 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { FileItem } from "../types";
 import type { ArquivoNaFila, EstadoArquivo } from "../estado/tipos";
-import { Botao, Icone, Selo } from "../ui";
+import { Botao, Icone, Selo, Tecla } from "../ui";
 
 /**
  * Área de soltar e fila de arquivos.
  *
- * Sucessora do `FileSelector`, com duas mudanças de fundo: a fila mostra em que
- * estágio cada arquivo está (na fila / lendo / anonimizando / pronto / falhou)
- * e a falha de um arquivo aparece **com o motivo**, ali na linha dele.
+ * A fila mostra em que estágio cada arquivo está (na fila / lendo /
+ * anonimizando / pronto / falhou) e a falha de um arquivo aparece **com o
+ * motivo**, ali na linha dele.
  *
- * O que **não** mudou, porque é essencial: `getPathForFile` do preload. O
+ * O que **não** pode mudar, porque é essencial: `getPathForFile` do preload. O
  * `File.path` não existe mais no Electron, e sem o caminho real um documento
  * binário nem poderia ser aberto pelo backend — além de o resultado ser salvo
  * no diretório errado.
+ *
+ * A área e a fila são dois cartões, não um. Enquanto eram um bloco só, a fila
+ * herdava a moldura tracejada e parecia parte do convite a soltar arquivo, em
+ * vez do inventário do que já foi solto.
  */
 
 const MAX_ARQUIVOS = 10;
@@ -120,10 +124,10 @@ export function AreaDeSoltar({
     [fila, aoMudarFila]
   );
 
-  const abrirDialogo = async () => {
+  const abrirDialogo = useCallback(async () => {
     /* No Electron, o diálogo nativo é o caminho bom: ele traz o caminho de
-       disco de graça e agora oferece PDF e Office no filtro. O `<input>` só
-       entra fora do Electron. */
+       disco de graça e oferece PDF e Office no filtro. O `<input>` só entra
+       fora do Electron. */
     if (window.electronAPI?.selectFiles) {
       const escolhidos = await window.electronAPI.selectFiles();
       if (escolhidos.length === 0) return;
@@ -182,10 +186,26 @@ export function AreaDeSoltar({
       return;
     }
     refInput.current?.click();
-  };
+  }, [fila, aoMudarFila]);
+
+  /* Ctrl+O abre o mesmo diálogo. O atalho vive num `ref` para o ouvinte ser
+     registrado uma vez só: com `abrirDialogo` na lista de dependências, cada
+     arquivo acrescentado remontaria o ouvinte. */
+  const refAbrir = useRef(abrirDialogo);
+  refAbrir.current = abrirDialogo;
+  useEffect(() => {
+    const aoTeclar = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey) return;
+      if (e.key.toLowerCase() !== "o") return;
+      e.preventDefault();
+      void refAbrir.current();
+    };
+    window.addEventListener("keydown", aoTeclar);
+    return () => window.removeEventListener("keydown", aoTeclar);
+  }, []);
 
   return (
-    <div>
+    <div className="flex flex-col gap-gutter-md">
       <div
         onDrop={(e) => {
           e.preventDefault();
@@ -200,28 +220,100 @@ export function AreaDeSoltar({
         }}
         onDragLeave={() => setArrastando(false)}
         className={[
-          "flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed px-6 py-10",
-          "transition-colors duration-[120ms]",
-          arrastando
-            ? "border-accent bg-accent-muted"
-            : "border-border bg-surface",
+          "group relative flex min-h-[340px] flex-col items-center justify-center overflow-hidden",
+          "rounded-xl bg-surface-container-lowest p-gutter-2xl text-center shadow-sm",
+          "transition-all duration-300 hover:shadow-md",
+          arrastando ? "scale-[1.01] bg-surface-container-high/40" : "",
           bloqueada ? "pointer-events-none opacity-50" : "",
         ].join(" ")}
       >
-        <Icone
-          nome="description"
-          tamanho={24}
-          className={arrastando ? "text-accent" : "text-text-tertiary"}
+        {/* Dois halos desfocados nos cantos opostos. É o único ornamento do
+            sistema, e existe porque esta é a única tela que fica vazia
+            esperando uma ação — sem ele o retângulo branco não convida a
+            nada. */}
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute -top-24 -right-24 h-64 w-64 rounded-full bg-primary-fixed/25 blur-3xl transition-transform duration-500 group-hover:scale-110"
         />
-        <p className="text-base text-text-secondary">
-          Arraste os autos como saem do PJe
-        </p>
-        <p className="font-mono text-xs text-text-tertiary">
-          PDF, DOCX, XLSX, imagem ou TXT · até {MAX_ARQUIVOS} arquivos por lote
-        </p>
-        <Botao tipo="secundario" onClick={abrirDialogo} disabled={bloqueada}>
-          Escolher arquivos
-        </Botao>
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute -bottom-24 -left-24 h-64 w-64 rounded-full bg-secondary-fixed/20 blur-3xl transition-transform duration-500 group-hover:scale-110"
+        />
+
+        {/* A moldura tracejada é desenhada com gradientes repetidos em vez de
+            `border-dashed`: assim o traço tem passo constante nos quatro lados
+            e a cor do traço pode acender no arrasto sem mexer no raio. */}
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-4 rounded-lg opacity-80 transition-opacity group-hover:opacity-100"
+          style={{
+            backgroundImage: [0, 90, 180, 270]
+              .map(
+                (g) =>
+                  `repeating-linear-gradient(${g}deg,var(--traco),var(--traco) 8px,transparent 8px,transparent 16px)`
+              )
+              .join(","),
+            backgroundSize: "2px 100%, 100% 2px, 2px 100%, 100% 2px",
+            backgroundPosition: "0 0, 0 0, 100% 0, 0 100%",
+            backgroundRepeat: "no-repeat",
+            ["--traco" as string]: arrastando
+              ? "var(--primary)"
+              : "var(--outline-variant)",
+          }}
+        />
+
+        <div className="relative z-10 flex max-w-md flex-col items-center gap-gutter-md">
+          <span
+            className={[
+              "grid size-16 place-items-center rounded-xl shadow-sm transition-all duration-300",
+              arrastando
+                ? "scale-105 bg-primary-container text-on-primary"
+                : "bg-surface-container text-primary group-hover:scale-105 group-hover:bg-primary-container group-hover:text-on-primary",
+            ].join(" ")}
+          >
+            <Icone nome="drive_folder_upload" tamanho={34} />
+          </span>
+
+          <div className="flex flex-col gap-gutter-xs">
+            <h3 className="font-display text-headline-lg text-on-surface">
+              Arraste os autos direto do PJe
+            </h3>
+            <p className="font-body text-body-md text-on-surface-variant">
+              Serve para a exportação integral do processo ou para peças avulsas
+              escaneadas.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-center gap-1.5 pt-1">
+            {["PDF (texto ou OCR)", "DOCX", "XLSX", "TXT", "imagem"].map((f) => (
+              <span
+                key={f}
+                className="rounded-xs bg-surface-container-low px-2 py-0.5 font-mono text-mono-tag text-on-surface-variant"
+              >
+                {f}
+              </span>
+            ))}
+            <span className="rounded-xs bg-surface-container-high px-2 py-0.5 font-mono text-mono-tag text-primary">
+              até {MAX_ARQUIVOS} por lote
+            </span>
+          </div>
+
+          <div className="mt-2 flex items-center gap-gutter-sm">
+            <Botao
+              tipo="primario"
+              tamanho="grande"
+              icone="file_open"
+              onClick={abrirDialogo}
+              disabled={bloqueada}
+            >
+              Escolher arquivos do computador
+            </Botao>
+            <span className="hidden items-center gap-1.5 sm:flex">
+              <span className="font-body text-body-sm text-outline">ou</span>
+              <Tecla>Ctrl+O</Tecla>
+            </span>
+          </div>
+        </div>
       </div>
 
       <input
@@ -237,88 +329,105 @@ export function AreaDeSoltar({
       />
 
       {noLimite && (
-        <p role="status" className="mt-3 text-xs text-warning">
+        <p role="status" className="font-body text-body-sm text-on-tertiary-container">
           Limite de {MAX_ARQUIVOS} arquivos por lote atingido.
         </p>
       )}
 
       {recusados.length > 0 && (
-        <p role="status" className="mt-3 text-xs text-warning">
+        <p role="status" className="font-body text-body-sm text-on-tertiary-container">
           Não dá para ler {recusados.join(", ")}. São aceitos PDF, DOCX, XLSX,
           PPTX, imagens digitalizadas, TXT, MD e RTF.
         </p>
       )}
 
-      {fila.some((f) => f.precisaExtracao) && (
-        <p className="mt-3 text-xs text-text-tertiary">
-          Documentos digitalizados passam por reconhecimento de texto antes da
-          anonimização — alguns segundos por página, inteiramente nesta máquina.
-        </p>
-      )}
-
       {fila.length > 0 && (
-        <ul className="mt-4 divide-y divide-border-subtle rounded-lg border border-border-subtle bg-surface">
-          {fila.map((arquivo, i) => (
-            <li
-              key={arquivo.path || arquivo.name}
-              className="flex items-center justify-between gap-3 px-3 py-2.5"
-            >
-              <div className="flex min-w-0 items-center gap-2.5">
-                <Icone
-                  nome="description"
-                  tamanho={15}
-                  className="shrink-0 text-text-tertiary"
-                />
-                <div className="min-w-0">
-                  <p className="truncate text-sm text-text">{arquivo.name}</p>
-                  {arquivo.estado === "falhou" && arquivo.motivoDaFalha ? (
-                    /* O motivo fica na linha do arquivo, não num toast que
-                       some: com um lote de dez, saber *qual* falhou e *por quê*
-                       é a informação inteira. */
-                    <p className="mt-0.5 text-2xs text-danger">
-                      {arquivo.motivoDaFalha}
+        <div className="flex flex-col gap-gutter-sm rounded-lg bg-surface-container-lowest p-gutter-md shadow-sm">
+          <div className="flex items-center justify-between gap-gutter-sm">
+            <div className="flex items-center gap-gutter-xs">
+              <h3 className="font-display text-headline-sm text-on-surface">Lote em fila</h3>
+              <Selo tom="acao" forma="pilula">
+                {`${fila.length} peça${fila.length > 1 ? "s" : ""}`}
+              </Selo>
+            </div>
+            {!bloqueada && (
+              <Botao
+                tipo="perigo"
+                tamanho="mini"
+                icone="delete_sweep"
+                onClick={() => aoMudarFila([])}
+              >
+                Limpar lote
+              </Botao>
+            )}
+          </div>
+
+          <ul className="flex flex-col gap-gutter-xs">
+            {fila.map((arquivo, i) => (
+              <li
+                key={arquivo.path || arquivo.name}
+                className="flex items-center justify-between gap-gutter-sm rounded-sm bg-surface-container-low/80 p-gutter-sm transition-colors duration-[120ms] hover:bg-surface-container-low"
+              >
+                <div className="flex min-w-0 items-center gap-gutter-sm">
+                  <span className="grid size-9 shrink-0 place-items-center rounded-xs bg-surface-container text-primary">
+                    <Icone
+                      nome={arquivo.precisaExtracao ? "picture_as_pdf" : "description"}
+                      tamanho={20}
+                    />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="truncate font-mono text-mono-code text-on-surface">
+                      {arquivo.name}
                     </p>
-                  ) : (
-                    arquivo.size > 0 && (
-                      <p className="mt-0.5 font-mono text-2xs text-text-tertiary">
-                        {tamanhoLegivel(arquivo.size)}
+                    {arquivo.estado === "falhou" && arquivo.motivoDaFalha ? (
+                      /* O motivo fica na linha do arquivo, não num toast que
+                         some: com um lote de dez, saber *qual* falhou e *por
+                         quê* é a informação inteira. */
+                      <p className="mt-0.5 font-body text-body-sm text-error">
+                        {arquivo.motivoDaFalha}
                       </p>
-                    )
+                    ) : (
+                      <p className="mt-0.5 font-mono text-mono-tag text-on-surface-variant">
+                        {arquivo.size > 0
+                          ? tamanhoLegivel(arquivo.size)
+                          : "tamanho lido pelo motor"}
+                        {arquivo.precisaExtracao && " · passa por reconhecimento de texto"}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex shrink-0 items-center gap-gutter-sm">
+                  <Selo
+                    tom={
+                      arquivo.estado === "falhou"
+                        ? "perigo"
+                        : arquivo.estado === "pronto"
+                          ? "deferido"
+                          : arquivo.estado === "na-fila"
+                            ? "neutro"
+                            : "acao"
+                    }
+                    comPonto={arquivo.estado !== "na-fila"}
+                  >
+                    {ROTULO_ESTADO[arquivo.estado]}
+                  </Selo>
+
+                  {!bloqueada && (
+                    <button
+                      type="button"
+                      onClick={() => aoMudarFila(fila.filter((_, n) => n !== i))}
+                      aria-label={`Remover ${arquivo.name}`}
+                      className="rounded-xs p-1 text-outline transition-colors duration-[120ms] hover:text-error"
+                    >
+                      <Icone nome="close" tamanho={16} />
+                    </button>
                   )}
                 </div>
-              </div>
-
-              <div className="flex shrink-0 items-center gap-2">
-                <Selo
-                  tom={
-                    arquivo.estado === "falhou"
-                      ? "perigo"
-                      : arquivo.estado === "pronto"
-                        ? "deferido"
-                        : arquivo.estado === "na-fila"
-                          ? "neutro"
-                          : "acao"
-                  }
-                  comPonto={arquivo.estado !== "na-fila"}
-                >
-                  {ROTULO_ESTADO[arquivo.estado]}
-                </Selo>
-
-                {!bloqueada && (
-                  <button
-                    onClick={() =>
-                      aoMudarFila(fila.filter((_, n) => n !== i))
-                    }
-                    aria-label={`Remover ${arquivo.name}`}
-                    className="rounded p-1 text-text-tertiary transition-colors hover:text-danger"
-                  >
-                    <Icone nome="close" tamanho={14} />
-                  </button>
-                )}
-              </div>
-            </li>
-          ))}
-        </ul>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </div>
   );

@@ -94,9 +94,9 @@ export function SeletorDeDocumentos({
         onChange={(e) => setBusca(e.target.value)}
       />
 
-      <ul className="mt-3 max-h-[46vh] divide-y divide-border-subtle overflow-y-auto rounded-md border border-border-subtle">
+      <ul className="mt-3 max-h-[46vh] divide-y divide-surface-container overflow-y-auto rounded-md border border-surface-container-high">
         {visiveis.length === 0 && (
-          <li className="px-3 py-6 text-center text-sm text-text-tertiary">
+          <li className="px-3 py-6 text-center text-sm text-outline">
             Nenhum documento com esse termo.
           </li>
         )}
@@ -105,15 +105,15 @@ export function SeletorDeDocumentos({
           const conversavel = politica?.id === "placeholder";
           return (
             <li key={d.id}>
-              <label className="flex cursor-pointer items-center gap-3 px-3 py-2.5 hover:bg-surface-hover">
+              <label className="flex cursor-pointer items-center gap-3 px-3 py-2.5 hover:bg-surface-container-low">
                 <Marcador
                   marcado={marcados.has(d.id)}
                   aoAlternar={() => alternar(d.id)}
                   rotulo={`Marcar ${d.nome}`}
                 />
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm text-text">{d.nome}</span>
-                  <span className="block truncate font-mono text-2xs text-text-tertiary">
+                  <span className="block truncate text-sm text-on-surface">{d.nome}</span>
+                  <span className="block truncate font-mono text-mono-tag text-outline">
                     {d.cnj ?? "Avulsos"} · {dataCurta(d.gravadoEm)} ·{" "}
                     {d.totalOcorrencias.toLocaleString("pt-BR")} ocorrências
                   </span>
@@ -129,7 +129,7 @@ export function SeletorDeDocumentos({
         })}
       </ul>
 
-      <p className="mt-3 text-xs text-text-tertiary">
+      <p className="mt-3 text-xs text-outline">
         Os documentos escolhidos passam a compartilhar uma numeração só: a mesma pessoa recebe o
         mesmo pseudônimo em todas as peças.
       </p>

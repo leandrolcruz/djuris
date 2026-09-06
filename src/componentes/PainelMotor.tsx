@@ -17,14 +17,14 @@ export function MotorCarregando({ modoNlp }: { modoNlp: string }) {
         <Icone
           nome="lock"
           tamanho={28}
-          className="mx-auto text-accent"
+          className="mx-auto text-primary"
           /* `animate-pulse-soft` em vez de rotação: um cadeado girando sugere
              um relógio, não um carregamento. */
         />
-        <h2 className="mt-4 font-mono text-base font-semibold text-text">
+        <h2 className="mt-4 font-mono text-base font-semibold text-on-surface">
           Carregando o motor de anonimização
         </h2>
-        <p className="mx-auto mt-2 max-w-sm text-sm text-text-tertiary">
+        <p className="mx-auto mt-2 max-w-sm text-sm text-outline">
           {modoNlp === "transformer"
             ? "Iniciando o modelo BERT jurídico. A primeira execução pode levar alguns minutos."
             : "O modelo de linguagem está sendo iniciado."}
@@ -32,11 +32,11 @@ export function MotorCarregando({ modoNlp }: { modoNlp: string }) {
         <div
           role="progressbar"
           aria-label="Carregando o motor"
-          className="mx-auto mt-6 h-1 w-48 overflow-hidden rounded-full bg-border-subtle"
+          className="mx-auto mt-6 h-1 w-48 overflow-hidden rounded-full bg-surface-container-high"
         >
-          <div className="h-full w-1/2 animate-pulse-soft rounded-full bg-accent" />
+          <div className="h-full w-1/2 animate-pulse-soft rounded-full bg-primary" />
         </div>
-        <p className="mt-4 text-xs text-text-tertiary">
+        <p className="mt-4 text-xs text-outline">
           O trilho à esquerda continua disponível.
         </p>
       </div>
@@ -48,11 +48,11 @@ export function MotorComFalha({ aoTentarDeNovo }: { aoTentarDeNovo: () => void }
   return (
     <div className="flex flex-1 items-center justify-center px-8">
       <div className="animate-fade-in text-center" role="alert">
-        <Icone nome="warning" tamanho={28} className="mx-auto text-danger" />
-        <h2 className="mt-4 font-mono text-base font-semibold text-danger">
+        <Icone nome="warning" tamanho={28} className="mx-auto text-error" />
+        <h2 className="mt-4 font-mono text-base font-semibold text-error">
           O motor de anonimização não respondeu
         </h2>
-        <p className="mx-auto mt-2 max-w-sm text-sm text-text-tertiary">
+        <p className="mx-auto mt-2 max-w-sm text-sm text-outline">
           Ele roda como um programa local junto com o aplicativo. Tentar de novo
           costuma resolver; se persistir, feche e abra o aplicativo.
         </p>

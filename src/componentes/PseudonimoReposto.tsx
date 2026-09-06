@@ -23,7 +23,7 @@ export function PseudonimoReposto({
   return (
     <mark
       title={`repostos localmente no lugar de ${rotulo}`}
-      className="rounded-[3px] px-0.5 font-medium text-text"
+      className="rounded-[3px] px-0.5 font-medium text-on-surface"
       style={{
         backgroundColor: `color-mix(in srgb, ${corDaEntidade(tipo)} 22%, transparent)`,
         boxShadow: `inset 0 -1px 0 ${corDaEntidade(tipo)}`,
@@ -45,7 +45,7 @@ export function PseudonimoDesconhecido({ rotulo }: { rotulo: string }) {
   return (
     <mark
       title="este pseudônimo não existe nos documentos desta conversa"
-      className="rounded-[3px] border border-dashed border-danger px-1 font-mono text-2xs text-danger"
+      className="rounded-[3px] border border-dashed border-error px-1 font-mono text-mono-tag text-error"
       style={{ backgroundColor: "transparent" }}
     >
       {rotulo} ?

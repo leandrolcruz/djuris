@@ -67,12 +67,12 @@ function Secao({
 }) {
   return (
     <section id={`ajustes-${id}`} aria-labelledby={`ajustes-${id}-titulo`} className="scroll-mt-6">
-      <h2 id={`ajustes-${id}-titulo`} className="font-mono text-base font-semibold text-text">
+      <h2 id={`ajustes-${id}-titulo`} className="font-mono text-base font-semibold text-on-surface">
         {titulo}
       </h2>
-      {descricao && <p className="mt-1 text-sm text-text-tertiary">{descricao}</p>}
+      {descricao && <p className="mt-1 text-sm text-outline">{descricao}</p>}
       <Cartao semPreenchimento className="mt-3">
-        <div className="divide-y divide-border-subtle px-4">{children}</div>
+        <div className="divide-y divide-surface-container px-4">{children}</div>
       </Cartao>
     </section>
   );
@@ -186,8 +186,8 @@ export function Ajustes({
                         "w-full rounded-md px-3 py-1.5 text-left font-mono text-sm",
                         "transition-colors duration-[120ms]",
                         atual
-                          ? "bg-surface text-text shadow-sm"
-                          : "text-text-secondary hover:bg-surface-hover hover:text-text",
+                          ? "bg-surface-container-lowest text-on-surface shadow-sm"
+                          : "text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface",
                       ].join(" ")}
                     >
                       {s.rotulo}
@@ -229,7 +229,7 @@ export function Ajustes({
                 descricao={
                   prefs.pastaDeSaida ? (
                     <>
-                      Em <code className="font-mono text-text">{prefs.pastaDeSaida}</code>
+                      Em <code className="font-mono text-on-surface">{prefs.pastaDeSaida}</code>
                     </>
                   ) : (
                     "Ao lado do arquivo original, com o nome acrescido do formato escolhido."
@@ -396,8 +396,8 @@ export function Ajustes({
                   titulo="Por que caiu"
                   descricao={
                     <>
-                      Pedido <span className="font-mono text-text">{avisoDeModo.solicitado}</span>,
-                      subiu <span className="font-mono text-text">{avisoDeModo.efetivo}</span>.{" "}
+                      Pedido <span className="font-mono text-on-surface">{avisoDeModo.solicitado}</span>,
+                      subiu <span className="font-mono text-on-surface">{avisoDeModo.efetivo}</span>.{" "}
                       {avisoDeModo.motivo}
                     </>
                   }

@@ -73,7 +73,7 @@ export function CliInstaller({ showToast }: Props) {
       descricao="O comando tecjustica-sigilo, para anonimizar pelo terminal ou por um agente."
       semPreenchimento
     >
-      <div className="divide-y divide-border-subtle px-4">
+      <div className="divide-y divide-surface-container px-4">
         <LinhaDeAjuste
           titulo="Windows (cmd, PowerShell)"
           descricao="Acrescenta a pasta do motor ao PATH do seu usuário. Depois de ativar, abra um terminal novo."
@@ -147,13 +147,13 @@ export function CliInstaller({ showToast }: Props) {
           descricao="Para um agente (Claude Code e afins), a saída em JSON traz anonymized_text e entities_found — tipo, texto, posições e confiança."
           empilhado
         >
-          <pre className="overflow-x-auto rounded-md bg-surface-sunken px-3 py-2.5 font-mono text-xs leading-relaxed text-text-secondary">
+          <pre className="overflow-x-auto rounded-md bg-surface-container-low px-3 py-2.5 font-mono text-xs leading-relaxed text-on-surface-variant">
             {"tecjustica-sigilo autos.pdf -o autos-anonimizado.md\n"}
             {"tecjustica-sigilo entrada.txt -q --format json\n"}
             {"tecjustica-sigilo conectar   # pareia com o aplicativo aberto"}
           </pre>
           {status && (
-            <p className="mt-2 truncate font-mono text-2xs text-text-tertiary" title={status.backendDir}>
+            <p className="mt-2 truncate font-mono text-mono-tag text-outline" title={status.backendDir}>
               Servido de {status.backendDir}
             </p>
           )}

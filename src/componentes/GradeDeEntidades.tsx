@@ -30,7 +30,7 @@ export function GradeDeEntidades({
   return (
     <div>
       <div className="mb-2 flex items-center justify-between">
-        <span className="font-mono text-xs text-text-tertiary">
+        <span className="font-mono text-xs text-outline">
           {selecionadas.length} de {ALL_ENTITIES.length}
         </span>
         <Botao
@@ -62,7 +62,7 @@ export function GradeDeEntidades({
               className={[
                 "flex min-h-7 items-center gap-2 rounded-md px-2 py-1 text-left",
                 "font-mono text-xs transition-colors duration-[120ms]",
-                ativa ? "text-text" : "text-text-tertiary hover:bg-surface-hover",
+                ativa ? "text-on-surface" : "text-outline hover:bg-surface-container-low",
               ].join(" ")}
               style={
                 ativa
@@ -82,7 +82,7 @@ export function GradeDeEntidades({
       </div>
 
       {selecionadas.length === 0 && (
-        <p role="alert" className="mt-2 text-xs text-danger">
+        <p role="alert" className="mt-2 text-xs text-error">
           Sem nenhum tipo escolhido não há o que mascarar.
         </p>
       )}

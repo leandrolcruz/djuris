@@ -108,39 +108,39 @@ export function AprovacaoDePareamento({
       }
     >
       <p>
-        <strong className="text-text">{pedido?.nome}</strong> quer usar o motor
+        <strong className="text-on-surface">{pedido?.nome}</strong> quer usar o motor
         de anonimização desta máquina.
       </p>
 
-      <p className="mt-3 font-mono text-xs text-text-secondary">
+      <p className="mt-3 font-mono text-xs text-on-surface-variant">
         Confira se este código é o mesmo que o programa mostrou:
       </p>
-      <p className="mt-1 font-mono text-2xl font-semibold tracking-[0.3em] text-accent tabular-nums">
+      <p className="mt-1 font-mono text-2xl font-semibold tracking-[0.3em] text-primary tabular-nums">
         {pedido?.codigo}
       </p>
-      <p className="mt-1 text-xs text-text-tertiary">
+      <p className="mt-1 text-xs text-outline">
         Se os códigos não baterem, recuse — o pedido é de outro programa.
       </p>
 
-      <div className="mt-4 space-y-1.5 border-t border-border-subtle pt-3">
-        <p className="text-xs text-text-tertiary">
+      <div className="mt-4 space-y-1.5 border-t border-surface-container-high pt-3">
+        <p className="text-xs text-outline">
           Origem:{" "}
-          <span className="font-mono text-text-secondary">
+          <span className="font-mono text-on-surface-variant">
             {pedido?.origem ?? "não informada"}
           </span>
         </p>
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-xs text-text-tertiary">Poderá:</span>
+          <span className="text-xs text-outline">Poderá:</span>
           {pedido?.escopos.map((e) => (
             <Selo key={e} tom="acao">
               {e}
             </Selo>
           ))}
           {pedido?.escopos.length === 0 && (
-            <span className="text-xs text-text-tertiary">nada — recuse</span>
+            <span className="text-xs text-outline">nada — recuse</span>
           )}
         </div>
-        <p className="flex items-start gap-1.5 pt-1 text-xs text-text-tertiary">
+        <p className="flex items-start gap-1.5 pt-1 text-xs text-outline">
           <Icone nome="lock" tamanho={13} className="mt-0.5 shrink-0" />
           Não poderá abrir arquivos do seu disco por caminho.
         </p>
