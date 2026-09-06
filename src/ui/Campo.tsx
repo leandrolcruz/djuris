@@ -1,5 +1,5 @@
 import { useId } from "react";
-import type { InputHTMLAttributes, ReactNode } from "react";
+import type { InputHTMLAttributes, ReactNode, Ref } from "react";
 import { Icone, type NomeIcone } from "./Icone";
 
 /**
@@ -28,6 +28,8 @@ interface CampoProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "id"> {
   erro?: string;
   /** Elemento à direita dentro da moldura — atalho, botão de limpar. */
   sufixo?: ReactNode;
+  /** Vai para o `<input>`, não para a moldura — quem chama quer dar foco. */
+  ref?: Ref<HTMLInputElement>;
 }
 
 export function Campo({
@@ -38,6 +40,7 @@ export function Campo({
   erro,
   sufixo,
   className = "",
+  ref,
   ...resto
 }: CampoProps) {
   const id = useId();
@@ -71,6 +74,7 @@ export function Campo({
           </span>
         )}
         <input
+          ref={ref}
           id={id}
           aria-invalid={erro ? true : undefined}
           aria-describedby={apoio || erro ? idApoio : undefined}

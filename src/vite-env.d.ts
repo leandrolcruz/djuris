@@ -30,6 +30,11 @@ interface EntradaDoCofre {
   porTipo: Record<string, number>;
   /** Política de máscara; ausente no que foi guardado antes da v1.4.0. */
   politicaMascara?: string;
+  /**
+   * Quando um humano conferiu as tarjas e salvou. ISO 8601.
+   * Ausente significa não revisado, nunca "provavelmente sim".
+   */
+  revisadoEm?: string;
   paginasComErro: number;
   totalPaginas: number;
 }
@@ -70,6 +75,13 @@ interface CofreAPI {
     entrada: Omit<EntradaDoCofre, "id" | "gravadoEm">,
     conteudo: ConteudoDoCofre
   ) => Promise<EntradaDoCofre | null>;
+  /**
+   * Carimba a data de revisão no índice. `null` se o documento já saiu.
+   *
+   * Toca só o índice: passar por `atualizar` decifraria e recifraria o
+   * documento inteiro para gravar uma data.
+   */
+  marcarRevisado: (id: string) => Promise<EntradaDoCofre | null>;
   ler: (id: string) => Promise<ConteudoDoCofre | null>;
   apagar: (id: string) => Promise<void>;
   esvaziar: () => Promise<void>;

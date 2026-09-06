@@ -160,6 +160,21 @@ export function useBiblioteca(cofreLigado: boolean, diasDeExpurgo: number) {
     [itens]
   );
 
+  /**
+   * Carimba a data de revisão no índice.
+   *
+   * Separado de `atualizar` porque não há conteúdo a reescrever: passar por lá
+   * decifraria e recifraria o documento inteiro para gravar uma data.
+   */
+  const marcarRevisado = useCallback(async (id: string): Promise<boolean> => {
+    const api = window.electronAPI?.cofre;
+    if (!api?.marcarRevisado) return false;
+    const entrada = await api.marcarRevisado(id);
+    if (!entrada) return false;
+    setItens((atuais) => atuais.map((i) => (i.id === id ? entrada : i)));
+    return true;
+  }, []);
+
   /** Reconstrói o `ProcessedFile` a partir do cofre, para a revisão reabrir. */
   const abrir = useCallback(
     async (item: EntradaDoCofre): Promise<ProcessedFile | null> => {
@@ -207,6 +222,7 @@ export function useBiblioteca(cofreLigado: boolean, diasDeExpurgo: number) {
     expurgados,
     guardar,
     atualizar,
+    marcarRevisado,
     abrir,
     apagar,
     esvaziar,

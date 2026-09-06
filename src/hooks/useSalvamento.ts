@@ -48,12 +48,17 @@ export function useSalvamento({
   pastaDeSaida,
 }: DependenciasSalvamento) {
   const caminhoPara = useCallback(
-    (arquivo: ProcessedFile) => {
+    /* `pastaAlternativa` vence a preferência. Ela existe para a exportação em
+       lote do cofre, em que o usuário escolhe a pasta na hora e não faz
+       sentido gravar o processo inteiro ao lado de cada original — que é o
+       padrão certo para o caminho normal. */
+    (arquivo: ProcessedFile, pastaAlternativa?: string) => {
       if (!window.electronAPI) return nomeDeSaida(arquivo.originalName, formato);
       const nome = nomeDeSaida(arquivo.originalName, formato);
-      if (pastaDeSaida) {
-        const sep = pastaDeSaida.includes("\\") ? "\\" : "/";
-        return `${pastaDeSaida}${pastaDeSaida.endsWith(sep) ? "" : sep}${nome}`;
+      const pasta = pastaAlternativa ?? pastaDeSaida;
+      if (pasta) {
+        const sep = pasta.includes("\\") ? "\\" : "/";
+        return `${pasta}${pasta.endsWith(sep) ? "" : sep}${nome}`;
       }
       return caminhoDeSaida(arquivo.originalPath, arquivo.originalName, formato);
     },
@@ -75,13 +80,13 @@ export function useSalvamento({
    * TypeScript, então nenhum typecheck pegaria. Daí o cuidado explícito aqui.
    */
   const salvarTodos = useCallback(
-    async (arquivos: ProcessedFile[]) => {
+    async (arquivos: ProcessedFile[], pastaAlternativa?: string) => {
       const gravados: string[] = [];
       let cancelados = 0;
 
       try {
         for (const arquivo of arquivos) {
-          const destino = caminhoPara(arquivo);
+          const destino = caminhoPara(arquivo, pastaAlternativa);
           const saida = await conteudoDeSaida(arquivo, formato);
 
           if (window.electronAPI) {

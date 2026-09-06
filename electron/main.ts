@@ -720,6 +720,7 @@ ipcMain.handle(
     conteudo: cofre.ConteudoDoCofre
   ) => cofre.atualizar(id, entrada, conteudo)
 );
+ipcMain.handle("cofre-marcar-revisado", (_e, id: string) => cofre.marcarRevisado(id));
 ipcMain.handle("cofre-ler", (_e, id: string) => cofre.ler(id));
 ipcMain.handle("cofre-apagar", (_e, id: string) => cofre.apagar(id));
 ipcMain.handle("cofre-esvaziar", () => cofre.esvaziar());

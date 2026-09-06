@@ -126,6 +126,68 @@ function Casca() {
     pastaDeSaida: prefs.pastaDeSaida,
   });
 
+  /**
+   * Salva os arquivos revisados e carimba a revisão no cofre.
+   *
+   * As duas coisas andam juntas de propósito: "salvar" na tela de Revisão é o
+   * gesto pelo qual um humano declara ter conferido as tarjas, e é essa
+   * declaração que a exportação em lote e o filtro "pendente de validação"
+   * consultam depois. Carimbar em outro lugar deixaria os dois em desacordo.
+   *
+   * O carimbo não bloqueia nem desfaz o salvamento: o arquivo em disco é o que
+   * importa, e um cofre desligado (ou um documento já apagado) não pode
+   * impedir a entrega.
+   */
+  const salvarERevisar = useCallback(
+    async (arquivos: ProcessedFile[]) => {
+      await salvarTodos(arquivos);
+      for (const arquivo of arquivos) {
+        const id =
+          estado.revisao?.idNoCofre ?? idsNoCofre.current.get(arquivo.originalPath);
+        if (id) await biblioteca.marcarRevisado(id);
+      }
+    },
+    [salvarTodos, estado.revisao, biblioteca]
+  );
+
+  /**
+   * Exporta os documentos escolhidos do cofre para uma pasta.
+   *
+   * Reusa o mesmo caminho de gravação da Revisão — `nomeDeSaida` decide a
+   * extensão, e a regra de que a saída é texto e nunca o formato de entrada
+   * vale igual aqui.
+   */
+  const exportarDoCofre = useCallback(
+    async (ids: string[]) => {
+      const pasta = await window.electronAPI?.selectDirectory?.();
+      if (!pasta) return;
+
+      const arquivos: ProcessedFile[] = [];
+      const ilegiveis: string[] = [];
+      for (const id of ids) {
+        const item = biblioteca.itens.find((i) => i.id === id);
+        if (!item) continue;
+        const arquivo = await biblioteca.abrir(item);
+        if (arquivo) arquivos.push(arquivo);
+        else ilegiveis.push(item.nome);
+      }
+
+      if (arquivos.length > 0) await salvarTodos(arquivos, pasta);
+
+      /* Documento que o cofre não devolveu não pode sumir do relatório: o
+         aviso de sucesso do `salvarTodos` conta só o que foi gravado, e sem
+         esta linha a diferença entre "exportei 8" e "marquei 10" ficaria sem
+         explicação. */
+      if (ilegiveis.length > 0) {
+        avisar(
+          `Não foi possível ler do cofre: ${ilegiveis.join(", ")}.`,
+          "erro"
+        );
+      }
+    },
+    [biblioteca, salvarTodos, avisar]
+  );
+
   /** Guarda o lote no cofre, contando o que falhou em vez de silenciar. */
   /** Caminho do arquivo → id no cofre, para o que foi guardado nesta sessão. */
   const idsNoCofre = useRef(new Map<string, string>());
@@ -384,7 +446,7 @@ function Casca() {
     if (estado.revisao) {
       return (
         <Revisao
-          aoSalvarTodos={() => salvarTodos(estado.revisao!.arquivos)}
+          aoSalvarTodos={() => salvarERevisar(estado.revisao!.arquivos)}
           aoBaixarArquivo={baixarUm}
           aoRejeitarDeteccao={rejeitarDeteccao}
         />
@@ -420,6 +482,7 @@ function Casca() {
             aoAbrir={abrirDaBiblioteca}
             aoApagar={biblioteca.apagar}
             aoConversar={(ids) => despachar({ tipo: "abrir-conversa", ids })}
+            aoExportar={exportarDoCofre}
             aoIrParaMesa={() => despachar({ tipo: "ir-para", destino: "mesa" })}
           />
         );
