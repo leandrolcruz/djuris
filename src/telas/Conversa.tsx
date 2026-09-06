@@ -198,6 +198,7 @@ export function Conversa({
   const [avisosAbertos, setAvisosAbertos] = useState(false);
   const [buscaSessao, setBuscaSessao] = useState("");
   const [renomeando, setRenomeando] = useState<string | null>(null);
+  const [gavetaAberta, setGavetaAberta] = useState(false);
   const [custo, setCusto] = useState<Awaited<ReturnType<typeof orcamento>> | null>(null);
 
   const rolagem = useRef<HTMLDivElement>(null);
@@ -323,6 +324,164 @@ export function Conversa({
     else porGrupo.set(g, [s]);
   }
 
+  /* A lista aparece em dois lugares: coluna fixa a partir de 1024px e
+     gaveta abaixo disso. Sem a gaveta ela sumia numa janela estreita, e com
+     ela ia embora a única forma de trocar de conversa — o mesmo defeito que
+     o painel de ocorrências da Revisão já teve. */
+  const listaDeSessoes = (
+    <>
+      <div className="flex min-h-0 flex-col">
+        <div className="flex flex-col gap-gutter-sm bg-surface-container-lowest/70 p-gutter-md">
+          <Botao
+            tipo="primario"
+            icone="add"
+            className="w-full"
+            disabled={documentos.length === 0}
+            onClick={() => setEscolhendo(true)}
+          >
+            Nova conversa
+          </Botao>
+          {sessoes.length > 1 && (
+            <Campo
+              rotulo="Buscar nas conversas"
+              rotuloOculto
+              icone="search"
+              placeholder="Buscar nos diálogos…"
+              value={buscaSessao}
+              onChange={(e) => setBuscaSessao(e.target.value)}
+            />
+          )}
+        </div>
+
+        <div className="flex-1 space-y-4 overflow-y-auto px-gutter-sm py-gutter-xs">
+          {[...porGrupo.entries()].map(([grupo, lista]) => (
+            <div key={grupo}>
+              <div className="flex items-center justify-between px-gutter-sm py-1">
+                <span className="font-mono text-mono-tag tracking-wider text-outline uppercase">
+                  {grupo}
+                </span>
+                <span className="font-mono text-mono-tag text-outline-variant">
+                  {lista.length} {lista.length === 1 ? "sessão" : "sessões"}
+                </span>
+              </div>
+              <ul className="mt-1 space-y-1">
+                {lista.map((s) => {
+                  const ativa = s.id === estado?.id;
+                  return (
+                    <li key={s.id}>
+                      <div
+                        className={[
+                          "group relative flex items-start justify-between gap-1 rounded-lg p-2.5 transition-all duration-[120ms]",
+                          ativa
+                            ? "bg-surface-container-lowest shadow-sm"
+                            : "hover:bg-surface-container-high",
+                        ].join(" ")}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => retomar(s)}
+                          className="flex min-w-0 flex-1 items-start gap-2.5 text-left"
+                        >
+                          <span
+                            className={`mt-0.5 shrink-0 ${ativa ? "text-primary" : "text-outline"}`}
+                          >
+                            <Icone
+                              nome={s.comprometida ? "block" : "forum"}
+                              tamanho={18}
+                              preenchido={ativa}
+                            />
+                          </span>
+                          <span className="flex min-w-0 flex-col">
+                            <span
+                              className={[
+                                "truncate",
+                                ativa
+                                  ? "font-display text-body-sm font-semibold text-primary"
+                                  : "font-body text-body-sm text-on-surface",
+                              ].join(" ")}
+                            >
+                              {s.titulo}
+                            </span>
+                            <span className="truncate font-mono text-mono-tag text-on-surface-variant">
+                              {s.totalTurnos === 0
+                                ? "sem perguntas ainda"
+                                : `${s.totalTurnos} turnos · ${horaCurta(s.ultimaAtividade)}`}
+                            </span>
+                          </span>
+                        </button>
+
+                        <span className="flex shrink-0 items-center opacity-0 transition-opacity duration-[120ms] group-hover:opacity-100 group-focus-within:opacity-100">
+                          <button
+                            type="button"
+                            onClick={() => setRenomeando(s.id)}
+                            title="Renomear"
+                            aria-label={`Renomear "${s.titulo}"`}
+                            className="grid size-6 place-items-center rounded-xs text-outline hover:bg-surface-container-highest hover:text-on-surface"
+                          >
+                            <Icone nome="edit" tamanho={14} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setAFechar(s)}
+                            title="Descartar esta conversa"
+                            aria-label={`Descartar "${s.titulo}"`}
+                            className="grid size-6 place-items-center rounded-xs text-outline hover:bg-error-container hover:text-on-error-container"
+                          >
+                            <Icone nome="delete" tamanho={14} />
+                          </button>
+                        </span>
+                      </div>
+
+                      {renomeando === s.id && (
+                        <form
+                          className="mt-1 px-2.5"
+                          onSubmit={(e) => {
+                            e.preventDefault();
+                            const campo = e.currentTarget.elements.namedItem(
+                              "titulo"
+                            ) as HTMLInputElement;
+                            void renomearSessao(s.id, campo.value);
+                            setRenomeando(null);
+                          }}
+                        >
+                          <input
+                            name="titulo"
+                            defaultValue={s.titulo}
+                            autoFocus
+                            onBlur={() => setRenomeando(null)}
+                            aria-label="Novo nome da conversa"
+                            className="w-full rounded-sm bg-surface-container-lowest px-2 py-1 font-body text-body-sm text-on-surface outline-none ring-2 ring-primary/30"
+                          />
+                        </form>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
+
+          {sessoes.length === 0 && (
+            <p className="px-gutter-sm py-gutter-md font-body text-body-sm text-on-surface-variant">
+              Nenhuma conversa aberta ainda.
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* O limite escrito onde ele é lido. */}
+      <div className="flex items-start gap-2 p-gutter-md">
+        <span className="mt-0.5 shrink-0 text-outline">
+          <Icone nome="info" tamanho={16} />
+        </span>
+        <p className="font-body text-body-sm leading-snug text-on-surface-variant">
+          As conversas existem só enquanto o aplicativo está aberto. Nada delas é gravado em
+          disco — nem aqui, nem no cofre.
+        </p>
+      </div>
+    </>
+  );
+
   return (
     <div className="flex h-full min-h-0">
       {/* ---------------------------------------------------------------- */}
@@ -332,156 +491,25 @@ export function Conversa({
         aria-label="Conversas desta sessão"
         className="hidden w-[300px] shrink-0 flex-col justify-between bg-surface-container-low lg:flex"
       >
-        <div className="flex min-h-0 flex-col">
-          <div className="flex flex-col gap-gutter-sm bg-surface-container-lowest/70 p-gutter-md">
-            <Botao
-              tipo="primario"
-              icone="add"
-              className="w-full"
-              disabled={documentos.length === 0}
-              onClick={() => setEscolhendo(true)}
-            >
-              Nova conversa
-            </Botao>
-            {sessoes.length > 1 && (
-              <Campo
-                rotulo="Buscar nas conversas"
-                rotuloOculto
-                icone="search"
-                placeholder="Buscar nos diálogos…"
-                value={buscaSessao}
-                onChange={(e) => setBuscaSessao(e.target.value)}
-              />
-            )}
-          </div>
-
-          <div className="flex-1 space-y-4 overflow-y-auto px-gutter-sm py-gutter-xs">
-            {[...porGrupo.entries()].map(([grupo, lista]) => (
-              <div key={grupo}>
-                <div className="flex items-center justify-between px-gutter-sm py-1">
-                  <span className="font-mono text-mono-tag tracking-wider text-outline uppercase">
-                    {grupo}
-                  </span>
-                  <span className="font-mono text-mono-tag text-outline-variant">
-                    {lista.length} {lista.length === 1 ? "sessão" : "sessões"}
-                  </span>
-                </div>
-                <ul className="mt-1 space-y-1">
-                  {lista.map((s) => {
-                    const ativa = s.id === estado?.id;
-                    return (
-                      <li key={s.id}>
-                        <div
-                          className={[
-                            "group relative flex items-start justify-between gap-1 rounded-lg p-2.5 transition-all duration-[120ms]",
-                            ativa
-                              ? "bg-surface-container-lowest shadow-sm"
-                              : "hover:bg-surface-container-high",
-                          ].join(" ")}
-                        >
-                          <button
-                            type="button"
-                            onClick={() => retomar(s)}
-                            className="flex min-w-0 flex-1 items-start gap-2.5 text-left"
-                          >
-                            <span
-                              className={`mt-0.5 shrink-0 ${ativa ? "text-primary" : "text-outline"}`}
-                            >
-                              <Icone
-                                nome={s.comprometida ? "block" : "forum"}
-                                tamanho={18}
-                                preenchido={ativa}
-                              />
-                            </span>
-                            <span className="flex min-w-0 flex-col">
-                              <span
-                                className={[
-                                  "truncate",
-                                  ativa
-                                    ? "font-display text-body-sm font-semibold text-primary"
-                                    : "font-body text-body-sm text-on-surface",
-                                ].join(" ")}
-                              >
-                                {s.titulo}
-                              </span>
-                              <span className="truncate font-mono text-mono-tag text-on-surface-variant">
-                                {s.totalTurnos === 0
-                                  ? "sem perguntas ainda"
-                                  : `${s.totalTurnos} turnos · ${horaCurta(s.ultimaAtividade)}`}
-                              </span>
-                            </span>
-                          </button>
-
-                          <span className="flex shrink-0 items-center opacity-0 transition-opacity duration-[120ms] group-hover:opacity-100 group-focus-within:opacity-100">
-                            <button
-                              type="button"
-                              onClick={() => setRenomeando(s.id)}
-                              title="Renomear"
-                              aria-label={`Renomear "${s.titulo}"`}
-                              className="grid size-6 place-items-center rounded-xs text-outline hover:bg-surface-container-highest hover:text-on-surface"
-                            >
-                              <Icone nome="edit" tamanho={14} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setAFechar(s)}
-                              title="Descartar esta conversa"
-                              aria-label={`Descartar "${s.titulo}"`}
-                              className="grid size-6 place-items-center rounded-xs text-outline hover:bg-error-container hover:text-on-error-container"
-                            >
-                              <Icone nome="delete" tamanho={14} />
-                            </button>
-                          </span>
-                        </div>
-
-                        {renomeando === s.id && (
-                          <form
-                            className="mt-1 px-2.5"
-                            onSubmit={(e) => {
-                              e.preventDefault();
-                              const campo = e.currentTarget.elements.namedItem(
-                                "titulo"
-                              ) as HTMLInputElement;
-                              void renomearSessao(s.id, campo.value);
-                              setRenomeando(null);
-                            }}
-                          >
-                            <input
-                              name="titulo"
-                              defaultValue={s.titulo}
-                              autoFocus
-                              onBlur={() => setRenomeando(null)}
-                              aria-label="Novo nome da conversa"
-                              className="w-full rounded-sm bg-surface-container-lowest px-2 py-1 font-body text-body-sm text-on-surface outline-none ring-2 ring-primary/30"
-                            />
-                          </form>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            ))}
-
-            {sessoes.length === 0 && (
-              <p className="px-gutter-sm py-gutter-md font-body text-body-sm text-on-surface-variant">
-                Nenhuma conversa aberta ainda.
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* O limite escrito onde ele é lido. */}
-        <div className="flex items-start gap-2 p-gutter-md">
-          <span className="mt-0.5 shrink-0 text-outline">
-            <Icone nome="info" tamanho={16} />
-          </span>
-          <p className="font-body text-body-sm leading-snug text-on-surface-variant">
-            As conversas existem só enquanto o aplicativo está aberto. Nada delas é gravado em
-            disco — nem aqui, nem no cofre.
-          </p>
-        </div>
+        {listaDeSessoes}
       </aside>
+
+      {gavetaAberta && (
+        <div
+          className="fixed inset-0 z-100 flex bg-[var(--veu)] lg:hidden"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setGavetaAberta(false);
+          }}
+        >
+          <div
+            role="dialog"
+            aria-label="Conversas desta sessão"
+            className="flex w-[min(20rem,90vw)] flex-col justify-between bg-surface-container-low"
+          >
+            {listaDeSessoes}
+          </div>
+        </div>
+      )}
 
       {/* ---------------------------------------------------------------- */}
       {/* Conversa                                                          */}
@@ -489,6 +517,16 @@ export function Conversa({
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="z-20 flex h-cabecalho shrink-0 items-center justify-between gap-gutter-md bg-surface-container-lowest/90 px-gutter-lg shadow-sm backdrop-blur">
           <div className="flex min-w-0 items-center gap-gutter-md">
+            {/* Abaixo de 1024px a lista de conversas é gaveta, e este é o
+                único caminho até ela. */}
+            <Botao
+              tipo="discreto"
+              circular
+              icone="menu"
+              className="lg:hidden"
+              aria-label="Abrir a lista de conversas"
+              onClick={() => setGavetaAberta(true)}
+            />
             <h1 className="min-w-0 truncate font-display text-headline-sm text-on-surface">
               {estado?.titulo ?? "Conversar com os autos"}
             </h1>
