@@ -1,3 +1,5 @@
+import { Icone, type NomeIcone } from "./Icone";
+
 /**
  * Grupo segmentado — escolha de um entre poucos, sempre visíveis.
  *
@@ -15,6 +17,7 @@
 interface OpcaoSegmento<T extends string> {
   valor: T;
   rotulo: string;
+  icone?: NomeIcone;
   /** Vira `title` e `aria-label`, para o que o rótulo curto não explica. */
   descricao?: string;
 }
@@ -58,7 +61,7 @@ export function GrupoSegmentado<T extends string>({
       role="radiogroup"
       aria-label={rotulo}
       className={[
-        "inline-flex rounded-lg border border-border-subtle bg-surface-sunken p-0.5",
+        "inline-flex rounded-lg bg-surface-container-high p-1",
         className,
       ].join(" ")}
     >
@@ -74,17 +77,18 @@ export function GrupoSegmentado<T extends string>({
             tabIndex={ativo ? 0 : -1}
             onClick={() => onChange(opcao.valor)}
             onKeyDown={(e) => aoTeclar(e, indice)}
-            /* O ativo é a folha pousada sobre o trilho rebaixado — o mesmo
-               gesto do cartão sobre a mesa —, não um preenchimento de ação:
-               escolher entre "MD" e "DOCX" não é um comando, é um estado. */
+            /* O ativo é o cartão pousado sobre o trilho rebaixado, não um
+               preenchimento de ação: escolher entre "MD" e "DOCX" não é um
+               comando, é um estado. */
             className={[
-              "min-h-7 rounded-md px-3 py-1 font-mono text-xs font-medium",
-              "transition-colors duration-[120ms]",
+              "flex min-h-8 items-center gap-1.5 rounded-sm px-4 py-1.5 text-label",
+              "transition-all duration-[120ms]",
               ativo
-                ? "bg-surface text-text shadow-sm"
-                : "text-text-tertiary hover:text-text",
+                ? "bg-surface-container-lowest font-display text-primary shadow-sm"
+                : "font-body text-on-surface-variant hover:text-on-surface",
             ].join(" ")}
           >
+            {opcao.icone && <Icone nome={opcao.icone} tamanho={16} />}
             {opcao.rotulo}
           </button>
         );

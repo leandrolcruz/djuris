@@ -37,14 +37,16 @@ export function LinhaDeAjuste({
   return (
     <div
       className={[
-        empilhado ? "py-4" : "flex items-center justify-between gap-6 py-4",
+        "rounded-md px-gutter-md py-gutter-sm transition-colors duration-[120ms]",
+        "hover:bg-surface-container-low/60",
+        empilhado ? "" : "flex items-center justify-between gap-gutter-lg",
         className,
       ].join(" ")}
     >
       <div className="min-w-0">
-        <p className="font-mono text-sm text-text">{titulo}</p>
+        <p className="font-display text-body-md font-semibold text-on-surface">{titulo}</p>
         {descricao && (
-          <p className="mt-0.5 max-w-prose text-xs leading-normal text-text-tertiary">
+          <p className="mt-0.5 max-w-prose font-body text-body-sm leading-normal text-on-surface-variant">
             {descricao}
           </p>
         )}

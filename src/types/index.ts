@@ -59,7 +59,7 @@ export const ALL_ENTITIES: EntityInfo[] = [
  */
 export const corDaEntidade = (tipo: string): string => {
   const info = ALL_ENTITIES.find((e) => e.id === tipo);
-  return info ? `var(--color-entity-${info.token})` : "var(--toner-3)";
+  return info ? `var(--color-entity-${info.token})` : "var(--outline)";
 };
 
 /** Rótulo em português de um tipo, com o próprio tipo como reserva. */

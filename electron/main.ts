@@ -158,10 +158,24 @@ function stopPythonBackend(): void {
   }
 }
 
+/**
+ * Altura da faixa dos controles da janela, em px.
+ *
+ * Tem de casar com a altura do cabeçalho do aplicativo (64px), porque os três
+ * botões do Windows são desenhados pelo sistema *dentro* dela e ficam
+ * sobrepostos ao canto direito do cabeçalho. Divergindo, ou os botões flutuam
+ * sobre o conteúdo ou sobra uma faixa morta acima dele.
+ */
+const ALTURA_MOLDURA = 64;
+
 function createWindow(): void {
   mainWindow = new BrowserWindow({
-    width: 1100,
-    height: 750,
+    /* O desenho de três painéis (trilho 240 + tela + inspetor 340) só cabe
+       inteiro a partir de 1280px. Com 1100 o aplicativo abria já no modo
+       colapsado, que é o plano B e não o plano A. Abaixo de 1280 o inspetor
+       vira gaveta; abaixo de 1024 o trilho vira rail de ícones. */
+    width: 1440,
+    height: 900,
     minWidth: 800,
     minHeight: 600,
     webPreferences: {
@@ -176,20 +190,21 @@ function createWindow(): void {
        e a inicial segue o sistema, como o `backgroundColor` abaixo. */
     titleBarStyle: "hidden",
     titleBarOverlay: {
-      color: nativeTheme.shouldUseDarkColors ? "#0e1013" : "#e8e6df",
-      symbolColor: nativeTheme.shouldUseDarkColors ? "#eceae4" : "#16181d",
-      height: 40,
+      color: nativeTheme.shouldUseDarkColors ? "#0c1323" : "#faf8ff",
+      symbolColor: nativeTheme.shouldUseDarkColors ? "#dce2f9" : "#131b2e",
+      height: ALTURA_MOLDURA,
     },
     /* O menu nativo (File, Edit, View…) fica escondido. Ele continua
        acessível pelo Alt, para os atalhos de zoom e de DevTools em
        desenvolvimento, mas não ocupa uma faixa da janela em produção. */
     autoHideMenuBar: true,
-    /* Cor pintada antes de o CSS carregar. Ficou para trás na troca de paleta
-       (era o grafite `#0c0f1a`), e o efeito é um flash escuro na abertura de
-       quem usa o tema papel. Segue `nativeTheme` porque a preferência padrão é
-       "seguir o sistema": `--papel` no claro, `--papel` do tema noite no
-       escuro. Quem fixou um tema vê o flash certo assim que o CSS entra. */
-    backgroundColor: nativeTheme.shouldUseDarkColors ? "#14161a" : "#f2f1ec",
+    /* Cor pintada antes de o CSS carregar. É o `--background` de cada tema, e
+       segue `nativeTheme` porque a preferência padrão é "seguir o sistema".
+       Quem fixou um tema contrário vê o flash certo assim que o CSS entra.
+       Errar aqui não quebra nada e aparece toda abertura: já esteve num
+       grafite de duas paletas atrás, dando um flash escuro para quem usava o
+       tema claro. */
+    backgroundColor: nativeTheme.shouldUseDarkColors ? "#0c1323" : "#faf8ff",
   });
 
   const isDev = !app.isPackaged;
@@ -671,7 +686,7 @@ ipcMain.handle(
     mainWindow.setTitleBarOverlay({
       color: cores.fundo,
       symbolColor: cores.simbolo,
-      height: 40,
+      height: ALTURA_MOLDURA,
     });
   }
 );
@@ -705,6 +720,7 @@ ipcMain.handle(
     conteudo: cofre.ConteudoDoCofre
   ) => cofre.atualizar(id, entrada, conteudo)
 );
+ipcMain.handle("cofre-marcar-revisado", (_e, id: string) => cofre.marcarRevisado(id));
 ipcMain.handle("cofre-ler", (_e, id: string) => cofre.ler(id));
 ipcMain.handle("cofre-apagar", (_e, id: string) => cofre.apagar(id));
 ipcMain.handle("cofre-esvaziar", () => cofre.esvaziar());
@@ -783,6 +799,10 @@ async function detectarNaPergunta(texto: string): Promise<Ocorrencia[]> {
 ipcMain.handle("chat-modelos", () => MODELOS);
 ipcMain.handle("chat-abrir", (_e, ids: string[], modelo?: string) =>
   conversa.abrir(ids, modelo)
+);
+ipcMain.handle("chat-listar", () => conversa.listar());
+ipcMain.handle("chat-renomear", (_e, id: string, titulo: string) =>
+  conversa.renomear(id, titulo)
 );
 ipcMain.handle("chat-estado", (_e, id: string) => conversa.estado(id));
 ipcMain.handle("chat-orcamento", (_e, id: string) => conversa.orcamento(id));

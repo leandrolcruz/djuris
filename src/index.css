@@ -1,20 +1,26 @@
-/* Fontes auto-hospedadas: nada é buscado na rede para desenhar a interface.
-   Um @import do Google Fonts faria a tela depender da internet a cada abertura
-   — deixando a interface sem sua tipografia numa máquina de vara sem conexão,
-   e caindo em silêncio para system-ui.
-
-   A partir da v1.4.0 o aplicativo pode fazer uma chamada externa: a conversa
-   com os autos anonimizados, quando o usuário configura uma chave. Ela sai do
-   processo principal, nunca daqui — a política de segurança de conteúdo em
-   `index.html` restringe o renderer ao backend local justamente para que esta
-   camada continue sem saída para a internet.
-
-   São fontes **variáveis**: um arquivo por família cobre todo o intervalo de
-   peso 100–900, contra os seis arquivos estáticos que estavam aqui antes.
-   A itálica não é importada porque o sistema não a usa em lugar nenhum. */
-@import "@fontsource-variable/petrona/wght.css";
-@import "@fontsource-variable/azeret-mono/wght.css";
-
+/**
+ * Folha de entrada da interface.
+ *
+ * As fontes entram por pacote local, não por `@import` do Google Fonts. Um
+ * import de rede faria a tela depender da internet a cada abertura — deixando
+ * a interface sem sua tipografia numa máquina de vara sem conexão, e caindo em
+ * silêncio para system-ui. O CSP de `index.html` proíbe isso de qualquer jeito
+ * (`font-src 'self'`), então um import remoto não falharia visivelmente: ele
+ * simplesmente não carregaria.
+ *
+ * São `wght.css`, não `index.css` nem `wght-italic.css`: só o eixo de peso, só
+ * o estilo normal. A itálica existe nos pacotes e não é importada porque o
+ * sistema não a usa em lugar nenhum.
+ *
+ * `material-symbols/outlined.css` traz a fonte variável de ícones (3,9 MB de
+ * woff2, servida do próprio pacote). A ligadura é o nome do ícone — `<span
+ * class="material-symbols-outlined">security</span>` —, e o `font-display:
+ * block` do pacote evita que o nome cru apareça antes de a fonte carregar.
+ */
+@import "@fontsource-variable/plus-jakarta-sans/wght.css";
+@import "@fontsource-variable/inter/wght.css";
+@import "@fontsource-variable/jetbrains-mono/wght.css";
+@import "material-symbols/outlined.css";
 @import "tailwindcss";
 @import "./styles/tokens.css";
 
@@ -32,44 +38,80 @@ body,
 }
 
 body {
-  background-color: var(--color-bg);
-  color: var(--color-text);
-  /* Serifa é o padrão do documento: a prosa do app e o texto do processo são
-     a mesma voz. O que a máquina diz — rótulo, botão, número, estado — pede
-     `font-mono` explicitamente. */
-  font-family: var(--font-serif);
-  font-size: var(--text-sm);
-  line-height: var(--leading-normal);
+  background-color: var(--background);
+  color: var(--on-surface);
+  /* Inter é o padrão: a prosa do app e o texto do processo são a mesma voz de
+     leitura. Estrutura — título, botão, item de menu — pede `font-display`;
+     dado literal — CNJ, nome de arquivo, chip, métrica — pede `font-mono`. */
+  font-family: var(--font-body);
+  font-size: var(--text-body-md);
+  line-height: var(--text-body-md--line-height);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Texto do documento: 16px numa entrelinha larga, porque a tarefa aqui é ler
-   páginas inteiras de autos e conferir cada ocorrência mascarada. */
+/* Texto do documento. A medida de 780px não é enfeite: é o comprimento de
+   linha que o desenho fixa para leitura de peça judicial, e passar disso torna
+   a volta de linha cansativa em página inteira de autos. */
 .texto-documento {
-  font-family: var(--font-serif);
-  font-size: var(--text-base);
+  font-family: var(--font-body);
+  font-size: var(--text-body-lg);
   line-height: var(--leading-document);
+  max-width: 780px;
 }
 
-/* Scrollbar refinada */
+/* O ícone é sempre decoração: o nome acessível vive no elemento que o envolve.
+   `line-height: 1` e `display: block` evitam que a caixa da ligadura empurre a
+   linha de base de quem o contém. */
+.material-symbols-outlined {
+  font-size: inherit;
+  line-height: 1;
+  display: block;
+  user-select: none;
+}
+
+/* Scrollbar discreta, na cor do contorno do tema. */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--color-border);
-  border-radius: var(--radius-full);
+  background: var(--outline-variant);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-text-tertiary);
+  background: var(--outline);
+  background-clip: content-box;
 }
 
 ::selection {
-  background: var(--color-accent);
-  color: var(--color-on-accent);
+  background: var(--primary-fixed);
+  color: var(--on-primary-fixed);
+}
+
+/* Barra de rolagem escondida onde o desenho pede fita horizontal sem trilho
+   (as fitas de chip de filtro e de peças anexadas). */
+.sem-barra {
+  scrollbar-width: none;
+}
+.sem-barra::-webkit-scrollbar {
+  display: none;
+}
+
+/* Região de arrasto da janela. O Electron esconde a moldura do sistema
+   (`titleBarStyle: "hidden"`), então quem arrasta a janela é o cabeçalho do
+   app mais o bloco de marca do trilho. Todo controle dentro dessas faixas
+   precisa de `.sem-arrasto`, ou o clique vira arrasto. */
+.arrasto {
+  -webkit-app-region: drag;
+}
+.sem-arrasto {
+  -webkit-app-region: no-drag;
 }
 
 /* Animações */
@@ -128,10 +170,4 @@ body {
 }
 .stagger-children > *:nth-child(n + 6) {
   animation-delay: 250ms;
-}
-
-/* Área de arrastar e soltar, em estado ativo */
-.drop-zone-active {
-  border-color: var(--color-accent) !important;
-  background: var(--color-accent-muted) !important;
 }

@@ -45,7 +45,7 @@ export function Tabela<L>({
   rotulo,
 }: TabelaProps<L>) {
   if (linhas.length === 0 && vazio) {
-    return <div className="px-4 py-10 text-center text-sm text-text-tertiary">{vazio}</div>;
+    return <div className="px-gutter-md py-gutter-2xl text-center font-body text-body-md text-on-surface-variant">{vazio}</div>;
   }
 
   return (
@@ -54,14 +54,14 @@ export function Tabela<L>({
     <div className="w-full overflow-x-auto">
       <table className="w-full border-collapse text-left" aria-label={rotulo}>
         <thead>
-          <tr className="border-b border-border-subtle">
+          <tr className="bg-surface-container-low/75">
             {colunas.map((coluna) => (
               <th
                 key={coluna.chave}
                 scope="col"
                 className={[
-                  "px-3 py-2.5 font-mono text-xs font-medium",
-                  "text-text-tertiary",
+                  "px-gutter-md py-3.5 font-mono text-mono-tag tracking-wider uppercase",
+                  "text-outline",
                   coluna.numerica ? "text-right" : "",
                   coluna.estreita ? "w-px whitespace-nowrap" : "",
                 ].join(" ")}
@@ -96,15 +96,17 @@ export function Tabela<L>({
                   : undefined
               }
               className={[
-                "border-b border-border-subtle last:border-0",
-                aoAbrir ? "cursor-pointer hover:bg-surface-hover" : "",
+                /* 56px de altura de linha: a medida do desenho, e a que faz
+                   caber nome de arquivo em duas linhas com os chips ao lado. */
+                "group h-14 border-b border-surface-container last:border-0 transition-colors duration-[120ms]",
+                aoAbrir ? "cursor-pointer hover:bg-surface-container-low/60" : "",
               ].join(" ")}
             >
               {colunas.map((coluna) => (
                 <td
                   key={coluna.chave}
                   className={[
-                    "px-3 py-3 text-sm text-text",
+                    "px-gutter-md py-gutter-sm font-body text-body-sm text-on-surface",
                     coluna.numerica ? "text-right font-mono tabular-nums" : "",
                     coluna.estreita ? "w-px whitespace-nowrap" : "",
                   ].join(" ")}

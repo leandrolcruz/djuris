@@ -1,6 +1,6 @@
 {
   "name": "tecjustica-sigilo",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "description": "Anonimizador de PII para processos judiciais brasileiros",
   "main": "dist-electron/main.js",
   "scripts": {
@@ -37,9 +37,11 @@
     "wait-on": "^9.0.4"
   },
   "dependencies": {
-    "@fontsource-variable/azeret-mono": "^5.3.0",
-    "@fontsource-variable/petrona": "^5.3.0",
+    "@fontsource-variable/inter": "^5.3.0",
+    "@fontsource-variable/jetbrains-mono": "^5.3.0",
+    "@fontsource-variable/plus-jakarta-sans": "^5.3.0",
     "docx": "^9.7.1",
+    "material-symbols": "^0.47.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4"
   }

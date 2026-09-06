@@ -4,8 +4,9 @@ import { useLote, mensagemDoLote } from "./hooks/useLote";
 import { useSalvamento } from "./hooks/useSalvamento";
 import { useBiblioteca } from "./hooks/useBiblioteca";
 import { ProvedorEstado, useApp } from "./estado/AppEstado";
-import { DESTINOS, TrilhoNavegacao } from "./componentes/TrilhoNavegacao";
-import { BarraDeTitulo } from "./componentes/BarraDeTitulo";
+import { DESTINOS, BarraLateral } from "./componentes/BarraLateral";
+import { CabecalhoDoApp } from "./componentes/CabecalhoDoApp";
+import { FaixaDeAndamento } from "./componentes/Andamento";
 import { MotorCarregando, MotorComFalha } from "./componentes/PainelMotor";
 import { ConsentimentoCofre } from "./componentes/ConsentimentoCofre";
 import { AprovacaoDePareamento } from "./componentes/AprovacaoDePareamento";
@@ -15,7 +16,7 @@ import { Conversa } from "./telas/Conversa";
 import { Conexoes } from "./telas/Conexoes";
 import { Ajustes } from "./telas/Ajustes";
 import { Revisao } from "./telas/Revisao";
-import { Toast } from "./components/Toast";
+import { Aviso } from "./componentes/Aviso";
 import type { EntityFound, ProcessedFile } from "./types";
 import type { ClientePareado } from "./hooks/usePythonBackend";
 
@@ -124,6 +125,68 @@ function Casca() {
     formato: prefs.formato,
     pastaDeSaida: prefs.pastaDeSaida,
   });
+
+  /**
+   * Salva os arquivos revisados e carimba a revisão no cofre.
+   *
+   * As duas coisas andam juntas de propósito: "salvar" na tela de Revisão é o
+   * gesto pelo qual um humano declara ter conferido as tarjas, e é essa
+   * declaração que a exportação em lote e o filtro "pendente de validação"
+   * consultam depois. Carimbar em outro lugar deixaria os dois em desacordo.
+   *
+   * O carimbo não bloqueia nem desfaz o salvamento: o arquivo em disco é o que
+   * importa, e um cofre desligado (ou um documento já apagado) não pode
+   * impedir a entrega.
+   */
+  const salvarERevisar = useCallback(
+    async (arquivos: ProcessedFile[]) => {
+      await salvarTodos(arquivos);
+      for (const arquivo of arquivos) {
+        const id =
+          estado.revisao?.idNoCofre ?? idsNoCofre.current.get(arquivo.originalPath);
+        if (id) await biblioteca.marcarRevisado(id);
+      }
+    },
+    [salvarTodos, estado.revisao, biblioteca]
+  );
+
+  /**
+   * Exporta os documentos escolhidos do cofre para uma pasta.
+   *
+   * Reusa o mesmo caminho de gravação da Revisão — `nomeDeSaida` decide a
+   * extensão, e a regra de que a saída é texto e nunca o formato de entrada
+   * vale igual aqui.
+   */
+  const exportarDoCofre = useCallback(
+    async (ids: string[]) => {
+      const pasta = await window.electronAPI?.selectDirectory?.();
+      if (!pasta) return;
+
+      const arquivos: ProcessedFile[] = [];
+      const ilegiveis: string[] = [];
+      for (const id of ids) {
+        const item = biblioteca.itens.find((i) => i.id === id);
+        if (!item) continue;
+        const arquivo = await biblioteca.abrir(item);
+        if (arquivo) arquivos.push(arquivo);
+        else ilegiveis.push(item.nome);
+      }
+
+      if (arquivos.length > 0) await salvarTodos(arquivos, pasta);
+
+      /* Documento que o cofre não devolveu não pode sumir do relatório: o
+         aviso de sucesso do `salvarTodos` conta só o que foi gravado, e sem
+         esta linha a diferença entre "exportei 8" e "marquei 10" ficaria sem
+         explicação. */
+      if (ilegiveis.length > 0) {
+        avisar(
+          `Não foi possível ler do cofre: ${ilegiveis.join(", ")}.`,
+          "erro"
+        );
+      }
+    },
+    [biblioteca, salvarTodos, avisar]
+  );
 
   /** Guarda o lote no cofre, contando o que falhou em vez de silenciar. */
   /** Caminho do arquivo → id no cofre, para o que foi guardado nesta sessão. */
@@ -269,6 +332,58 @@ function Casca() {
    * motor repetiu quarenta vezes exigiria quarenta cliques para o mesmo efeito
    * que a gravação já teve.
    */
+  /**
+   * Reescreve a saída deste documento com o conjunto de ocorrências dado.
+   *
+   * É o caminho único de toda mudança de máscara na Revisão — liberar um
+   * termo, liberar uma ocorrência só, liberar todas, desfazer. Três coisas
+   * precisam acontecer juntas, e separá-las já custou bug:
+   *
+   * 1. `/remascarar` reescreve o texto e **renumera do zero**. Deixar buraco na
+   *    sequência faria `pseudonimos.conferir` recusar o documento, e um "não é
+   *    PII" viraria "este documento não pode mais ser conversado".
+   * 2. A tela recebe a versão nova.
+   * 3. O cofre é regravado. Ele é gravado assim que o processamento termina,
+   *    antes de qualquer revisão — sem isto a tela ficaria limpa e o cofre
+   *    guardaria a versão suja, que é de onde a conversa lê.
+   *
+   * Devolve o arquivo atualizado, ou `null` se o remascaramento falhou.
+   */
+  const aplicarMascaras = useCallback(
+    async (
+      indiceArquivo: number,
+      entidades: EntityFound[]
+    ): Promise<ProcessedFile | null> => {
+      const arquivo = estado.revisao?.arquivos[indiceArquivo];
+      if (!arquivo) return null;
+
+      const refeito = await remascarar(
+        arquivo.originalContent,
+        entidades,
+        /* A política com que ESTE documento foi mascarado, não a preferência de
+           agora: remascarar com outra reescreveria o documento inteiro por
+           efeito colateral de um clique em uma linha. */
+        arquivo.politicaMascara ?? prefs.politica
+      );
+
+      const atualizado: ProcessedFile = {
+        ...arquivo,
+        anonymizedContent: refeito.anonymized_text,
+        entitiesFound: refeito.entities_found,
+      };
+
+      despachar({ tipo: "substituir-em-revisao", indice: indiceArquivo, arquivo: atualizado });
+
+      await gravacaoPendente.current;
+      const idNoCofre =
+        estado.revisao?.idNoCofre ?? idsNoCofre.current.get(arquivo.originalPath);
+      if (idNoCofre) await biblioteca.atualizar(idNoCofre, atualizado);
+
+      return atualizado;
+    },
+    [estado.revisao, remascarar, prefs.politica, despachar, biblioteca]
+  );
+
   const rejeitarDeteccao = useCallback(
     async (entidade: EntityFound, indiceArquivo: number) => {
       try {
@@ -383,9 +498,10 @@ function Casca() {
     if (estado.revisao) {
       return (
         <Revisao
-          aoSalvarTodos={() => salvarTodos(estado.revisao!.arquivos)}
+          aoSalvarTodos={() => salvarERevisar(estado.revisao!.arquivos)}
           aoBaixarArquivo={baixarUm}
           aoRejeitarDeteccao={rejeitarDeteccao}
+          aoAplicarMascaras={aplicarMascaras}
         />
       );
     }
@@ -403,7 +519,8 @@ function Casca() {
             motorPronto={estadoMotor === "pronto"}
             recentes={[...biblioteca.itens]
               .sort((a, b) => b.gravadoEm.localeCompare(a.gravadoEm))
-              .slice(0, 5)}
+              .slice(0, 3)}
+            totalNoCofre={biblioteca.itens.length}
             aoAbrirRecente={abrirDaBiblioteca}
             aoVerTodos={() => despachar({ tipo: "ir-para", destino: "documentos" })}
           />
@@ -418,6 +535,7 @@ function Casca() {
             aoAbrir={abrirDaBiblioteca}
             aoApagar={biblioteca.apagar}
             aoConversar={(ids) => despachar({ tipo: "abrir-conversa", ids })}
+            aoExportar={exportarDoCofre}
             aoIrParaMesa={() => despachar({ tipo: "ir-para", destino: "mesa" })}
           />
         );
@@ -429,6 +547,8 @@ function Casca() {
             aoEscolherDocumentos={(ids) => despachar({ tipo: "abrir-conversa", ids })}
             temChave={temChave}
             modelo={prefs.modeloDaNuvem}
+            aoTrocarModelo={(m) => definirPref("modeloDaNuvem", m)}
+            avisar={avisar}
             aoIrParaAjustes={() =>
               despachar({ tipo: "ir-para", destino: "ajustes" })
             }
@@ -465,10 +585,12 @@ function Casca() {
   };
 
   return (
-    <div className="flex h-screen flex-col bg-bg">
-      <BarraDeTitulo titulo={tituloDaTela} />
-      <div className="flex min-h-0 flex-1">
-      <TrilhoNavegacao
+    /* Casca de três faixas: trilho fixo à esquerda, cabeçalho no topo da
+       coluna restante, e a tela abaixo dele. A rolagem vive dentro de cada
+       tela, nunca aqui — a janela do Electron tem altura fixa e `body` está
+       com `overflow: hidden`. */
+    <div className="flex h-screen bg-background text-on-surface">
+      <BarraLateral
         destino={estado.destino}
         aoNavegar={(destino) => despachar({ tipo: "ir-para", destino })}
         estadoMotor={estadoMotor}
@@ -478,13 +600,32 @@ function Casca() {
       />
 
       {/* `min-w-0` porque um item flex tem `min-width: auto` e não encolhe
-          abaixo do próprio conteúdo. Hoje sobra espaço (o main mede 1316 e a
-          tabela pede 1086), mas sem isto uma tabela mais larga — outra coluna,
-          uma janela menor — empurraria o main para fora em vez de deixar o
+          abaixo do próprio conteúdo. Sem isto uma tabela mais larga que a
+          janela empurraria a coluna para fora em vez de deixar o
           `overflow-x-auto` da Tabela rolar por dentro. */}
-      <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        {conteudo()}
-      </main>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <CabecalhoDoApp
+          titulo={tituloDaTela}
+          tema={prefs.tema}
+          aoTrocarTema={(t) => definirPref("tema", t)}
+          cofreDisponivel={biblioteca.disponivel}
+          cofreLigado={prefs.cofreLigado}
+          /* A faixa vive na casca, não na Mesa: sem isso, navegar durante um
+             lote fazia o andamento sumir e parecia ter cancelado o trabalho. */
+          andamento={
+            estado.progresso && (
+              <FaixaDeAndamento
+                current={estado.progresso.atual}
+                total={estado.progresso.total}
+                fileName={estado.progresso.nomeArquivo}
+                phase={estado.progresso.etapa}
+              />
+            )
+          }
+        />
+        <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
+          {conteudo()}
+        </main>
       </div>
 
       {/* Na casca, não na tela de Conexões: quem roda `tecjustica-sigilo
@@ -516,10 +657,10 @@ function Casca() {
       />
 
       {estado.aviso && (
-        <Toast
-          message={estado.aviso.mensagem}
-          type={estado.aviso.tipo === "erro" ? "error" : "success"}
-          onClose={() => despachar({ tipo: "fechar-aviso" })}
+        <Aviso
+          mensagem={estado.aviso.mensagem}
+          tipo={estado.aviso.tipo === "erro" ? "erro" : "sucesso"}
+          aoFechar={() => despachar({ tipo: "fechar-aviso" })}
         />
       )}
     </div>

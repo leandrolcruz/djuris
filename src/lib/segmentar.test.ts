@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { agruparPorTipo, segmentar } from "./Revisao";
+import { agruparPorTipo, segmentar } from "./segmentar";
 import type { EntityFound } from "../types";
 
 /**

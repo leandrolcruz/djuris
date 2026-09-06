@@ -21,28 +21,28 @@ interface CliStatus {
 }
 
 interface Props {
-  showToast: (message: string, type?: "success" | "error") => void;
+  avisar: (mensagem: string, tipo?: "sucesso" | "erro") => void;
 }
 
-export function CliInstaller({ showToast }: Props) {
+export function InstaladorCli({ avisar }: Props) {
   const [status, setStatus] = useState<CliStatus | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
 
   const api = window.electronAPI?.cli;
 
-  /* `showToast` chega recriada a cada render do pai. Se ela fosse dependência
+  /* `avisar` chega recriada a cada render do pai. Se ela fosse dependência
      de `refresh`, um status que falha mostraria o aviso, o aviso re-renderizaria
      o pai, e o efeito abaixo consultaria o status de novo — em ciclo enquanto
      o IPC falhasse. A referência quebra o laço sem perder a função atual. */
-  const avisar = useRef(showToast);
-  avisar.current = showToast;
+  const ultimoAvisar = useRef(avisar);
+  ultimoAvisar.current = avisar;
 
   const refresh = useCallback(async () => {
     if (!api) return;
     try {
       setStatus(await api.status());
     } catch (err) {
-      avisar.current(`Erro lendo status: ${err}`, "error");
+      ultimoAvisar.current(`Erro lendo status: ${err}`, "erro");
     }
   }, [api]);
 
@@ -59,8 +59,8 @@ export function CliInstaller({ showToast }: Props) {
     setBusy(action);
     try {
       const r = await fn();
-      if (r.ok) showToast(r.note || "Operação concluída.", "success");
-      else showToast(r.error || "Falhou.", "error");
+      if (r.ok) avisar(r.note || "Operação concluída.", "sucesso");
+      else avisar(r.error || "Falhou.", "erro");
       await refresh();
     } finally {
       setBusy(null);
@@ -73,7 +73,7 @@ export function CliInstaller({ showToast }: Props) {
       descricao="O comando tecjustica-sigilo, para anonimizar pelo terminal ou por um agente."
       semPreenchimento
     >
-      <div className="divide-y divide-border-subtle px-4">
+      <div className="divide-y divide-surface-container px-4">
         <LinhaDeAjuste
           titulo="Windows (cmd, PowerShell)"
           descricao="Acrescenta a pasta do motor ao PATH do seu usuário. Depois de ativar, abra um terminal novo."
@@ -147,13 +147,13 @@ export function CliInstaller({ showToast }: Props) {
           descricao="Para um agente (Claude Code e afins), a saída em JSON traz anonymized_text e entities_found — tipo, texto, posições e confiança."
           empilhado
         >
-          <pre className="overflow-x-auto rounded-md bg-surface-sunken px-3 py-2.5 font-mono text-xs leading-relaxed text-text-secondary">
+          <pre className="overflow-x-auto rounded-md bg-surface-container-low px-3 py-2.5 font-mono text-mono-tag leading-relaxed text-on-surface-variant">
             {"tecjustica-sigilo autos.pdf -o autos-anonimizado.md\n"}
             {"tecjustica-sigilo entrada.txt -q --format json\n"}
             {"tecjustica-sigilo conectar   # pareia com o aplicativo aberto"}
           </pre>
           {status && (
-            <p className="mt-2 truncate font-mono text-2xs text-text-tertiary" title={status.backendDir}>
+            <p className="mt-2 truncate font-mono text-mono-tag text-outline" title={status.backendDir}>
               Servido de {status.backendDir}
             </p>
           )}

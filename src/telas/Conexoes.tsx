@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CliInstaller } from "../components/CliInstaller";
+import { InstaladorCli } from "../componentes/InstaladorCli";
 import { Botao, CabecalhoDeTela, Cartao, Dialogo, Selo } from "../ui";
 import type { ClientePareado } from "../hooks/usePythonBackend";
 
@@ -59,7 +59,7 @@ export function Conexoes({
 
   return (
     <div className="flex-1 overflow-y-auto">
-      <div className="mx-auto max-w-2xl space-y-5 px-8 py-8">
+      <div className="mx-auto w-full max-w-3xl space-y-gutter-lg p-gutter-xl">
         {/* O endereço da API, à vista, no cabeçalho.
             A porta é **dinâmica** (a primeira livre a partir de 8123), então
             sem mostrá-la aqui nem o operador nem quem for escrever uma extensão
@@ -67,6 +67,11 @@ export function Conexoes({
             desta tela. */}
         <CabecalhoDeTela
           titulo="Conexões"
+          sobrelinha={
+            <span className="font-mono text-mono-tag tracking-wider text-outline uppercase">
+              API local · 127.0.0.1 · nunca exposta na rede
+            </span>
+          }
           subtitulo="Quem, além desta janela, alcança o motor desta máquina."
           acoes={
             <>
@@ -79,7 +84,7 @@ export function Conexoes({
                   avisar(`${enderecoApi} copiado.`);
                 }}
                 title="Copiar o endereço"
-                className="rounded font-mono text-sm text-accent underline decoration-accent/40 decoration-2 underline-offset-4 hover:decoration-accent"
+                className="rounded-sm bg-surface-container-low px-2.5 py-1 font-mono text-mono-code text-primary transition-colors duration-[120ms] hover:bg-surface-container"
               >
                 {enderecoApi}
               </button>
@@ -89,70 +94,68 @@ export function Conexoes({
 
         <Cartao
           titulo="Como um programa se conecta"
+          icone="sync_alt"
           descricao="O mesmo caminho vale para a linha de comando, uma extensão de navegador ou um agente."
         >
-          <ol className="space-y-2.5 text-sm text-text-secondary">
+          <ol className="space-y-gutter-sm font-body text-body-md text-on-surface-variant">
             <li className="flex gap-2.5">
-              <span className="font-mono text-xs text-text-tertiary">1</span>
+              <span className="grid size-6 shrink-0 place-items-center rounded-full bg-surface-container font-mono text-mono-tag text-primary">1</span>
               <span>
                 O programa chama{" "}
-                <code className="rounded bg-surface-sunken px-1 py-0.5 font-mono text-2xs text-text">
+                <code className="rounded bg-surface-container-low px-1 py-0.5 font-mono text-mono-tag text-on-surface">
                   POST /v1/parear
                 </code>{" "}
                 e recebe um código de seis letras.
               </span>
             </li>
             <li className="flex gap-2.5">
-              <span className="font-mono text-xs text-text-tertiary">2</span>
+              <span className="grid size-6 shrink-0 place-items-center rounded-full bg-surface-container font-mono text-mono-tag text-primary">2</span>
               <span>
-                O <strong className="text-text">mesmo código</strong> aparece
+                O <strong className="text-on-surface">mesmo código</strong> aparece
                 aqui numa janela, com o nome de quem pediu. Conferir os dois é o
                 que impede aprovar às cegas.
               </span>
             </li>
             <li className="flex gap-2.5">
-              <span className="font-mono text-xs text-text-tertiary">3</span>
+              <span className="grid size-6 shrink-0 place-items-center rounded-full bg-surface-container font-mono text-mono-tag text-primary">3</span>
               <span>
                 Aprovado, ele recebe uma credencial e passa a aparecer na lista
                 abaixo — onde pode ser revogado a qualquer momento.
               </span>
             </li>
           </ol>
-          <p className="mt-3 text-xs text-text-tertiary">
+          <p className="mt-gutter-md font-body text-body-sm text-on-surface-variant">
             Para a linha de comando, o comando é{" "}
-            <code className="rounded bg-surface-sunken px-1 py-0.5 font-mono text-2xs text-text">
+            <code className="rounded bg-surface-container-low px-1 py-0.5 font-mono text-mono-tag text-on-surface">
               tecjustica-sigilo conectar
             </code>
             . O contrato completo para quem escreve um cliente está em{" "}
-            <code className="font-mono text-2xs">docs/api-local.md</code>.
+            <code className="font-mono text-mono-tag">docs/api-local.md</code>.
           </p>
         </Cartao>
 
-        <CliInstaller
-          showToast={(mensagem, tipo) =>
-            avisar(mensagem, tipo === "error" ? "erro" : "sucesso")
-          }
-        />
+        <InstaladorCli avisar={avisar} />
 
         <Cartao
           titulo="Clientes pareados"
+          icone="link"
           descricao="Programas autorizados a usar o motor desta máquina."
         >
           {clientes.length === 0 ? (
-            <p className="text-sm text-text-secondary">
+            <p className="text-body-md text-on-surface-variant">
               Nenhum cliente pareado. Um programa que peça acesso aparece aqui
               para você aprovar, com um código que precisa bater com o dele.
             </p>
           ) : (
-            <ul className="divide-y divide-border-subtle">
+            <ul className="divide-y divide-surface-container">
               {clientes.map((c) => (
                 <li
                   key={c.id}
                   className="flex items-start justify-between gap-3 py-3 first:pt-0 last:pb-0"
                 >
                   <div className="min-w-0">
-                    <p className="text-sm text-text">{c.nome}</p>
-                    <p className="mt-0.5 truncate font-mono text-2xs text-text-tertiary">
+                    <p className="text-body-md text-on-surface">{c.nome}</p>
+                    <p className="mt-0.5 truncate font-mono text-mono-tag text-outline">
                       {c.origem ?? "origem desconhecida"} ·{" "}
                       {tempoRelativo(c.ultimo_uso)}
                     </p>
@@ -177,8 +180,9 @@ export function Conexoes({
           )}
         </Cartao>
 
-        <Cartao titulo="O que um cliente externo pode fazer">
-          <ul className="space-y-2 text-sm text-text-secondary">
+        <Cartao titulo="O que um cliente externo pode fazer"
+          icone="policy">
+          <ul className="space-y-2 text-body-md text-on-surface-variant">
             <li className="flex gap-2">
               <Selo tom="acao">anonimizar</Selo>
               <span>manda um texto, recebe o texto mascarado.</span>
@@ -192,7 +196,7 @@ export function Conexoes({
               <span>envia um PDF ou DOCX e recebe o texto.</span>
             </li>
           </ul>
-          <p className="mt-3 border-l-2 border-warning pl-3 text-xs leading-normal text-text-secondary">
+          <p className="mt-3 border-l-2 border-tertiary pl-3 text-body-sm leading-normal text-on-surface-variant">
             Ler um arquivo do disco <strong>por caminho</strong> não está nessa
             lista e nunca é concedido. Um cliente externo sempre manda o
             conteúdo; quem abre arquivo do seu computador continua sendo só esta
@@ -233,7 +237,7 @@ export function Conexoes({
           }
         >
           <p>
-            <strong className="text-text">{aRevogar?.nome}</strong> perde o
+            <strong className="text-on-surface">{aRevogar?.nome}</strong> perde o
             acesso imediatamente. Para voltar a usar, terá de parear de novo.
           </p>
         </Dialogo>

@@ -67,12 +67,17 @@ function Secao({
 }) {
   return (
     <section id={`ajustes-${id}`} aria-labelledby={`ajustes-${id}-titulo`} className="scroll-mt-6">
-      <h2 id={`ajustes-${id}-titulo`} className="font-mono text-base font-semibold text-text">
+      <h2
+        id={`ajustes-${id}-titulo`}
+        className="font-display text-headline-lg text-on-surface"
+      >
         {titulo}
       </h2>
-      {descricao && <p className="mt-1 text-sm text-text-tertiary">{descricao}</p>}
-      <Cartao semPreenchimento className="mt-3">
-        <div className="divide-y divide-border-subtle px-4">{children}</div>
+      {descricao && (
+        <p className="mt-1 font-body text-body-md text-on-surface-variant">{descricao}</p>
+      )}
+      <Cartao semPreenchimento className="mt-gutter-md">
+        <div className="flex flex-col gap-gutter-xs p-gutter-sm">{children}</div>
       </Cartao>
     </section>
   );
@@ -161,9 +166,14 @@ export function Ajustes({
 
   return (
     <div ref={rolagem} className="flex-1 overflow-y-auto">
-      <div className="mx-auto max-w-5xl px-8 py-8">
+      <div className="mx-auto w-full max-w-[1100px] p-gutter-xl">
         <CabecalhoDeTela
           titulo="Ajustes"
+          sobrelinha={
+            <span className="font-mono text-mono-tag tracking-wider text-outline uppercase">
+              Preferências desta máquina
+            </span>
+          }
           subtitulo="Valem para as próximas aberturas. Nada aqui é dado pessoal."
           acoes={
             <Botao tipo="discreto" onClick={restaurarPreferencias}>
@@ -172,8 +182,11 @@ export function Ajustes({
           }
         />
 
-        <div className="mt-6 flex items-start gap-10">
-          <nav aria-label="Seções dos ajustes" className="sticky top-0 w-44 shrink-0">
+        <div className="mt-gutter-xl flex items-start gap-gutter-2xl">
+          <nav aria-label="Seções dos ajustes" className="sticky top-0 hidden w-48 shrink-0 md:block">
+            <p className="px-gutter-sm pb-gutter-xs font-mono text-mono-tag tracking-wider text-outline uppercase">
+              Nesta tela
+            </p>
             <ul className="space-y-0.5">
               {SECOES.map((s) => {
                 const atual = s.id === ativa;
@@ -183,11 +196,11 @@ export function Ajustes({
                       onClick={() => irPara(s.id)}
                       aria-current={atual ? "true" : undefined}
                       className={[
-                        "w-full rounded-md px-3 py-1.5 text-left font-mono text-sm",
+                        "w-full rounded-sm px-gutter-sm py-1.5 text-left text-body-sm",
                         "transition-colors duration-[120ms]",
                         atual
-                          ? "bg-surface text-text shadow-sm"
-                          : "text-text-secondary hover:bg-surface-hover hover:text-text",
+                          ? "bg-surface-container-lowest font-display text-primary shadow-sm"
+                          : "font-body text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface",
                       ].join(" ")}
                     >
                       {s.rotulo}
@@ -198,7 +211,7 @@ export function Ajustes({
             </ul>
           </nav>
 
-          <div className="min-w-0 flex-1 space-y-10 pb-24">
+          <div className="min-w-0 flex-1 space-y-gutter-2xl pb-24">
             <Secao id="geral" titulo="Geral" descricao="Aparência e onde os arquivos vão parar.">
               <LinhaDeAjuste titulo="Tema" descricao="“Sistema” acompanha a configuração do Windows.">
                 <GrupoSegmentado
@@ -229,7 +242,7 @@ export function Ajustes({
                 descricao={
                   prefs.pastaDeSaida ? (
                     <>
-                      Em <code className="font-mono text-text">{prefs.pastaDeSaida}</code>
+                      Em <code className="font-mono text-on-surface">{prefs.pastaDeSaida}</code>
                     </>
                   ) : (
                     "Ao lado do arquivo original, com o nome acrescido do formato escolhido."
@@ -244,7 +257,7 @@ export function Ajustes({
                   )}
                   <Botao
                     tamanho="mini"
-                    icone="pasta"
+                    icone="folder"
                     onClick={escolherPasta}
                     disabled={!window.electronAPI?.selectDirectory}
                   >
@@ -345,7 +358,7 @@ export function Ajustes({
                     <Botao
                       tipo="perigo"
                       tamanho="mini"
-                      icone="lixeira"
+                      icone="delete"
                       disabled={itensNoCofre === 0}
                       onClick={() => setConfirmandoEsvaziar(true)}
                     >
@@ -396,8 +409,8 @@ export function Ajustes({
                   titulo="Por que caiu"
                   descricao={
                     <>
-                      Pedido <span className="font-mono text-text">{avisoDeModo.solicitado}</span>,
-                      subiu <span className="font-mono text-text">{avisoDeModo.efetivo}</span>.{" "}
+                      Pedido <span className="font-mono text-on-surface">{avisoDeModo.solicitado}</span>,
+                      subiu <span className="font-mono text-on-surface">{avisoDeModo.efetivo}</span>.{" "}
                       {avisoDeModo.motivo}
                     </>
                   }

@@ -2,8 +2,17 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
+import { createRequire } from "node:module";
+
+/* A versão exibida na interface vem do `package.json`, não de uma constante
+   escrita à mão: já houve tela anunciando a versão errada porque alguém subiu
+   o `package.json` e esqueceu do resto. Aqui só existe um lugar. */
+const { version } = createRequire(import.meta.url)("./package.json");
 
 export default defineConfig({
+  define: {
+    __VERSAO_DO_APP__: JSON.stringify(version),
+  },
   plugins: [react(), tailwindcss()],
   base: "./",
   resolve: {

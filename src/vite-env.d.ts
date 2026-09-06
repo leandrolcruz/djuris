@@ -1,5 +1,8 @@
 /// <reference types="vite/client" />
 
+/** Versão do `package.json`, injetada pelo Vite em tempo de build. */
+declare const __VERSAO_DO_APP__: string;
+
 interface CliStatusResult {
   backendDir: string;
   windows: { installed: boolean; onPath: boolean };
@@ -27,6 +30,11 @@ interface EntradaDoCofre {
   porTipo: Record<string, number>;
   /** Política de máscara; ausente no que foi guardado antes da v1.4.0. */
   politicaMascara?: string;
+  /**
+   * Quando um humano conferiu as tarjas e salvou. ISO 8601.
+   * Ausente significa não revisado, nunca "provavelmente sim".
+   */
+  revisadoEm?: string;
   paginasComErro: number;
   totalPaginas: number;
 }
@@ -67,6 +75,13 @@ interface CofreAPI {
     entrada: Omit<EntradaDoCofre, "id" | "gravadoEm">,
     conteudo: ConteudoDoCofre
   ) => Promise<EntradaDoCofre | null>;
+  /**
+   * Carimba a data de revisão no índice. `null` se o documento já saiu.
+   *
+   * Toca só o índice: passar por `atualizar` decifraria e recifraria o
+   * documento inteiro para gravar uma data.
+   */
+  marcarRevisado: (id: string) => Promise<EntradaDoCofre | null>;
   ler: (id: string) => Promise<ConteudoDoCofre | null>;
   apagar: (id: string) => Promise<void>;
   esvaziar: () => Promise<void>;
@@ -149,6 +164,7 @@ interface TurnoDaConversa {
 
 interface EstadoDaConversa {
   id: string;
+  titulo: string;
   documentos: { id: string; nome: string }[];
   avisos: { grave: boolean; texto: string }[];
   turnos: TurnoDaConversa[];
@@ -170,9 +186,32 @@ interface EstadoDaConversa {
  * pseudônimo a nome real também não atravessa — as respostas chegam já
  * re-hidratadas, em pedaços prontos para desenhar.
  */
+/**
+ * Uma linha da barra lateral de conversas.
+ *
+ * As conversas vivem só na memória do processo principal e morrem com o
+ * aplicativo. É decisão de privacidade: gravar as perguntas de um magistrado
+ * sobre autos sigilosos criaria em disco justamente o índice pesquisável que o
+ * produto existe para não criar.
+ */
+interface ResumoDaConversa {
+  id: string;
+  titulo: string;
+  documentos: { id: string; nome: string }[];
+  modelo: string;
+  /** ISO 8601. */
+  abertaEm: string;
+  ultimaAtividade: string;
+  totalTurnos: number;
+  comprometida: boolean;
+}
+
 interface ChatAPI {
   modelos: () => Promise<ModeloDaNuvem[]>;
   abrir: (ids: string[], modelo?: string) => Promise<EstadoDaConversa>;
+  /** As sessões vivas, da mais recente para a mais antiga. */
+  listar: () => Promise<ResumoDaConversa[]>;
+  renomear: (id: string, titulo: string) => Promise<ResumoDaConversa | null>;
   estado: (id: string) => Promise<EstadoDaConversa | null>;
   orcamento: (id: string) => Promise<{
     tokensEntrada: number;

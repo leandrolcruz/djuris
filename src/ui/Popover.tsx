@@ -89,7 +89,7 @@ export function Popover({
           className={[
             "absolute top-[calc(100%+6px)] z-100",
             alinhamento === "fim" ? "right-0" : "left-0",
-            "rounded-lg border border-border bg-surface p-3 text-left shadow-md",
+            "rounded-lg bg-surface-container-lowest p-gutter-md text-left shadow-md",
           ].join(" ")}
         >
           {children}

@@ -59,15 +59,15 @@ export function EscolhaDePolitica({
             className={[
               "w-full rounded-lg border p-3 text-left transition-colors duration-[120ms]",
               ativa
-                ? "border-accent bg-accent-muted"
-                : "border-border-subtle hover:bg-surface-hover",
+                ? "border-primary bg-primary-fixed"
+                : "border-surface-container-high hover:bg-surface-container-low",
             ].join(" ")}
           >
-            <span className="font-mono text-xs font-semibold text-text">{opcao.titulo}</span>
-            <code className="mt-1.5 block truncate rounded bg-surface-sunken px-1.5 py-1 font-mono text-2xs text-text-secondary">
+            <span className="font-mono text-mono-tag font-semibold text-on-surface">{opcao.titulo}</span>
+            <code className="mt-1.5 block truncate rounded bg-surface-container-low px-1.5 py-1 font-mono text-mono-tag text-on-surface-variant">
               {opcao.exemplo}
             </code>
-            <span className="mt-1.5 block text-xs leading-normal text-text-tertiary">
+            <span className="mt-1.5 block text-body-sm leading-normal text-outline">
               {opcao.descricao}
             </span>
           </button>

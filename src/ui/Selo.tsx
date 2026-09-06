@@ -1,14 +1,20 @@
 import type { ReactNode } from "react";
 
 /**
- * Selo — rótulo curto de estado ou contagem, em mono.
+ * Selo — o chip de estado e de categoria.
  *
- * Usado para o estado do motor, o tipo de uma ocorrência, a contagem por
- * entidade. É a voz da máquina, então nunca leva serifa.
+ * Duas formas, e elas não são intercambiáveis no desenho:
  *
- * O tom `entidade` recebe a cor por `cor`, que deve ser uma referência CSS
- * vinda de `corDaEntidade()` — nunca um hex. O fundo sai da mesma cor por
- * `color-mix`, para o selo acompanhar o tema sem uma segunda tabela de cores.
+ * - **`chip`** (padrão) tem canto de 2px e é o formato do dado literal: tipo de
+ *   entidade, contagem, tamanho de arquivo, hash. Vive em mono.
+ * - **`pilula`** tem canto de 12px e é o formato do estado: SIGILOSO, ATIVO,
+ *   "Pronto para conversar". Também em mono, porque continua sendo o que a
+ *   máquina afirma sobre a peça.
+ *
+ * O tom `entidade` sai do mapa de classes e vai por atributo `style`, porque a
+ * cor vem de `corDaEntidade()`, que monta `var(--color-entity-…)` em runtime.
+ * É por causa deste caminho que o CSP da janela precisa de
+ * `style-src 'unsafe-inline'`.
  */
 
 type TomSelo = "neutro" | "acao" | "perigo" | "atencao" | "deferido" | "entidade";
@@ -16,19 +22,20 @@ type TomSelo = "neutro" | "acao" | "perigo" | "atencao" | "deferido" | "entidade
 interface SeloProps {
   children: ReactNode;
   tom?: TomSelo;
-  /** Só para `tom="entidade"`: uma referência como `var(--color-entity-cpf)`. */
+  /** Só para `tom="entidade"`: `var(--color-entity-*)`, nunca hexadecimal. */
   cor?: string;
-  /** Ponto sólido antes do texto — para estado ligado/desligado. */
+  /** Ponto sólido antes do texto, na cor do próprio selo. */
   comPonto?: boolean;
+  forma?: "chip" | "pilula";
   className?: string;
 }
 
 const POR_TOM: Record<Exclude<TomSelo, "entidade">, string> = {
-  neutro: "text-text-secondary bg-surface-sunken",
-  acao: "text-accent bg-accent-muted",
-  perigo: "text-danger bg-danger/10",
-  atencao: "text-warning bg-warning/10",
-  deferido: "text-success bg-success/10",
+  neutro: "text-on-surface-variant bg-surface-container",
+  acao: "text-on-primary-fixed-variant bg-primary-fixed",
+  perigo: "text-on-error-container bg-error-container/70",
+  atencao: "text-on-tertiary-fixed-variant bg-tertiary-fixed",
+  deferido: "text-on-secondary-container bg-secondary-container/60",
 };
 
 export function Selo({
@@ -36,31 +43,33 @@ export function Selo({
   tom = "neutro",
   cor,
   comPonto = false,
+  forma = "chip",
   className = "",
 }: SeloProps) {
-  const porEntidade = tom === "entidade" && cor;
+  const daEntidade = tom === "entidade" && cor;
 
   return (
     <span
-      className={[
-        "inline-flex items-center gap-1.5 rounded-full px-2 py-0.5",
-        "font-mono text-2xs font-medium whitespace-nowrap",
-        porEntidade ? "" : POR_TOM[tom as Exclude<TomSelo, "entidade">],
-        className,
-      ].join(" ")}
       style={
-        porEntidade
+        daEntidade
           ? {
               color: cor,
-              backgroundColor: `color-mix(in srgb, ${cor} 12%, transparent)`,
+              backgroundColor: `color-mix(in srgb, ${cor} 14%, transparent)`,
             }
           : undefined
       }
+      className={[
+        "inline-flex items-center gap-1.5 whitespace-nowrap",
+        "font-mono text-mono-tag",
+        forma === "pilula" ? "rounded-pill px-2.5 py-0.5" : "rounded-xs px-2 py-0.5",
+        daEntidade ? "" : POR_TOM[tom as Exclude<TomSelo, "entidade">],
+        className,
+      ].join(" ")}
     >
       {comPonto && (
         <span
-          className="h-1.5 w-1.5 shrink-0 rounded-full bg-current"
           aria-hidden="true"
+          className="h-1.5 w-1.5 shrink-0 rounded-full bg-current"
         />
       )}
       {children}

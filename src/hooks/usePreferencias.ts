@@ -76,11 +76,18 @@ export function aplicarTema(tema: Tema) {
   /* A moldura da janela (barra de título e controles) é pintada pelo
      Electron, fora do CSS. Depois que o tema entra, lê-se do próprio `:root`
      as duas cores que ela precisa — assim a fonte da verdade continua sendo o
-     `tokens.css`, e "seguir o sistema" também chega à moldura. */
+     `tokens.css`, e "seguir o sistema" também chega à moldura.
+
+     `getPropertyValue` devolve o valor **autorado**, não o computado: se
+     `--fundo-moldura` ou `--simbolo-moldura` deixarem de ser hexadecimal de
+     seis dígitos, a validação do `main.ts` recusa em silêncio e a moldura
+     congela na cor do tema anterior, sem nada no console. Os dois tokens
+     existem separados justamente para poderem carregar essa restrição sem
+     amarrar o resto da paleta. */
   requestAnimationFrame(() => {
     const estilo = getComputedStyle(raiz);
-    const fundo = estilo.getPropertyValue("--papel-fundo").trim();
-    const simbolo = estilo.getPropertyValue("--toner").trim();
+    const fundo = estilo.getPropertyValue("--fundo-moldura").trim();
+    const simbolo = estilo.getPropertyValue("--simbolo-moldura").trim();
     if (fundo && simbolo) {
       void window.electronAPI?.janela?.pintarBarra({ fundo, simbolo }).catch(() => {});
     }

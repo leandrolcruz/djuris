@@ -72,6 +72,18 @@ export interface EntradaDoCofre {
    * pseudônimo numerado. Ausente em tudo que foi guardado antes da v1.4.0.
    */
   politicaMascara?: string;
+  /**
+   * Quando um humano conferiu as tarjas e salvou. ISO 8601.
+   *
+   * O cofre grava **antes** de qualquer revisão — é o que permite reabrir a
+   * revisão depois. Sem este campo não havia como distinguir "anonimizado pelo
+   * motor" de "anonimizado e conferido", e as duas coisas não valem o mesmo:
+   * exportar em lote ou mandar para a nuvem o que ninguém olhou é justamente o
+   * risco que a tela de Revisão existe para cobrir.
+   *
+   * Ausente significa não revisado, nunca "provavelmente sim".
+   */
+  revisadoEm?: string;
 }
 
 /** O conteúdo pesado, num arquivo por documento. */
@@ -288,6 +300,32 @@ export function atualizar(
   );
 
   return completa;
+}
+
+/**
+ * Marca o documento como conferido por um humano.
+ *
+ * Toca **só o índice**. Passar por `atualizar` exigiria decifrar e recifrar o
+ * documento inteiro — que num processo do PJe são centenas de milhares de
+ * caracteres — para gravar um carimbo de data.
+ *
+ * A guarda do índice ilegível continua valendo: gravar por cima de um índice
+ * que não abre apagaria a referência a tudo que já está guardado.
+ */
+export function marcarRevisado(id: string, quando = new Date().toISOString()): EntradaDoCofre | null {
+  exigirDisponivel();
+  exigirIndiceUtilizavel();
+
+  const atual = listar();
+  const anterior = atual.find((i) => i.id === id);
+  if (!anterior) return null;
+
+  const marcada: EntradaDoCofre = { ...anterior, revisadoEm: quando };
+  cifrarPara(
+    caminhoDoIndice(),
+    atual.map((i) => (i.id === id ? marcada : i))
+  );
+  return marcada;
 }
 
 export function ler(id: string): ConteudoDoCofre | null {

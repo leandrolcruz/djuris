@@ -1,117 +1,177 @@
 /**
- * Ícones do sistema, num lugar só.
+ * Ícone.
  *
- * Antes cada SVG era colado direto no JSX de quem precisava dele: o cadeado
- * aparecia três vezes e o "X" duas, cada cópia com sua própria espessura de
- * traço e seu próprio tamanho. Um ícone duplicado não é só repetição — é a
- * garantia de que uma correção vai pegar em dois dos três lugares.
+ * O sistema usa **Material Symbols Outlined**, a fonte variável, servida do
+ * pacote `material-symbols` instalado localmente — o CSP da janela tem
+ * `font-src 'self'` e nenhuma fonte entra pela rede. O glifo é escolhido por
+ * ligadura: o texto do `<span>` é o nome do ícone.
  *
- * Todos são de traço (nunca preenchidos), herdam a cor do texto por
- * `currentColor` e vêm com `aria-hidden`. Ícone aqui é decoração: quem precisa
- * de nome acessível põe no elemento que o envolve — um botão só com ícone
- * carrega `aria-label`, e o `Botao` deste diretório cobra isso por tipo.
+ * Antes daqui havia 22 ícones desenhados à mão como `path`. O desenho novo pede
+ * setenta e poucos, com estados preenchido/vazado, e desenhar isso à mão seria
+ * trocar semanas por um resultado que não bate com a referência.
+ *
+ * **O ícone é sempre decoração.** `aria-hidden` é fixo e não há como
+ * desligá-lo: o nome acessível pertence ao elemento que envolve o ícone — o
+ * botão, o link, a linha da tabela. Um ícone que "fala" duplica o rótulo no
+ * leitor de tela ou, pior, é a única coisa que ele lê.
+ *
+ * A fonte tem quatro eixos. Dois interessam:
+ *
+ * - **FILL** (0/1) separa o item ativo do inativo no trilho e a conversa aberta
+ *   das outras. É canal redundante à cor, nunca o único.
+ * - **opsz** deve acompanhar o corpo do ícone, senão o traço fica grosso demais
+ *   no pequeno e fino demais no grande. A fonte só cobre 20–48, então o valor é
+ *   preso nessa faixa.
  */
 
+/* A união é curada de propósito. Ela custa uma linha por ícone novo e paga
+   isso na hora em que alguém digita `visibilty`: com `string`, a ligadura não
+   casa, a fonte desenha o nome cru na tela e nada acusa o erro. */
 export type NomeIcone =
-  | "cadeado"
-  | "fechar"
-  | "verificado"
-  | "documento"
+  /* Navegação e casca */
+  | "security"
+  | "folder_supervised"
+  | "forum"
+  | "sync_alt"
+  | "tune"
+  | "menu_book"
+  | "menu"
+  | "person"
+  | "arrow_back"
+  | "arrow_forward"
+  | "arrow_right"
+  | "arrow_drop_down"
+  | "chevron_left"
+  | "chevron_right"
+  | "expand_more"
+  | "expand_less"
+  | "unfold_more"
+  | "close"
+  | "more_vert"
+  | "add"
+  | "edit"
+  | "search"
+  | "refresh"
+  | "open_in_new"
+  /* Documento e formato */
+  | "description"
+  | "article"
+  | "assignment"
+  | "text_snippet"
+  | "table_chart"
+  | "image"
+  | "picture_as_pdf"
+  | "folder"
+  | "folder_open"
+  | "folder_special"
+  | "drive_folder_upload"
+  | "file_open"
+  | "file_download"
+  | "post_add"
+  | "history_edu"
+  | "history"
+  /* Justiça */
+  | "gavel"
+  | "balance"
+  | "account_balance"
+  | "policy"
+  | "record_voice_over"
+  | "biotech"
+  | "person_off"
+  /* Sigilo e segurança */
+  | "lock"
+  | "lock_open"
+  | "lock_reset"
+  | "encrypted"
+  | "shield"
+  | "shield_locked"
+  | "verified"
+  | "verified_user"
+  | "visibility"
+  | "visibility_off"
+  | "key"
+  | "block"
+  /* Estado */
+  | "check"
+  | "check_circle"
+  | "task_alt"
+  | "done"
+  | "done_all"
+  | "warning"
+  | "error"
+  | "info"
+  | "hourglass_empty"
+  | "progress_activity"
+  | "cancel"
+  /* Motor e métrica */
+  | "memory"
+  | "speed"
+  | "neurology"
+  | "psychology"
+  | "token"
+  | "bolt"
   | "terminal"
-  | "arquivar"
-  | "voltar"
-  | "avancar"
-  | "alerta"
-  | "mais"
-  | "reticencias"
-  | "busca"
-  | "ajustes"
-  | "lixeira"
-  | "pasta"
-  | "sol"
-  | "lua"
-  | "conexao"
-  | "conversa"
-  | "olho"
-  | "baixar"
-  | "enviar";
-
-/* O `d` de cada traçado. Grade de 24×24, traço de 2, pontas arredondadas —
-   a mesma métrica dos que já estavam no projeto, para que nada mude de peso
-   visual ao migrar. */
-const TRACADOS: Record<NomeIcone, string[]> = {
-  cadeado: [
-    "M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z",
-  ],
-  fechar: ["M6 18L18 6M6 6l12 12"],
-  verificado: ["M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"],
-  documento: [
-    "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z",
-  ],
-  terminal: ["M4 17l6-6-6-6M12 19h8"],
-  arquivar: [
-    "M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10",
-  ],
-  voltar: ["M15 19l-7-7 7-7"],
-  avancar: ["M9 5l7 7-7 7"],
-  alerta: [
-    "M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z",
-  ],
-  mais: ["M12 5v14M5 12h14"],
-  /* Reticências — "mais ações". `mais` é o sinal de somar, e num menu
-     de ações secundárias ele promete acrescentar alguma coisa. */
-  reticencias: ["M5 12v0M12 12v0M19 12v0"],
-  busca: ["M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z"],
-  ajustes: ["M4 6h16M4 12h16M4 18h16", "M9 6v0M15 12v0M7 18v0"],
-  lixeira: [
-    "M4 7h16M10 11v6M14 11v6M5 7l1 12a2 2 0 002 2h8a2 2 0 002-2l1-12M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3",
-  ],
-  pasta: [
-    "M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z",
-  ],
-  sol: [
-    "M12 3v2M12 19v2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M3 12h2M19 12h2M5.6 18.4L7 17M17 7l1.4-1.4",
-    "M12 16a4 4 0 100-8 4 4 0 000 8z",
-  ],
-  lua: ["M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"],
-  conexao: [
-    "M10 14a5 5 0 007.1 0l3-3a5 5 0 00-7.1-7.1L11.5 5.4",
-    "M14 10a5 5 0 00-7.1 0l-3 3a5 5 0 007.1 7.1l1.4-1.4",
-  ],
-  conversa: ["M20 11.5a7.5 7.5 0 01-7.5 7.5H8l-5 3 1.4-4.2A7.5 7.5 0 1120 11.5z"],
-  olho: [
-    "M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z",
-    "M12 15a3 3 0 100-6 3 3 0 000 6z",
-  ],
-  baixar: ["M12 3v12M7 12l5 5 5-5M4 21h16"],
-  enviar: ["M12 19V5M5 12l7-7 7 7"],
-};
+  /* Ações */
+  | "delete"
+  | "delete_sweep"
+  | "content_copy"
+  | "ios_share"
+  | "send"
+  | "stop"
+  | "undo"
+  | "redo"
+  | "restart_alt"
+  | "attach_file"
+  | "filter_list"
+  | "checklist"
+  | "thumb_up"
+  | "thumb_down"
+  /* Nuvem e conexão */
+  | "cloud"
+  | "cloud_off"
+  | "link"
+  | "link_off"
+  | "mail"
+  /* Tema */
+  | "light_mode"
+  | "dark_mode"
+  | "contrast";
 
 interface IconeProps {
   nome: NomeIcone;
-  /** Lado do quadrado, em px. O padrão acompanha o corpo da interface. */
+  /** Corpo do ícone em px. O padrão 18 é o tamanho de botão do desenho. */
   tamanho?: number;
+  /** Eixo FILL. Ativo/selecionado usa o preenchido. */
+  preenchido?: boolean;
+  /** Eixo wght (100–700). Sobe um pouco no ícone miúdo, que some no traço fino. */
+  peso?: number;
   className?: string;
 }
 
-export function Icone({ nome, tamanho = 16, className }: IconeProps) {
+export function Icone({
+  nome,
+  tamanho = 18,
+  preenchido = false,
+  peso,
+  className = "",
+}: IconeProps) {
+  /* `opsz` fora de 20–48 é ignorado pela fonte, e ignorado não é neutro: o
+     traço volta ao padrão do eixo, que é o errado para o corpo pedido. */
+  const opsz = Math.min(48, Math.max(20, tamanho));
+  const wght = peso ?? (tamanho <= 14 ? 500 : 400);
+
   return (
-    <svg
-      width={tamanho}
-      height={tamanho}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
+    <span
+      className={`material-symbols-outlined ${className}`}
       aria-hidden="true"
-      focusable="false"
+      style={{
+        fontSize: `${tamanho}px`,
+        width: `${tamanho}px`,
+        height: `${tamanho}px`,
+        fontVariationSettings: `'FILL' ${preenchido ? 1 : 0}, 'wght' ${wght}, 'opsz' ${opsz}`,
+      }}
     >
-      {TRACADOS[nome].map((d) => (
-        <path key={d} d={d} />
-      ))}
-    </svg>
+      {nome}
+    </span>
   );
 }

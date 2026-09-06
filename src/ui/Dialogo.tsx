@@ -79,27 +79,30 @@ export function Dialogo({
       }}
       className={[
         largo
-          ? "m-auto w-[min(44rem,calc(100vw-2rem))] rounded-xl border border-border-subtle"
-          : "m-auto w-[min(32rem,calc(100vw-2rem))] rounded-xl border border-border-subtle",
-        "bg-surface p-0 text-text shadow-lg",
-        "backdrop:bg-[rgb(22_24_29/0.55)]",
+          ? "m-auto w-[min(44rem,calc(100vw-2rem))]"
+          : "m-auto w-[min(32rem,calc(100vw-2rem))]",
+        "rounded-xl bg-surface-container-lowest p-0 text-on-surface shadow-lg",
+        /* O véu é token: cravado, ele era o preto do tema claro e não
+           escurecia no tema noite — o fundo por trás do diálogo saía idêntico
+           nos dois. */
+        "backdrop:bg-[var(--veu)]",
       ].join(" ")}
       aria-labelledby={idTitulo}
     >
-      <div className="border-b border-border-subtle px-5 py-3.5">
+      <div className="px-gutter-lg pt-gutter-lg pb-gutter-sm">
         <h2
           id={idTitulo}
-          className="font-mono text-sm font-semibold text-text"
+          className="font-display text-headline-sm text-on-surface"
         >
           {titulo}
         </h2>
       </div>
 
-      <div className="px-5 py-4 text-sm leading-normal text-text-secondary">
+      <div className="px-gutter-lg pb-gutter-md font-body text-body-md leading-relaxed text-on-surface-variant">
         {children}
       </div>
 
-      <div className="flex justify-end gap-2 border-t border-border-subtle px-5 py-3">
+      <div className="flex justify-end gap-gutter-sm bg-surface-container-low/60 px-gutter-lg py-gutter-md">
         {acoes ?? (
           <Botao tipo="secundario" onClick={aoFechar}>
             Fechar

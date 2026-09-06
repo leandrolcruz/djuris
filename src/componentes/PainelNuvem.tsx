@@ -165,7 +165,7 @@ export function PainelNuvem() {
           id="modelo-da-nuvem"
           value={escolhido}
           onChange={(e) => definirPref("modeloDaNuvem", e.target.value)}
-          className="min-h-9 max-w-xs rounded-md border border-border bg-surface px-3 font-mono text-xs text-text"
+          className="min-h-9 max-w-xs rounded-md border border-outline-variant bg-surface-container-lowest px-3 font-mono text-mono-tag text-on-surface"
         >
           {modelos.map((m) => (
             <option key={m.id} value={m.id}>
@@ -181,14 +181,14 @@ export function PainelNuvem() {
         descricao={
           sonda ? (
             sonda.erro ? (
-              <span className="text-danger">{sonda.erro}</span>
+              <span className="text-error">{sonda.erro}</span>
             ) : sonda.zdr ? (
               <>
-                Atendido por <strong className="text-text">{sonda.provedor}</strong> ·
+                Atendido por <strong className="text-on-surface">{sonda.provedor}</strong> ·
                 retenção zero confirmada.
               </>
             ) : (
-              <span className="text-danger">
+              <span className="text-error">
                 Atendido por {sonda.provedor ?? "provedor desconhecido"}, que não
                 consta na lista de retenção zero.
               </span>
