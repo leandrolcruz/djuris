@@ -47,7 +47,7 @@ export function Toast({ message, type = "success", onClose, duration }: ToastPro
       ].join(" ")}
     >
       <span className={sucesso ? "mt-0.5 text-success" : "mt-0.5 text-danger"}>
-        <Icone nome={sucesso ? "verificado" : "alerta"} tamanho={16} />
+        <Icone nome={sucesso ? "check_circle" : "warning"} tamanho={16} />
       </span>
       <span className="text-sm leading-snug text-text">{message}</span>
     </div>

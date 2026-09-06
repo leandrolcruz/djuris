@@ -15,7 +15,7 @@ export function MotorCarregando({ modoNlp }: { modoNlp: string }) {
     <div className="flex flex-1 items-center justify-center px-8">
       <div className="animate-fade-in text-center">
         <Icone
-          nome="cadeado"
+          nome="lock"
           tamanho={28}
           className="mx-auto text-accent"
           /* `animate-pulse-soft` em vez de rotação: um cadeado girando sugere
@@ -48,7 +48,7 @@ export function MotorComFalha({ aoTentarDeNovo }: { aoTentarDeNovo: () => void }
   return (
     <div className="flex flex-1 items-center justify-center px-8">
       <div className="animate-fade-in text-center" role="alert">
-        <Icone nome="alerta" tamanho={28} className="mx-auto text-danger" />
+        <Icone nome="warning" tamanho={28} className="mx-auto text-danger" />
         <h2 className="mt-4 font-mono text-base font-semibold text-danger">
           O motor de anonimização não respondeu
         </h2>

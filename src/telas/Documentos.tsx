@@ -240,7 +240,7 @@ export function Documentos({
           <Botao
             tamanho="mini"
             tipo="discreto"
-            icone="lixeira"
+            icone="delete"
             aria-label={`Apagar ${i.nome}`}
             onClick={(e) => {
               e.stopPropagation();
@@ -317,10 +317,10 @@ export function Documentos({
 
         {itens.length === 0 && cofreDisponivel !== false && (
           <Vazio
-            icone="arquivar"
+            icone="folder_supervised"
             titulo={cofreLigado ? "O cofre está vazio" : "O cofre está desligado"}
             acao={
-              <Botao tipo="primario" icone="cadeado" onClick={aoIrParaMesa}>
+              <Botao tipo="primario" icone="lock" onClick={aoIrParaMesa}>
                 Anonimizar um documento
               </Botao>
             }
@@ -380,10 +380,10 @@ export function Documentos({
                 {/* Apagar fica à esquerda do primário e em `secundario`: é a
                     ação destrutiva, não pode disputar o clique com a que se
                     quer. */}
-                <Botao tipo="secundario" icone="lixeira" onClick={() => setApagarMarcados(true)}>
+                <Botao tipo="secundario" icone="delete" onClick={() => setApagarMarcados(true)}>
                   Apagar
                 </Botao>
-                <Botao tipo="primario" icone="conversa" onClick={() => aoConversar([...marcados])}>
+                <Botao tipo="primario" icone="forum" onClick={() => aoConversar([...marcados])}>
                   Conversar
                 </Botao>
               </div>

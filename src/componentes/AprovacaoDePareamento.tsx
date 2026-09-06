@@ -141,7 +141,7 @@ export function AprovacaoDePareamento({
           )}
         </div>
         <p className="flex items-start gap-1.5 pt-1 text-xs text-text-tertiary">
-          <Icone nome="cadeado" tamanho={13} className="mt-0.5 shrink-0" />
+          <Icone nome="lock" tamanho={13} className="mt-0.5 shrink-0" />
           Não poderá abrir arquivos do seu disco por caminho.
         </p>
       </div>

@@ -177,7 +177,7 @@ export function Receita() {
           <div className="flex gap-2">
             <Botao
               tamanho="mini"
-              icone="pasta"
+              icone="folder"
               onClick={escolherPasta}
               disabled={!window.electronAPI?.selectDirectory}
               title={
@@ -203,7 +203,7 @@ export function Receita() {
       .
       {qtdEntidades === 0 && (
         <span className="mt-2 flex items-center gap-1.5 text-xs text-danger">
-          <Icone nome="alerta" tamanho={13} />
+          <Icone nome="warning" tamanho={13} />
           Escolha ao menos um tipo de dado.
         </span>
       )}

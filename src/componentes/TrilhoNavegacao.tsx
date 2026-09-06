@@ -45,11 +45,11 @@ interface TrilhoNavegacaoProps {
 }
 
 export const DESTINOS: { id: Destino; rotulo: string; icone: NomeIcone; titulo: string }[] = [
-  { id: "mesa", rotulo: "Anonimizar", icone: "cadeado", titulo: "Anonimizar" },
-  { id: "documentos", rotulo: "Documentos", icone: "arquivar", titulo: "Documentos" },
-  { id: "conversa", rotulo: "Conversar", icone: "conversa", titulo: "Conversar com os autos" },
-  { id: "conexoes", rotulo: "Conexões", icone: "conexao", titulo: "Conexões" },
-  { id: "ajustes", rotulo: "Ajustes", icone: "ajustes", titulo: "Ajustes" },
+  { id: "mesa", rotulo: "Anonimizar", icone: "lock", titulo: "Anonimizar" },
+  { id: "documentos", rotulo: "Documentos", icone: "folder_supervised", titulo: "Documentos" },
+  { id: "conversa", rotulo: "Conversar", icone: "forum", titulo: "Conversar com os autos" },
+  { id: "conexoes", rotulo: "Conexões", icone: "sync_alt", titulo: "Conexões" },
+  { id: "ajustes", rotulo: "Ajustes", icone: "tune", titulo: "Ajustes" },
 ];
 
 function rotuloDoMotor(estado: EstadoMotor, modoNlp: string): string {

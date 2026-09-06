@@ -209,7 +209,7 @@ export function AreaDeSoltar({
         ].join(" ")}
       >
         <Icone
-          nome="documento"
+          nome="description"
           tamanho={24}
           className={arrastando ? "text-accent" : "text-text-tertiary"}
         />
@@ -265,7 +265,7 @@ export function AreaDeSoltar({
             >
               <div className="flex min-w-0 items-center gap-2.5">
                 <Icone
-                  nome="documento"
+                  nome="description"
                   tamanho={15}
                   className="shrink-0 text-text-tertiary"
                 />
@@ -312,7 +312,7 @@ export function AreaDeSoltar({
                     aria-label={`Remover ${arquivo.name}`}
                     className="rounded p-1 text-text-tertiary transition-colors hover:text-danger"
                   >
-                    <Icone nome="fechar" tamanho={14} />
+                    <Icone nome="close" tamanho={14} />
                   </button>
                 )}
               </div>

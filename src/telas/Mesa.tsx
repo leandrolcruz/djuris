@@ -98,7 +98,7 @@ export function Mesa({
           <Botao
             tipo="primario"
             tamanho="grande"
-            icone="cadeado"
+            icone="lock"
             onClick={aoAnonimizar}
             disabled={impedido}
           >
@@ -128,7 +128,7 @@ export function Mesa({
                       onClick={() => aoAbrirRecente(item)}
                       className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors duration-[120ms] hover:bg-surface-hover"
                     >
-                      <Icone nome="documento" tamanho={15} className="shrink-0 text-text-tertiary" />
+                      <Icone nome="description" tamanho={15} className="shrink-0 text-text-tertiary" />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm text-text">{item.nome}</span>
                         <span className="block truncate font-mono text-2xs text-text-tertiary">
@@ -136,7 +136,7 @@ export function Mesa({
                           {item.totalOcorrencias.toLocaleString("pt-BR")} ocorrências
                         </span>
                       </span>
-                      <Icone nome="avancar" tamanho={14} className="shrink-0 text-text-tertiary" />
+                      <Icone nome="arrow_forward" tamanho={14} className="shrink-0 text-text-tertiary" />
                     </button>
                   </li>
                 ))}

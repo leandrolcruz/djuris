@@ -44,7 +44,7 @@ export function ConsentimentoCofre({
           <Botao tipo="secundario" onClick={aoRecusar}>
             Não guardar
           </Botao>
-          <Botao tipo="primario" icone="cadeado" onClick={aoAceitar}>
+          <Botao tipo="primario" icone="lock" onClick={aoAceitar}>
             Guardar cifrado
           </Botao>
         </>

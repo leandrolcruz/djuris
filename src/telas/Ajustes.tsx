@@ -244,7 +244,7 @@ export function Ajustes({
                   )}
                   <Botao
                     tamanho="mini"
-                    icone="pasta"
+                    icone="folder"
                     onClick={escolherPasta}
                     disabled={!window.electronAPI?.selectDirectory}
                   >
@@ -345,7 +345,7 @@ export function Ajustes({
                     <Botao
                       tipo="perigo"
                       tamanho="mini"
-                      icone="lixeira"
+                      icone="delete"
                       disabled={itensNoCofre === 0}
                       onClick={() => setConfirmandoEsvaziar(true)}
                     >

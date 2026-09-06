@@ -22,6 +22,7 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
+    "@material/material-color-utilities": "^0.4.0",
     "@tailwindcss/vite": "^4.2.2",
     "@types/node": "^25.5.0",
     "@types/react": "^19.2.14",
@@ -38,8 +39,12 @@
   },
   "dependencies": {
     "@fontsource-variable/azeret-mono": "^5.3.0",
+    "@fontsource-variable/inter": "^5.3.0",
+    "@fontsource-variable/jetbrains-mono": "^5.3.0",
     "@fontsource-variable/petrona": "^5.3.0",
+    "@fontsource-variable/plus-jakarta-sans": "^5.3.0",
     "docx": "^9.7.1",
+    "material-symbols": "^0.47.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4"
   }

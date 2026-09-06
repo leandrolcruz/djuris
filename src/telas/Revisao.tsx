@@ -293,7 +293,7 @@ export function Revisao({
                 </span>
                 <span className="text-text-tertiary">{itens.length}</span>
                 <Icone
-                  nome="avancar"
+                  nome="arrow_forward"
                   tamanho={12}
                   className={`shrink-0 text-text-tertiary transition-transform duration-[120ms] ${
                     recolhido ? "" : "rotate-90"
@@ -377,7 +377,7 @@ export function Revisao({
           <div className="flex min-w-0 items-center gap-3">
             <Botao
               tipo="secundario"
-              icone="voltar"
+              icone="arrow_back"
               onClick={() => despachar({ tipo: "fechar-revisao" })}
             >
               Voltar
@@ -392,7 +392,7 @@ export function Revisao({
                 <Botao
                   tamanho="mini"
                   tipo="discreto"
-                  icone="voltar"
+                  icone="arrow_back"
                   disabled={indiceSeguro === 0}
                   onClick={() => setIndiceArquivo(indiceSeguro - 1)}
                   aria-label="Documento anterior"
@@ -406,7 +406,7 @@ export function Revisao({
                 <Botao
                   tamanho="mini"
                   tipo="discreto"
-                  icone="avancar"
+                  icone="arrow_forward"
                   disabled={indiceSeguro === arquivos.length - 1}
                   onClick={() => setIndiceArquivo(indiceSeguro + 1)}
                   aria-label="Próximo documento"
@@ -438,7 +438,7 @@ export function Revisao({
                 <Botao
                   {...props}
                   tipo="discreto"
-                  icone="reticencias"
+                  icone="more_vert"
                   aria-label="Mais ações"
                 />
               )}
@@ -464,7 +464,7 @@ export function Revisao({
                     {saida}
                   </p>
                 </div>
-                <Botao icone="baixar" onClick={() => aoBaixarArquivo(arquivo)}>
+                <Botao icone="file_download" onClick={() => aoBaixarArquivo(arquivo)}>
                   Baixar cópia deste
                 </Botao>
               </div>
@@ -473,7 +473,7 @@ export function Revisao({
             {/* Abaixo de 1024px o painel vira gaveta; o botão só existe aí. */}
             <Botao
               className="lg:hidden"
-              icone="olho"
+              icone="visibility"
               onClick={() => setGavetaAberta(true)}
               aria-label="Abrir a lista de ocorrências"
             >
@@ -494,7 +494,7 @@ export function Revisao({
                 : "border-warning text-warning"
             }`}
           >
-            <Icone nome="alerta" tamanho={14} className="mt-0.5 shrink-0" />
+            <Icone nome="warning" tamanho={14} className="mt-0.5 shrink-0" />
             <div className="min-w-0">
               {ocr.paginas_com_erro > 0 ? (
                 <>
@@ -596,7 +596,7 @@ export function Revisao({
               <Botao
                 tamanho="mini"
                 tipo="discreto"
-                icone="fechar"
+                icone="close"
                 onClick={() => setGavetaAberta(false)}
                 aria-label="Fechar a lista de ocorrências"
               />

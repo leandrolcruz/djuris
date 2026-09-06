@@ -290,7 +290,7 @@ export function Conversa({
                   <Botao
                     tipo="primario"
                     className="mt-5"
-                    icone="arquivar"
+                    icone="folder_supervised"
                     onClick={() => setEscolhendo(true)}
                     disabled={documentos.length === 0}
                   >
@@ -434,7 +434,7 @@ export function Conversa({
               <p className="font-serif text-sm text-danger">
                 Esta conversa foi marcada como comprometida e não aceita novos envios.
               </p>
-              <Botao tipo="secundario" icone="conversa" onClick={() => setRecomecando(true)}>
+              <Botao tipo="secundario" icone="forum" onClick={() => setRecomecando(true)}>
                 Nova conversa
               </Botao>
             </div>
@@ -453,7 +453,7 @@ export function Conversa({
             <div className="flex flex-wrap items-center gap-1.5 px-3 pt-3">
               {escolhidos.map((d) => (
                 <Selo key={d.id} tom="neutro" className="max-w-[16rem]">
-                  <Icone nome="documento" tamanho={11} />
+                  <Icone nome="description" tamanho={11} />
                   <span className="truncate">{d.nome}</span>
                 </Selo>
               ))}
@@ -463,7 +463,7 @@ export function Conversa({
                 disabled={documentos.length === 0}
                 className="inline-flex min-h-6 items-center gap-1 rounded-full px-2 font-mono text-2xs text-accent transition-colors duration-[120ms] hover:bg-accent-muted disabled:opacity-40"
               >
-                <Icone nome="mais" tamanho={11} />
+                <Icone nome="add" tamanho={11} />
                 {escolhidos.length === 0 ? "Escolher documentos" : "Trocar"}
               </button>
               {/* Só com a conversa em andamento: recomeçar uma conversa vazia
@@ -474,7 +474,7 @@ export function Conversa({
                   onClick={() => setRecomecando(true)}
                   className="inline-flex min-h-6 items-center gap-1 rounded-full px-2 font-mono text-2xs text-accent transition-colors duration-[120ms] hover:bg-accent-muted"
                 >
-                  <Icone nome="conversa" tamanho={11} />
+                  <Icone nome="forum" tamanho={11} />
                   Nova conversa
                 </button>
               )}
@@ -513,7 +513,7 @@ export function Conversa({
                 <Botao
                   tipo="secundario"
                   circular
-                  icone="fechar"
+                  icone="close"
                   aria-label="Parar a resposta"
                   onClick={cancelar}
                 />
@@ -521,7 +521,7 @@ export function Conversa({
                 <Botao
                   tipo="primario"
                   circular
-                  icone="enviar"
+                  icone="send"
                   type="submit"
                   aria-label="Enviar"
                   disabled={!podeEnviar || pergunta.trim() === ""}

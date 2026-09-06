@@ -113,7 +113,7 @@ export function PainelDenyList({ buscar, gravar, avisar }: PainelDenyListProps) 
                   <Botao
                     tamanho="mini"
                     tipo="discreto"
-                    icone="fechar"
+                    icone="close"
                     disabled={gravando}
                     aria-label={`Voltar a mascarar ${termo}`}
                     onClick={() => remover(tipo, termo)}
