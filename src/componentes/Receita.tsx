@@ -40,7 +40,7 @@ const Trecho = forwardRef<
       ref={ref}
       type="button"
       className={[
-        "mx-0.5 rounded-sm font-mono text-sm font-medium text-primary",
+        "mx-0.5 rounded-sm font-mono text-body-md font-medium text-primary",
         "underline decoration-accent/40 decoration-2 underline-offset-4",
         "transition-colors duration-[120ms] hover:decoration-accent",
       ].join(" ")}
@@ -83,7 +83,7 @@ export function Receita() {
        dentro de parágrafo. O navegador "conserta" fechando o `<p>` sozinho no
        meio da frase, o que quebra a hidratação do React e embaralha o layout.
        Serifa e entrelinha de leitura vêm das classes. */
-    <div className="text-base leading-loose text-on-surface">
+    <div className="text-body-lg leading-loose text-on-surface">
       Mascarar{" "}
       <Popover
         rotulo="Tipos de dado a mascarar"
@@ -161,7 +161,7 @@ export function Receita() {
         )}
       >
         <div className="w-[320px] space-y-2">
-          <p className="text-xs leading-normal text-on-surface-variant">
+          <p className="text-body-sm leading-normal text-on-surface-variant">
             {prefs.pastaDeSaida ? (
               <>
                 Salvando em{" "}
@@ -202,7 +202,7 @@ export function Receita() {
       </Popover>
       .
       {qtdEntidades === 0 && (
-        <span className="mt-2 flex items-center gap-1.5 text-xs text-error">
+        <span className="mt-2 flex items-center gap-1.5 text-body-sm text-error">
           <Icone nome="warning" tamanho={13} />
           Escolha ao menos um tipo de dado.
         </span>

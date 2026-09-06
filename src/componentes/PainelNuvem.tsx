@@ -165,7 +165,7 @@ export function PainelNuvem() {
           id="modelo-da-nuvem"
           value={escolhido}
           onChange={(e) => definirPref("modeloDaNuvem", e.target.value)}
-          className="min-h-9 max-w-xs rounded-md border border-outline-variant bg-surface-container-lowest px-3 font-mono text-xs text-on-surface"
+          className="min-h-9 max-w-xs rounded-md border border-outline-variant bg-surface-container-lowest px-3 font-mono text-mono-tag text-on-surface"
         >
           {modelos.map((m) => (
             <option key={m.id} value={m.id}>

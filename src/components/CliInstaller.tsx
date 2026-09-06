@@ -147,7 +147,7 @@ export function CliInstaller({ showToast }: Props) {
           descricao="Para um agente (Claude Code e afins), a saída em JSON traz anonymized_text e entities_found — tipo, texto, posições e confiança."
           empilhado
         >
-          <pre className="overflow-x-auto rounded-md bg-surface-container-low px-3 py-2.5 font-mono text-xs leading-relaxed text-on-surface-variant">
+          <pre className="overflow-x-auto rounded-md bg-surface-container-low px-3 py-2.5 font-mono text-mono-tag leading-relaxed text-on-surface-variant">
             {"tecjustica-sigilo autos.pdf -o autos-anonimizado.md\n"}
             {"tecjustica-sigilo entrada.txt -q --format json\n"}
             {"tecjustica-sigilo conectar   # pareia com o aplicativo aberto"}

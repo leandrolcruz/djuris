@@ -49,7 +49,7 @@ export function Toast({ message, type = "success", onClose, duration }: ToastPro
       <span className={sucesso ? "mt-0.5 text-secondary" : "mt-0.5 text-error"}>
         <Icone nome={sucesso ? "check_circle" : "warning"} tamanho={16} />
       </span>
-      <span className="text-sm leading-snug text-on-surface">{message}</span>
+      <span className="text-body-md leading-snug text-on-surface">{message}</span>
     </div>
   );
 }

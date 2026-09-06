@@ -21,10 +21,10 @@ export function MotorCarregando({ modoNlp }: { modoNlp: string }) {
           /* `animate-pulse-soft` em vez de rotação: um cadeado girando sugere
              um relógio, não um carregamento. */
         />
-        <h2 className="mt-4 font-mono text-base font-semibold text-on-surface">
+        <h2 className="mt-4 font-mono text-body-lg font-semibold text-on-surface">
           Carregando o motor de anonimização
         </h2>
-        <p className="mx-auto mt-2 max-w-sm text-sm text-outline">
+        <p className="mx-auto mt-2 max-w-sm text-body-md text-outline">
           {modoNlp === "transformer"
             ? "Iniciando o modelo BERT jurídico. A primeira execução pode levar alguns minutos."
             : "O modelo de linguagem está sendo iniciado."}
@@ -36,7 +36,7 @@ export function MotorCarregando({ modoNlp }: { modoNlp: string }) {
         >
           <div className="h-full w-1/2 animate-pulse-soft rounded-full bg-primary" />
         </div>
-        <p className="mt-4 text-xs text-outline">
+        <p className="mt-4 text-body-sm text-outline">
           O trilho à esquerda continua disponível.
         </p>
       </div>
@@ -49,10 +49,10 @@ export function MotorComFalha({ aoTentarDeNovo }: { aoTentarDeNovo: () => void }
     <div className="flex flex-1 items-center justify-center px-8">
       <div className="animate-fade-in text-center" role="alert">
         <Icone nome="warning" tamanho={28} className="mx-auto text-error" />
-        <h2 className="mt-4 font-mono text-base font-semibold text-error">
+        <h2 className="mt-4 font-mono text-body-lg font-semibold text-error">
           O motor de anonimização não respondeu
         </h2>
-        <p className="mx-auto mt-2 max-w-sm text-sm text-outline">
+        <p className="mx-auto mt-2 max-w-sm text-body-md text-outline">
           Ele roda como um programa local junto com o aplicativo. Tentar de novo
           costuma resolver; se persistir, feche e abra o aplicativo.
         </p>

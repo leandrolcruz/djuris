@@ -73,10 +73,10 @@ export class BarreiraDeErro extends Component<Props, Estado> {
     return (
       <div className="flex h-full items-center justify-center p-8">
         <div className="w-full max-w-xl">
-          <h1 className="font-mono text-lg font-semibold tracking-tight text-error">
+          <h1 className="font-mono text-headline-sm font-semibold tracking-tight text-error">
             O aplicativo encontrou um erro
           </h1>
-          <p className="mt-2 text-sm text-on-surface-variant">
+          <p className="mt-2 text-body-md text-on-surface-variant">
             Nada foi enviado para fora da sua máquina. Os arquivos que você já
             salvou em disco não foram afetados; um lote em andamento foi
             interrompido e precisa ser refeito.
@@ -90,19 +90,19 @@ export class BarreiraDeErro extends Component<Props, Estado> {
           <div className="mt-4 flex gap-2">
             <button
               onClick={this.copiar}
-              className="min-h-9 rounded-md border border-outline-variant bg-surface-container-lowest px-3.5 py-2 font-mono text-sm font-medium text-on-surface hover:bg-surface-container-low"
+              className="min-h-9 rounded-md border border-outline-variant bg-surface-container-lowest px-3.5 py-2 font-mono text-body-md font-medium text-on-surface hover:bg-surface-container-low"
             >
               Copiar o erro
             </button>
             <button
               onClick={() => window.location.reload()}
-              className="min-h-9 rounded-md bg-primary px-3.5 py-2 font-mono text-sm font-medium text-on-primary hover:bg-primary-hover"
+              className="min-h-9 rounded-md bg-primary px-3.5 py-2 font-mono text-body-md font-medium text-on-primary hover:bg-primary-hover"
             >
               Recarregar
             </button>
           </div>
 
-          <p className="mt-4 text-xs text-outline">
+          <p className="mt-4 text-body-sm text-outline">
             Copie o texto acima ao relatar o problema — é ele que diz onde
             procurar.
           </p>

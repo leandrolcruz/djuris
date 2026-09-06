@@ -96,7 +96,7 @@ export function SeletorDeDocumentos({
 
       <ul className="mt-3 max-h-[46vh] divide-y divide-surface-container overflow-y-auto rounded-md border border-surface-container-high">
         {visiveis.length === 0 && (
-          <li className="px-3 py-6 text-center text-sm text-outline">
+          <li className="px-3 py-6 text-center text-body-md text-outline">
             Nenhum documento com esse termo.
           </li>
         )}
@@ -112,7 +112,7 @@ export function SeletorDeDocumentos({
                   rotulo={`Marcar ${d.nome}`}
                 />
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm text-on-surface">{d.nome}</span>
+                  <span className="block truncate text-body-md text-on-surface">{d.nome}</span>
                   <span className="block truncate font-mono text-mono-tag text-outline">
                     {d.cnj ?? "Avulsos"} · {dataCurta(d.gravadoEm)} ·{" "}
                     {d.totalOcorrencias.toLocaleString("pt-BR")} ocorrências
@@ -129,7 +129,7 @@ export function SeletorDeDocumentos({
         })}
       </ul>
 
-      <p className="mt-3 text-xs text-outline">
+      <p className="mt-3 text-body-sm text-outline">
         Os documentos escolhidos passam a compartilhar uma numeração só: a mesma pessoa recebe o
         mesmo pseudônimo em todas as peças.
       </p>

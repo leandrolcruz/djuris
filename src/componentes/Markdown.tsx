@@ -47,7 +47,7 @@ export function Markdown({
   const blocos = analisarBlocos(texto);
 
   return (
-    <div className="markdown space-y-3 font-body text-sm leading-relaxed text-on-surface">
+    <div className="markdown space-y-3 font-body text-body-md leading-relaxed text-on-surface">
       {blocos.map((bloco, i) => (
         <BlocoRender
           key={i}
@@ -92,14 +92,14 @@ function BlocoRender({
     case "titulo": {
       /* Um `#` numa resposta de chat não é título de página: é o começo de uma
          seção dentro de uma mensagem. Por isso o maior nível já entra em
-         `text-base`, e não numa escala de display que competiria com o resto
+         `text-body-lg`, e não numa escala de display que competiria com o resto
          da interface. */
       if (bloco.nivel <= 2) {
         return (
           <h3
             className={[
               "mt-5 border-b border-surface-container-high pb-1 font-body font-semibold text-on-surface first:mt-0",
-              bloco.nivel === 1 ? "text-base" : "text-sm",
+              bloco.nivel === 1 ? "text-body-lg" : "text-body-md",
             ].join(" ")}
           >
             <Linha filhos={bloco.filhos} nomes={nomes} />
@@ -181,7 +181,7 @@ function BlocoRender({
               {bloco.linhas.map((linha, i) => (
                 <tr key={i} className="border-b border-surface-container-high last:border-0">
                   {linha.map((celula, j) => (
-                    <td key={j} className="px-2 py-1.5 align-top text-sm">
+                    <td key={j} className="px-2 py-1.5 align-top text-body-md">
                       <Linha filhos={celula} nomes={nomes} />
                     </td>
                   ))}

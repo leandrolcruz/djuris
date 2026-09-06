@@ -82,7 +82,7 @@ export function PainelDenyList({ buscar, gravar, avisar }: PainelDenyListProps) 
       empilhado
     >
       {lista === null ? (
-        <p className="text-sm text-outline">Carregando…</p>
+        <p className="text-body-md text-outline">Carregando…</p>
       ) : (
         <div className="space-y-3">
           <Campo
@@ -94,7 +94,7 @@ export function PainelDenyList({ buscar, gravar, avisar }: PainelDenyListProps) 
           />
 
           {pares.length === 0 ? (
-            <p className="py-4 text-center text-sm text-outline">
+            <p className="py-4 text-center text-body-md text-outline">
               {busca ? "Nenhum termo com essa busca." : "Nenhum termo liberado ainda."}
             </p>
           ) : (
@@ -108,7 +108,7 @@ export function PainelDenyList({ buscar, gravar, avisar }: PainelDenyListProps) 
                     <Selo tom="neutro">
                       {tipo === "*" ? "qualquer tipo" : rotuloDaEntidade(tipo)}
                     </Selo>
-                    <span className="truncate text-sm text-on-surface">{termo}</span>
+                    <span className="truncate text-body-md text-on-surface">{termo}</span>
                   </div>
                   <Botao
                     tamanho="mini"

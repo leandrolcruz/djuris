@@ -63,11 +63,11 @@ export function EscolhaDePolitica({
                 : "border-surface-container-high hover:bg-surface-container-low",
             ].join(" ")}
           >
-            <span className="font-mono text-xs font-semibold text-on-surface">{opcao.titulo}</span>
+            <span className="font-mono text-mono-tag font-semibold text-on-surface">{opcao.titulo}</span>
             <code className="mt-1.5 block truncate rounded bg-surface-container-low px-1.5 py-1 font-mono text-mono-tag text-on-surface-variant">
               {opcao.exemplo}
             </code>
-            <span className="mt-1.5 block text-xs leading-normal text-outline">
+            <span className="mt-1.5 block text-body-sm leading-normal text-outline">
               {opcao.descricao}
             </span>
           </button>

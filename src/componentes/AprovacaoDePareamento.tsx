@@ -112,35 +112,35 @@ export function AprovacaoDePareamento({
         de anonimização desta máquina.
       </p>
 
-      <p className="mt-3 font-mono text-xs text-on-surface-variant">
+      <p className="mt-3 font-mono text-mono-tag text-on-surface-variant">
         Confira se este código é o mesmo que o programa mostrou:
       </p>
-      <p className="mt-1 font-mono text-2xl font-semibold tracking-[0.3em] text-primary tabular-nums">
+      <p className="mt-1 font-mono text-display font-semibold tracking-[0.3em] text-primary tabular-nums">
         {pedido?.codigo}
       </p>
-      <p className="mt-1 text-xs text-outline">
+      <p className="mt-1 text-body-sm text-outline">
         Se os códigos não baterem, recuse — o pedido é de outro programa.
       </p>
 
       <div className="mt-4 space-y-1.5 border-t border-surface-container-high pt-3">
-        <p className="text-xs text-outline">
+        <p className="text-body-sm text-outline">
           Origem:{" "}
           <span className="font-mono text-on-surface-variant">
             {pedido?.origem ?? "não informada"}
           </span>
         </p>
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-xs text-outline">Poderá:</span>
+          <span className="text-body-sm text-outline">Poderá:</span>
           {pedido?.escopos.map((e) => (
             <Selo key={e} tom="acao">
               {e}
             </Selo>
           ))}
           {pedido?.escopos.length === 0 && (
-            <span className="text-xs text-outline">nada — recuse</span>
+            <span className="text-body-sm text-outline">nada — recuse</span>
           )}
         </div>
-        <p className="flex items-start gap-1.5 pt-1 text-xs text-outline">
+        <p className="flex items-start gap-1.5 pt-1 text-body-sm text-outline">
           <Icone nome="lock" tamanho={13} className="mt-0.5 shrink-0" />
           Não poderá abrir arquivos do seu disco por caminho.
         </p>
