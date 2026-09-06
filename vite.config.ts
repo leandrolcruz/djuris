@@ -22,6 +22,28 @@ export default defineConfig({
   },
   build: {
     outDir: "dist",
+
+    /* Fonte nunca é embutida como `data:` URI, e isto é a CSP falando, não
+       gosto pessoal.
+
+       O padrão do Vite embute todo asset com menos de 4 KB, e dois subconjuntos
+       de fonte caem abaixo disso (os cirílicos do Plus Jakarta Sans e do
+       JetBrains Mono, ~1,7 e ~2,0 KB). A CSP da janela tem `font-src 'self'`,
+       que **não** aceita `data:` — então o navegador bloqueia a fonte embutida
+       e registra a violação. Os outros dezesseis subconjuntos, que viram
+       arquivo, carregam normalmente.
+
+       O estrago hoje é console sujo: os dois bloqueados cobrem só o cirílico,
+       que não aparece em processo brasileiro. O que torna isso pior que
+       cosmético é o que vem depois — quatro erros de CSP a cada abertura
+       ensinam a ignorar erro de CSP, e basta uma atualização de fonte encolher
+       um subconjunto LATINO abaixo de 4 KB para o texto cair na fonte do
+       sistema, em silêncio, sem nada além dessa mesma linha que ninguém lê
+       mais.
+
+       Só apareceu no aplicativo INSTALADO: em desenvolvimento o Vite serve as
+       fontes por URL, e o `data:` nem chega a existir. */
+    assetsInlineLimit: (arquivo) => (arquivo.endsWith(".woff2") ? false : undefined),
   },
   server: {
     watch: {
