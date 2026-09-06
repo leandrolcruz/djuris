@@ -1,25 +1,30 @@
 import type { ReactNode } from "react";
+import { Icone, type NomeIcone } from "./Icone";
 
 /**
- * Cartão — a folha sobre a mesa.
+ * Cartão.
  *
- * A relação de claro/escuro aqui é o contrário do que a maioria dos sistemas
- * escuros faz, e é proposital: `--folha` é **mais clara** que `--papel`. Uma
- * folha apoiada numa mesa recebe mais luz que a mesa; inverter isso faz o
- * cartão parecer um buraco em vez de um objeto pousado.
+ * A unidade de agrupamento do sistema. **Não tem borda**, e isso é a mudança
+ * estrutural da repaginação: a separação entre camadas passou a ser diferença
+ * de tom mais sombra curta. `--surface-container-lowest` é branco puro sobre um
+ * fundo lavanda claro; no tema escuro a relação se inverte e o cartão fica mais
+ * escuro que o fundo, que é como o Material 3 trata elevação no escuro.
  *
- * A sombra é curta e fria (`--shadow-sm`) — papel encostado, não flutuando.
+ * `semPreenchimento` existe para a tabela sangrar até a borda do cartão — sem
+ * ele a tabela ganharia uma moldura de 16px que a faz parecer encaixotada.
  */
 
 interface CartaoProps {
   children: ReactNode;
-  /** Título curto em mono, com o fio de divisão abaixo. */
+  /** Título da seção. Aparece com um fio abaixo. */
   titulo?: string;
-  /** Linha de apoio sob o título, em serifa. */
+  /** Ícone à esquerda do título, na cor de ação. */
+  icone?: NomeIcone;
+  /** Uma linha explicando o que a seção faz. */
   descricao?: string;
-  /** Canto superior direito do cabeçalho — normalmente um `Botao` mini. */
+  /** Canto superior direito — normalmente um selo ou um botão mini. */
   acao?: ReactNode;
-  /** Tira o preenchimento interno, para tabela que sangra até a borda. */
+  /** Para conteúdo que precisa encostar nas bordas (tabela, lista). */
   semPreenchimento?: boolean;
   className?: string;
 }
@@ -27,6 +32,7 @@ interface CartaoProps {
 export function Cartao({
   children,
   titulo,
+  icone,
   descricao,
   acao,
   semPreenchimento = false,
@@ -34,25 +40,28 @@ export function Cartao({
 }: CartaoProps) {
   return (
     <section
-      className={[
-        "rounded-lg border border-border-subtle bg-surface shadow-sm",
-        className,
-      ].join(" ")}
+      className={`rounded-lg bg-surface-container-lowest shadow-sm ${className}`}
     >
       {(titulo || acao) && (
-        <header className="flex items-start justify-between gap-3 border-b border-border-subtle px-4 py-3">
+        <div className="flex items-start justify-between gap-3 px-gutter-md pt-gutter-md pb-gutter-sm">
           <div className="min-w-0">
-            {titulo && (
-              <h2 className="font-mono text-sm font-semibold text-text">{titulo}</h2>
-            )}
+            <h2 className="flex items-center gap-2 font-display text-headline-sm text-on-surface">
+              {icone && (
+                <span className="text-primary">
+                  <Icone nome={icone} tamanho={20} />
+                </span>
+              )}
+              {titulo}
+            </h2>
             {descricao && (
-              <p className="mt-0.5 text-xs leading-normal text-text-tertiary">{descricao}</p>
+              <p className="mt-1 font-body text-body-sm text-on-surface-variant">{descricao}</p>
             )}
           </div>
           {acao && <div className="shrink-0">{acao}</div>}
-        </header>
+        </div>
       )}
-      <div className={semPreenchimento ? "" : "p-4"}>{children}</div>
+
+      <div className={semPreenchimento ? "" : "p-gutter-md"}>{children}</div>
     </section>
   );
 }

@@ -4,7 +4,6 @@ import {
   Botao,
   CabecalhoDeTela,
   Cartao,
-  Carimbo,
   Campo,
   Marcador,
   Selo,
@@ -174,9 +173,9 @@ export function Documentos({
                 /* Página que precisava de OCR e não voltou. O texto dela não
                    está no resultado — quem revisa precisa saber antes de
                    assinar. O carimbo marca a exceção, nunca a regra. */
-                <Carimbo tom="perigo">
+                <Selo tom="perigo" forma="pilula">
                   {`${i.paginasComErro} falha${i.paginasComErro > 1 ? "s" : ""}`}
-                </Carimbo>
+                </Selo>
               )}
               <span className="truncate text-sm text-text">{i.nome}</span>
             </div>

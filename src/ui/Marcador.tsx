@@ -50,17 +50,17 @@ export function Marcador({
         aoAlternar();
       }}
       className={[
-        "grid size-[17px] shrink-0 place-items-center rounded-[2px] border",
+        "grid size-[17px] shrink-0 place-items-center rounded-xs border",
         "transition-colors duration-[120ms]",
         "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2",
-        "focus-visible:outline-accent",
+        "focus-visible:outline-primary",
         marcado || parcial
-          ? "border-accent bg-accent/10"
-          : "border-border hover:border-accent hover:bg-surface-hover",
+          ? "border-primary bg-primary/10"
+          : "border-outline-variant hover:border-primary hover:bg-surface-container",
       ].join(" ")}
     >
       {parcial ? (
-        <span className="block h-px w-2.5 bg-accent" />
+        <span className="block h-px w-2.5 bg-primary" />
       ) : marcado ? (
         <svg viewBox="0 0 17 17" className="size-[15px]" aria-hidden="true">
           {/* Traço de caneta: entra fino, engrossa na virada e sai levantando.
@@ -69,7 +69,7 @@ export function Marcador({
           <path
             d="M3.4 8.9 C4.4 9.5 5.4 10.8 6.6 12.3 C8.7 8.4 10.9 5.2 13.8 3.1"
             fill="none"
-            stroke="var(--esferografica)"
+            stroke="var(--primary)"
             strokeWidth="1.9"
             strokeLinecap="round"
             strokeLinejoin="round"

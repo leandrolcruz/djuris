@@ -39,14 +39,14 @@ export function Interruptor({
       className={[
         "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full",
         "transition-colors duration-[120ms] disabled:cursor-not-allowed disabled:opacity-40",
-        ligado ? "bg-accent" : "bg-border",
+        ligado ? "bg-primary" : "bg-outline-variant",
         className,
       ].join(" ")}
     >
       <span
         aria-hidden="true"
         className={[
-          "block size-4 rounded-full bg-on-accent shadow-sm",
+          "block size-4 rounded-full bg-surface-container-lowest shadow-sm",
           "transition-transform duration-[120ms]",
           ligado ? "translate-x-[18px]" : "translate-x-0.5",
         ].join(" ")}

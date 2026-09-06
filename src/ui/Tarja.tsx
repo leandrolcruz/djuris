@@ -1,79 +1,137 @@
 import type { CSSProperties, KeyboardEvent } from "react";
 import { corDaEntidade, rotuloDaEntidade } from "../types";
+import { Icone } from "./Icone";
 
 /**
  * Tarja de redação — o elemento de assinatura do produto.
  *
- * Barra **preta** sobre o papel, com filete de 2px na cor do tipo. A versão
- * anterior pintava a tarja inteira na cor da entidade, o que fazia a página
- * parecer marcada a marca-texto em vez de censurada; o preenchimento agora é
- * sempre `--toner`, e o tipo se identifica pelo filete.
+ * Uma barra sólida cor de tinta cobre o dado detectado. Passar o cursor (ou dar
+ * foco pelo teclado) pinta a barra com a cor do tipo e revela o valor, junto de
+ * um painel que diz **o que** o motor achou, **com quanta confiança** e oferece
+ * as duas decisões possíveis. É assim que o revisor confere sem desmascarar o
+ * documento inteiro.
  *
- * Passar o mouse ou focar pelo teclado revela o valor original — é o gesto que
- * permite conferir se a anonimização acertou, a tarefa central de quem responde
- * pelo sigilo. Por isso cada tarja é um `<button>` de verdade: o revisor tem de
- * alcançar **todas** as ocorrências por Tab, não só as que couberem no mouse.
+ * ## O painel é a mudança de verdade
  *
- * O nome acessível diz o tipo e o valor ("CPF: 123.456.789-09"), porque para
- * quem usa leitor de tela a barra preta não comunica nada — e a cor do filete,
- * menos ainda.
+ * Antes, o único jeito de saber o tipo de uma tarja era achá-la na lista
+ * lateral — e a lista tem dezenas de itens. O painel traz a resposta ao lugar
+ * onde a pergunta nasce.
+ *
+ * Ele não pode viver dentro do `<button>`: HTML não permite botão dentro de
+ * botão, e as duas decisões são botões. Daí o envelope `<span>` com
+ * `position: relative`, que também é `display: inline` para que um nome longo
+ * continue quebrando entre linhas — a tarja é conteúdo do documento, não um
+ * bloco encaixado nele.
+ *
+ * ## A cor
+ *
+ * `--cor-entidade` chega por atributo `style` porque `corDaEntidade()` monta
+ * `var(--color-entity-…)` em runtime. É por causa deste caminho que o CSP da
+ * janela precisa de `style-src 'unsafe-inline'`.
  */
 
 interface TarjaProps {
-  /** O texto original, que a tarja esconde. */
+  /** O texto original que a tarja esconde. */
   children: string;
-  /** Tipo da entidade, como o backend devolveu (`CPF_BR`, `PERSON`…). */
+  /** `CPF_BR`, `PERSON`… String livre: recognizer novo cai no cinza. */
   tipo: string;
-  /** Posição na lista de ocorrências — liga a tarja ao painel de auditoria. */
+  /** Posição na lista de ocorrências — é por ele que a lista lateral navega. */
   indice: number;
+  /** Confiança do motor, 0–1. Ausente quando o dado não veio. */
+  score?: number;
   ativa?: boolean;
-  /** Deixa o valor à mostra sem depender de hover. */
+  /** À mostra sem precisar do cursor. */
   revelada?: boolean;
-  /** Dispara a animação de varredura, escalonada por `indice`. */
   varrendo?: boolean;
   onClick?: () => void;
+  /** "Não é dado pessoal" — grava na lista de termos liberados. */
+  aoLiberar?: () => void;
 }
 
-/* 240 ms para o documento inteiro, escalonados: uma tarja tardia não pode
-   esperar mais que isso, ou a página fica se montando na frente do revisor.
-   O passo encolhe conforme o índice cresce; a soma converge. */
+/* O atraso da varredura cresce com a posição, mas com teto: num documento de
+   oitocentas ocorrências, atraso proporcional viraria espetáculo de meio
+   minuto antes de a tela ficar utilizável. */
 const ATRASO_MAXIMO_MS = 240;
-const atrasoDe = (indice: number) =>
-  Math.min(ATRASO_MAXIMO_MS, indice * 12);
+const atrasoDe = (indice: number) => Math.min(ATRASO_MAXIMO_MS, indice * 12);
 
 export function Tarja({
   children,
   tipo,
   indice,
+  score,
   ativa = false,
   revelada = false,
   varrendo = false,
   onClick,
+  aoLiberar,
 }: TarjaProps) {
+  const cor = corDaEntidade(tipo);
   const estilo = {
-    "--cor-entidade": corDaEntidade(tipo),
+    "--cor-entidade": cor,
     "--atraso": `${atrasoDe(indice)}ms`,
   } as CSSProperties;
+  const rotulo = rotuloDaEntidade(tipo);
+  const confianca = score === undefined ? null : `${Math.round(score * 100)}%`;
 
   return (
-    <button
-      type="button"
-      className="tarja"
-      style={estilo}
-      data-ocorrencia={indice}
-      data-revelada={revelada || undefined}
-      data-varrendo={varrendo || undefined}
-      data-ativa={ativa || undefined}
-      aria-label={`${rotuloDaEntidade(tipo)}: ${children}`}
-      onClick={onClick}
-      onKeyDown={(e: KeyboardEvent) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onClick?.();
-        }
-      }}
-    >
-      {children}
-    </button>
+    <span className="group/tarja relative inline" style={estilo}>
+      <button
+        type="button"
+        className="tarja"
+        data-ocorrencia={indice}
+        data-revelada={revelada || undefined}
+        data-varrendo={varrendo || undefined}
+        data-ativa={ativa || undefined}
+        aria-label={`${rotulo}: ${children}`}
+        onClick={onClick}
+        onKeyDown={(e: KeyboardEvent) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onClick?.();
+          }
+        }}
+      >
+        {children}
+      </button>
+
+      {/* `pointer-events-none` enquanto escondido: sem isso o painel invisível
+          intercepta o clique na linha de texto acima da tarja. */}
+      <span
+        role="tooltip"
+        className={[
+          "pointer-events-none invisible absolute bottom-full left-0 z-100 mb-2 w-72",
+          "flex flex-col gap-2 rounded-lg bg-inverse-surface p-3 text-inverse-on-surface shadow-lg",
+          "opacity-0 transition-opacity duration-[120ms]",
+          "group-hover/tarja:pointer-events-auto group-hover/tarja:visible group-hover/tarja:opacity-100",
+          "group-focus-within/tarja:pointer-events-auto group-focus-within/tarja:visible group-focus-within/tarja:opacity-100",
+        ].join(" ")}
+      >
+        <span className="flex items-center justify-between gap-2">
+          <span className="font-mono text-mono-tag uppercase" style={{ color: cor }}>
+            {rotulo}
+            {confianca && ` · ${confianca}`}
+          </span>
+          <span className="font-mono text-mono-tag opacity-70">motor local</span>
+        </span>
+
+        <span className="block font-mono text-mono-code break-all">{children}</span>
+
+        {aoLiberar && (
+          <span className="flex items-center gap-1.5">
+            <span className="flex flex-1 items-center justify-center gap-1 rounded-xs bg-secondary px-2 py-1 font-display text-mono-tag text-on-secondary">
+              <Icone nome="lock" tamanho={13} />
+              mantido em sigilo
+            </span>
+            <button
+              type="button"
+              onClick={aoLiberar}
+              className="flex-1 rounded-xs bg-surface-container-highest px-2 py-1 font-display text-mono-tag text-on-surface transition-colors duration-[120ms] hover:bg-surface-bright"
+            >
+              não é dado pessoal
+            </button>
+          </span>
+        )}
+      </span>
+    </span>
   );
 }
