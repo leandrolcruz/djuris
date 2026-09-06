@@ -332,6 +332,58 @@ function Casca() {
    * motor repetiu quarenta vezes exigiria quarenta cliques para o mesmo efeito
    * que a gravação já teve.
    */
+  /**
+   * Reescreve a saída deste documento com o conjunto de ocorrências dado.
+   *
+   * É o caminho único de toda mudança de máscara na Revisão — liberar um
+   * termo, liberar uma ocorrência só, liberar todas, desfazer. Três coisas
+   * precisam acontecer juntas, e separá-las já custou bug:
+   *
+   * 1. `/remascarar` reescreve o texto e **renumera do zero**. Deixar buraco na
+   *    sequência faria `pseudonimos.conferir` recusar o documento, e um "não é
+   *    PII" viraria "este documento não pode mais ser conversado".
+   * 2. A tela recebe a versão nova.
+   * 3. O cofre é regravado. Ele é gravado assim que o processamento termina,
+   *    antes de qualquer revisão — sem isto a tela ficaria limpa e o cofre
+   *    guardaria a versão suja, que é de onde a conversa lê.
+   *
+   * Devolve o arquivo atualizado, ou `null` se o remascaramento falhou.
+   */
+  const aplicarMascaras = useCallback(
+    async (
+      indiceArquivo: number,
+      entidades: EntityFound[]
+    ): Promise<ProcessedFile | null> => {
+      const arquivo = estado.revisao?.arquivos[indiceArquivo];
+      if (!arquivo) return null;
+
+      const refeito = await remascarar(
+        arquivo.originalContent,
+        entidades,
+        /* A política com que ESTE documento foi mascarado, não a preferência de
+           agora: remascarar com outra reescreveria o documento inteiro por
+           efeito colateral de um clique em uma linha. */
+        arquivo.politicaMascara ?? prefs.politica
+      );
+
+      const atualizado: ProcessedFile = {
+        ...arquivo,
+        anonymizedContent: refeito.anonymized_text,
+        entitiesFound: refeito.entities_found,
+      };
+
+      despachar({ tipo: "substituir-em-revisao", indice: indiceArquivo, arquivo: atualizado });
+
+      await gravacaoPendente.current;
+      const idNoCofre =
+        estado.revisao?.idNoCofre ?? idsNoCofre.current.get(arquivo.originalPath);
+      if (idNoCofre) await biblioteca.atualizar(idNoCofre, atualizado);
+
+      return atualizado;
+    },
+    [estado.revisao, remascarar, prefs.politica, despachar, biblioteca]
+  );
+
   const rejeitarDeteccao = useCallback(
     async (entidade: EntityFound, indiceArquivo: number) => {
       try {
@@ -449,6 +501,7 @@ function Casca() {
           aoSalvarTodos={() => salvarERevisar(estado.revisao!.arquivos)}
           aoBaixarArquivo={baixarUm}
           aoRejeitarDeteccao={rejeitarDeteccao}
+          aoAplicarMascaras={aplicarMascaras}
         />
       );
     }
