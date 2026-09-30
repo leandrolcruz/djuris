@@ -1,5 +1,10 @@
 # Porte macOS arm64 + Reidratação Reversível — Implementation Plan
 
+> **Estado em 30/09/2026 — Fase 1 e Fase 1b COMPLETAS (15/15).** Os checkboxes
+> das Tasks 1 a 10 ficaram sem marcar porque foram executadas em rodadas
+> anteriores; o trabalho está no código e nas suítes (259 Python, 90 Node, 51
+> renderer). Marcados de fato: 10b em diante. Falta publicar a branch `macos`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Rodar o `tecjustica-sigilo` no macOS Apple Silicon pela CLI e pelo MCP, e acrescentar reidratação — desfazer localmente a máscara na resposta que voltou de um modelo na nuvem.
@@ -2615,7 +2620,7 @@ quantas pessoas há no processo."
 - Modify: `/Users/leandroleitedacruz/tecjustica-sigilo/python-backend/cli.py`
 - Test: `/Users/leandroleitedacruz/tecjustica-sigilo/python-backend/tests/test_reidratacao_cli.py`
 
-- [ ] **Step 1: Acrescentar os testes**
+- [x] **Step 1: Acrescentar os testes**
 
 ```python
 # ---------------------------------------------------------------------------
@@ -2684,7 +2689,7 @@ def test_reidratar_avisa_rotulo_sem_entrada(cofre, capsys):
     assert "[PESSOA_7]" in capturado.err
 ```
 
-- [ ] **Step 2: Rodar e ver falhar**
+- [x] **Step 2: Rodar e ver falhar**
 
 ```bash
 cd /Users/leandroleitedacruz/tecjustica-sigilo/python-backend && \
@@ -2693,7 +2698,7 @@ cd /Users/leandroleitedacruz/tecjustica-sigilo/python-backend && \
 
 Expected: FAIL — `invalid choice: 'reidratar'`.
 
-- [ ] **Step 3: Implementar**
+- [x] **Step 3: Implementar**
 
 3a. A função, junto das outras `cmd_*` (depois de `cmd_ler`):
 
@@ -2851,7 +2856,7 @@ ressalvados `status` e `conectar` — que no `.sh` seguem de fora de propósito,
 porque dependem do aplicativo aberto, e no macOS ele só existe a partir da
 Fase 2.
 
-- [ ] **Step 4: Rodar e ver passar**
+- [x] **Step 4: Rodar e ver passar**
 
 ```bash
 cd /Users/leandroleitedacruz/tecjustica-sigilo/python-backend && \
@@ -2861,7 +2866,7 @@ cd /Users/leandroleitedacruz/tecjustica-sigilo/python-backend && \
 
 Expected: PASS em tudo.
 
-- [ ] **Step 5: Ciclo completo à mão, pelo shim instalado**
+- [x] **Step 5: Ciclo completo à mão, pelo shim instalado**
 
 ```bash
 cd /tmp && printf 'O autor JOÃO DA SILVA, CPF 529.982.247-25, pede a rescisão.\n' > peca.txt
@@ -2877,7 +2882,7 @@ Limpar depois: `tecjustica-sigilo reidratar --help` não apaga nada, então rode
 `rm -f /tmp/peca.txt /tmp/mascarada.txt /tmp/resposta.txt` e apague o mapa de
 teste com `python -c "import mapa_reverso; mapa_reverso.esquecer('teste-ciclo')"`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 cd /Users/leandroleitedacruz/tecjustica-sigilo
@@ -2909,7 +2914,7 @@ morre no dia em que alguém achar prático expor a ferramenta.
 **Files:**
 - Create: `/Users/leandroleitedacruz/tecjustica-sigilo/python-backend/tests/test_mapa_nao_vaza.py`
 
-- [ ] **Step 1: Escrever os testes**
+- [x] **Step 1: Escrever os testes**
 
 ```python
 """
@@ -2967,7 +2972,7 @@ def test_rotas_de_anonimizacao_nao_devolvem_o_mapa():
     assert "JOÃO DA SILVA" not in resposta.text
 ```
 
-- [ ] **Step 2: Rodar**
+- [x] **Step 2: Rodar**
 
 ```bash
 cd /Users/leandroleitedacruz/tecjustica-sigilo/python-backend && \
@@ -2978,7 +2983,7 @@ cd /Users/leandroleitedacruz/tecjustica-sigilo/python-backend && \
 Expected: os três primeiros PASS de imediato. O quarto é o que pode reprovar —
 e se reprovar, **é defeito real**, não teste a ajustar.
 
-- [ ] **Step 3: Se a rota vazar o mapa, filtrar na borda**
+- [x] **Step 3: Se a rota vazar o mapa, filtrar na borda**
 
 Em `server.py`, no handler de `/anonymize` (e no de `/v1/anonimizar`, se ele
 também serializar o dicionário cru), remover a chave antes de responder:
@@ -2993,7 +2998,7 @@ também serializar o dicionário cru), remover a chave antes de responder:
 
 Repetir o teste do Step 2 até passar.
 
-- [ ] **Step 4: Rodar a suíte inteira**
+- [x] **Step 4: Rodar a suíte inteira**
 
 ```bash
 cd /Users/leandroleitedacruz/tecjustica-sigilo/python-backend && \
@@ -3003,7 +3008,7 @@ cd /Users/leandroleitedacruz/tecjustica-sigilo/python-backend && \
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd /Users/leandroleitedacruz/tecjustica-sigilo
@@ -3031,7 +3036,7 @@ a qualquer cliente pareado, extensão de navegador incluída."
 - Create: `/Users/leandroleitedacruz/tecjustica-sigilo/docs/macos.md`
 - Modify: `/Users/leandroleitedacruz/tecjustica-sigilo/README.md`
 
-- [ ] **Step 1: Escrever `docs/macos.md`**
+- [x] **Step 1: Escrever `docs/macos.md`**
 
 Conteúdo obrigatório, nesta ordem:
 
@@ -3111,7 +3116,7 @@ Conteúdo obrigatório, nesta ordem:
     a variável para um punhado de digitalizações fecha isso. Não é porte, é dado
     de teste; e teste pulado passa por teste aprovado em log corrido.
 
-- [ ] **Step 1c: Registrar no `CLAUDE.md` duas armadilhas de medição**
+- [x] **Step 1c: Registrar no `CLAUDE.md` duas armadilhas de medição**
 
 As duas custaram diagnóstico errado durante a execução, e as duas são do tipo
 que o `CLAUDE.md` deste repositório coleciona — sintoma que aponta para o lugar
@@ -3132,7 +3137,7 @@ aparece vem dali, não do `os.open` que se queria medir. O erro sobreviveu a dua
 rodadas e a uma mensagem de commit afirmando a medição. Crie o diretório antes,
 fora do `umask` sob teste.
 
-- [ ] **Step 1b: Registrar no `CLAUDE.md` a decisão da chave**
+- [x] **Step 1b: Registrar no `CLAUDE.md` a decisão da chave**
 
 Levantado pelo implementador da Task 9, e ele está certo: a decisão "chave no
 disco interno porque o volume externo monta com `noowners`, e Keychain descartado
@@ -3145,7 +3150,7 @@ decisão, o fato medido que a sustenta (`Owners: Disabled` no volume externo), e
 por que o Keychain não serve aqui. **Não** duplique a explicação longa da
 `docs/macos.md` — aponte para ela.
 
-- [ ] **Step 2: Corrigir a linha do README que ficou falsa**
+- [x] **Step 2: Corrigir a linha do README que ficou falsa**
 
 Trocar `Linux/Mac: rode em modo dev (abaixo). Build nativo sob demanda.` por:
 
@@ -3157,7 +3162,7 @@ veja [`docs/macos.md`](docs/macos.md). A interface gráfica roda em modo dev;
 **Linux:** rode em modo dev. Build nativo sob demanda.
 ```
 
-- [ ] **Step 3: Conferir que os comandos do doc realmente rodam**
+- [x] **Step 3: Conferir que os comandos do doc realmente rodam**
 
 ```bash
 cd /Users/leandroleitedacruz/tecjustica-sigilo && \
@@ -3167,7 +3172,7 @@ cd /Users/leandroleitedacruz/tecjustica-sigilo && \
 Rodar cada um à mão. Comando em documentação que não foi executado é comando
 errado — o `README` deste projeto tem uma seção inteira sobre isso.
 
-- [ ] **Step 4: Rodar a suíte uma última vez e conferir o repositório limpo**
+- [x] **Step 4: Rodar a suíte uma última vez e conferir o repositório limpo**
 
 ```bash
 cd /Users/leandroleitedacruz/tecjustica-sigilo/python-backend && \
@@ -3178,7 +3183,9 @@ cd /Users/leandroleitedacruz/tecjustica-sigilo && git status --short
 
 Expected: PASS, e `git status` sem nada além do doc a commitar.
 
-- [ ] **Step 5: Commit e publicar a branch**
+- [ ] **Step 5: Commit e publicar a branch** — o COMMIT está feito
+  (`0b4f393`); o `git push -u origin macos` **não**, porque publica trabalho em
+  andamento num repositório público e essa é decisão do Leandro.
 
 ```bash
 cd /Users/leandroleitedacruz/tecjustica-sigilo
