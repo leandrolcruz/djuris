@@ -1791,6 +1791,24 @@ def test_semear_nao_conta_para_o_resumo():
     assert m.resumo() == {"PERSON": 1}
 
 
+def test_a_forma_da_etiqueta_nao_aceita_simbolo():
+    """
+    `×` (U+00D7) fica no meio do bloco Latin-1 maiúsculo e não é letra. A irmã em
+    TypeScript o exclui por usar `\\p{Lu}`; o intervalo partido `À-Ö`/`Ø-Þ` faz o
+    Python concordar. Nenhum rótulo real usaria símbolo — o teste existe para as
+    duas camadas não divergirem em rigor sem ninguém notar.
+    """
+    from mask_config import RE_ETIQUETA
+
+    assert RE_ETIQUETA.fullmatch("[ENDEREÇO_1]") is not None
+    assert RE_ETIQUETA.fullmatch("[PESSOA_12]") is not None
+    assert RE_ETIQUETA.fullmatch("[ORGANIZATION_1]") is not None
+    assert RE_ETIQUETA.fullmatch("[×_1]") is None
+    assert RE_ETIQUETA.fullmatch("[pessoa_1]") is None
+    assert RE_ETIQUETA.fullmatch("[PESSOA_]") is None
+    assert RE_ETIQUETA.fullmatch("[PESSOA_1") is None
+
+
 def test_semear_recusa_etiqueta_fora_de_forma():
     m = Mascarador("placeholder")
     with pytest.raises(ValueError, match="etiqueta"):
@@ -1846,10 +1864,21 @@ Em `mask_config.py`, junto de `ROTULO_ENTIDADE`:
 # "reidratado" com um pedaço ainda mascarado, sem erro nenhum.
 #
 # A classe cobre `Ç` (U+00C7) porque `ENDEREÇO` é um dos rótulos; com `[A-Z_]+`
-# ele ficaria de fora em silêncio. Conferido contra os 27 tipos que o motor
+# ele ficaria de fora em silêncio — o texto sairia "reidratado" com o endereço
+# ainda mascarado, sem erro nenhum. Conferido contra os 27 tipos que o motor
 # suporta, inclusive os que caem no fallback `rotulo == entity_type`
 # (`ORGANIZATION`, `DATE_TIME`, `LAW`).
-RE_ETIQUETA = re.compile(r"\[([A-ZÀ-Þ_]+)_(\d+)\]")
+#
+# O intervalo é partido em `À-Ö` e `Ø-Þ` para PULAR `×` (U+00D7, sinal de
+# multiplicação), que fica no meio do bloco Latin-1 e não é letra. `À-Þ` inteiro
+# funcionaria na prática — nenhum rótulo real usa símbolo —, mas a irmã em
+# TypeScript já é precisa, e deixar as duas divergirem em rigor é como a
+# duplicação começa a apodrecer.
+#
+# Ver também `electron/pseudonimos.ts`, `RE_ROTULO`: mesmo contrato, motor de
+# regex diferente. Lá se usa `\p{Lu}`, que o `re` da biblioteca padrão não tem.
+# As duas precisam casar o mesmo conjunto; se uma mudar, a outra muda junto.
+RE_ETIQUETA = re.compile(r"\[([A-ZÀ-ÖØ-Þ_]+)_(\d+)\]")
 ```
 
 Em `mapa_reverso.py`, trocar a definição local por importação, mantendo o nome
