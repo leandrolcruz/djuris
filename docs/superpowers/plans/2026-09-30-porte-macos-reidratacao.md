@@ -2192,6 +2192,20 @@ Conteúdo obrigatório, nesta ordem:
 7. **O que NÃO existe no Mac ainda** — `.dmg`, GUI empacotada, `--autos` no
    modo remoto. Seção explícita: um leitor que procura e não acha supõe defeito.
 8. **Testes** — os comandos exatos do Task 4.
+9. **Duas ressalvas medidas durante a execução**, que só existem por terem sido
+   testadas e merecem estar onde alguém as leia:
+   - `uv venv --allow-existing` sobre um venv de **outra** versão de Python não
+     falha, mas deixa `lib/python3.11/` órfão ao lado do novo. Não acontece hoje
+     (o `setup-macos.sh` pina 3.12 e é o único criador do caminho); passa a
+     importar no dia em que a versão pinada subir — aí, apague o venv antes.
+   - O teto de 40 saltos do `tecjustica-sigilo.sh` é **inalcançável pelo caminho
+     normal de invocação neste sistema**: o macOS tem `SYMLOOP_MAX=32` e o
+     kernel recusa abrir o arquivo antes de qualquer linha do script rodar,
+     com mensagem própria (`Too many levels of symbolic links`, código 126).
+     O teto segue como defesa das vias que não passam pelo `open()` do kernel,
+     mas quem for depurar uma cadeia de symlinks vai ver a mensagem do sistema,
+     não a do shim — e procurar a mensagem do shim no log seria procurar a
+     errada.
 
 - [ ] **Step 2: Corrigir a linha do README que ficou falsa**
 
