@@ -17,12 +17,18 @@
 
 ## Convenções deste plano
 
-Caminhos absolutos, sempre:
+Dois nomes, usados no plano inteiro. Defina-os antes de copiar qualquer comando
+daqui:
 
-| Nome | Caminho |
+```bash
+export REPO=~/tecjustica-sigilo
+export PESO="${TECJUSTICA_PESO:-/Volumes/<seu volume externo>/tecjustica-sigilo}"
+```
+
+| Nome | O que é |
 |---|---|
-| `$REPO` | `/Users/leandroleitedacruz/tecjustica-sigilo` |
-| `$PESO` | `/Volumes/SSD do Leandro/tecjustica-sigilo` |
+| `$REPO` | a raiz deste repositório |
+| `$PESO` | o volume onde o peso mora — veja `TECJUSTICA_PESO` em `docs/macos.md` |
 | venv | `$PESO/venv` (e `$REPO/.venv` → symlink para ele) |
 | modelos HF | `$PESO/hf-cache` |
 | mapas cifrados | `$PESO/mapas` |
@@ -72,7 +78,7 @@ caminho remoto ganha `autos` na Fase 2, junto da GUI.
 ## Task 1: Ambiente no SSD e symlink do venv
 
 **Files:**
-- Create: `/Users/leandroleitedacruz/tecjustica-sigilo/scripts/setup-macos.sh`
+- Create: `$REPO/scripts/setup-macos.sh`
 
 - [ ] **Step 1: Escrever o script**
 
@@ -94,7 +100,7 @@ caminho remoto ganha `autos` na Fase 2, junto da GUI.
 set -euo pipefail
 
 RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PESO="${TECJUSTICA_PESO:-/Volumes/SSD do Leandro/tecjustica-sigilo}"
+PESO="${TECJUSTICA_PESO:-$PESO}"
 VENV="$PESO/venv"
 VOLUME="$(dirname "$PESO")"
 
@@ -139,8 +145,8 @@ echo "  $RAIZ/.venv/bin/python -c 'import server; print(\"ok\")'"
 - [ ] **Step 2: Tornar executável e rodar**
 
 ```bash
-chmod +x /Users/leandroleitedacruz/tecjustica-sigilo/scripts/setup-macos.sh
-/Users/leandroleitedacruz/tecjustica-sigilo/scripts/setup-macos.sh
+chmod +x $REPO/scripts/setup-macos.sh
+$REPO/scripts/setup-macos.sh
 ```
 
 Expected: termina com `Pronto.`. Demora vários minutos (torch são ~1 GB).
@@ -150,20 +156,20 @@ guarda, não falha do script.
 - [ ] **Step 3: Verificar o symlink e o import do backend**
 
 ```bash
-ls -l /Users/leandroleitedacruz/tecjustica-sigilo/.venv
-cd /Users/leandroleitedacruz/tecjustica-sigilo/python-backend && \
-  HF_HOME="/Volumes/SSD do Leandro/tecjustica-sigilo/hf-cache" \
+ls -l $REPO/.venv
+cd $REPO/python-backend && \
+  HF_HOME="$PESO/hf-cache" \
   ../.venv/bin/python -c "import server, mcp_server; print('rotas:', len(server.app.openapi()['paths']), 'tools:', len(mcp_server.FERRAMENTAS))"
 ```
 
-Expected: o `ls -l` mostra `.venv -> /Volumes/SSD do Leandro/tecjustica-sigilo/venv`,
+Expected: o `ls -l` mostra `.venv -> $PESO/venv`,
 e o import imprime `rotas: <n> tools: 4`.
 
 - [ ] **Step 4: Verificar que nada pesado foi para o disco interno**
 
 ```bash
-du -sh /Users/leandroleitedacruz/tecjustica-sigilo
-du -sh "/Volumes/SSD do Leandro/tecjustica-sigilo"
+du -sh $REPO
+du -sh "$PESO"
 df -h / | tail -1
 ```
 
@@ -173,7 +179,7 @@ interno passou de 1 GB, o symlink não pegou — investigue antes de seguir.
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/leandroleitedacruz/tecjustica-sigilo
+cd $REPO
 git add scripts/setup-macos.sh
 git commit -m "Monta o ambiente de macOS com o peso num volume externo
 
@@ -197,12 +203,12 @@ ele sai com 0 e a mensagem "esperado fora do Windows/WSL" — um `check` que
 sempre passa é indistinguível de um `check` que não roda.
 
 **Files:**
-- Modify: `/Users/leandroleitedacruz/tecjustica-sigilo/scripts/smoke-backend.sh:27-35`
+- Modify: `$REPO/scripts/smoke-backend.sh:27-35`
 
 - [ ] **Step 1: Ver o estado atual falhando no propósito**
 
 ```bash
-cd /Users/leandroleitedacruz/tecjustica-sigilo && bash scripts/smoke-backend.sh
+cd $REPO && bash scripts/smoke-backend.sh
 ```
 
 Expected: `python-embed/python.exe não encontrado — nada a verificar.` e exit 0.
@@ -243,8 +249,8 @@ fi
 - [ ] **Step 3: Rodar e confirmar que agora VERIFICA**
 
 ```bash
-cd /Users/leandroleitedacruz/tecjustica-sigilo && \
-  HF_HOME="/Volumes/SSD do Leandro/tecjustica-sigilo/hf-cache" bash scripts/smoke-backend.sh
+cd $REPO && \
+  HF_HOME="$PESO/hf-cache" bash scripts/smoke-backend.sh
 ```
 
 Expected, as três linhas:
@@ -257,7 +263,7 @@ Expected, as três linhas:
 - [ ] **Step 4: Confirmar que a guarda ainda falha quando deve**
 
 ```bash
-cd /Users/leandroleitedacruz/tecjustica-sigilo && \
+cd $REPO && \
   mv .venv .venv-guardado && bash scripts/smoke-backend.sh; echo "saída: $?"; \
   mv .venv-guardado .venv
 ```
@@ -267,7 +273,7 @@ Expected: `Nem python-embed nem .venv encontrados.` e `saída: 1`.
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/leandroleitedacruz/tecjustica-sigilo
+cd $REPO
 git add scripts/smoke-backend.sh
 git commit -m "Faz o smoke verificar no Mac em vez de sair calado
 
@@ -286,7 +292,7 @@ achar. Sem nenhum dos dois, falha com 1."
 ## Task 3: Shim POSIX da CLI
 
 **Files:**
-- Create: `/Users/leandroleitedacruz/tecjustica-sigilo/python-backend/tecjustica-sigilo.sh`
+- Create: `$REPO/python-backend/tecjustica-sigilo.sh`
 
 - [ ] **Step 1: Escrever o shim**
 
@@ -317,7 +323,7 @@ done
 BACKEND="$(cd "$(dirname "$ORIGEM")" && pwd)"
 RAIZ="$(cd "$BACKEND/.." && pwd)"
 
-PESO="${TECJUSTICA_PESO:-/Volumes/SSD do Leandro/tecjustica-sigilo}"
+PESO="${TECJUSTICA_PESO:-$PESO}"
 PYTHON="$RAIZ/.venv/bin/python"
 
 # A mensagem importa: o modo de falha mais provável desta instalação é o volume
@@ -342,8 +348,8 @@ exec "$PYTHON" "$BACKEND/cli.py" "$@"
 - [ ] **Step 2: Instalar por symlink e testar**
 
 ```bash
-chmod +x /Users/leandroleitedacruz/tecjustica-sigilo/python-backend/tecjustica-sigilo.sh
-ln -sfn /Users/leandroleitedacruz/tecjustica-sigilo/python-backend/tecjustica-sigilo.sh \
+chmod +x $REPO/python-backend/tecjustica-sigilo.sh
+ln -sfn $REPO/python-backend/tecjustica-sigilo.sh \
         ~/.local/bin/tecjustica-sigilo
 tecjustica-sigilo --help
 ```
@@ -365,7 +371,7 @@ pelo próprio motor e o teste passaria por engano.)
 
 ```bash
 TECJUSTICA_PESO=/Volumes/Inexistente/x \
-  bash -c 'unset HF_HOME; /Users/leandroleitedacruz/tecjustica-sigilo/python-backend/tecjustica-sigilo.sh --help' \
+  bash -c 'unset HF_HOME; $REPO/python-backend/tecjustica-sigilo.sh --help' \
   ; echo "saída: $?"
 ```
 
@@ -373,7 +379,7 @@ Expected: como o `.venv` existe, ele roda normalmente — a guarda do volume só
 dispara quando o `.venv` some junto. Para exercer a mensagem de volume:
 
 ```bash
-cd /Users/leandroleitedacruz/tecjustica-sigilo && mv .venv .venv-guardado
+cd $REPO && mv .venv .venv-guardado
 TECJUSTICA_PESO=/Volumes/Inexistente/x ./python-backend/tecjustica-sigilo.sh --help; echo "saída: $?"
 mv .venv-guardado .venv
 ```
@@ -383,7 +389,7 @@ Expected: `O volume '/Volumes/Inexistente' não está montado` e `saída: 1`.
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/leandroleitedacruz/tecjustica-sigilo
+cd $REPO
 git add python-backend/tecjustica-sigilo.sh
 git commit -m "Dá à CLI um shim POSIX, par do .cmd do Windows
 
@@ -408,8 +414,8 @@ momento de descobrir um acoplamento a Windows que a leitura não pegou.
 - [ ] **Step 1: Rodar a suíte inteira**
 
 ```bash
-cd /Users/leandroleitedacruz/tecjustica-sigilo/python-backend && \
-  HF_HOME="/Volumes/SSD do Leandro/tecjustica-sigilo/hf-cache" \
+cd $REPO/python-backend && \
+  HF_HOME="$PESO/hf-cache" \
   ../.venv/bin/python -m pytest tests -q 2>&1 | tail -25
 ```
 
@@ -432,8 +438,8 @@ Três causas possíveis, com tratamento diferente:
 - [ ] **Step 3: Registrar o resultado como fato, não como impressão**
 
 ```bash
-cd /Users/leandroleitedacruz/tecjustica-sigilo/python-backend && \
-  HF_HOME="/Volumes/SSD do Leandro/tecjustica-sigilo/hf-cache" \
+cd $REPO/python-backend && \
+  HF_HOME="$PESO/hf-cache" \
   ../.venv/bin/python -m pytest tests -q 2>&1 | tail -3 \
   > /tmp/resultado-suite-macos.txt; cat /tmp/resultado-suite-macos.txt
 ```
@@ -441,7 +447,7 @@ cd /Users/leandroleitedacruz/tecjustica-sigilo/python-backend && \
 - [ ] **Step 4: Commit (só se houve correção)**
 
 ```bash
-cd /Users/leandroleitedacruz/tecjustica-sigilo
+cd $REPO
 git add -u
 git commit -m "Aceita o layout POSIX do venv nos testes, mantendo o do Windows
 
@@ -460,7 +466,7 @@ Se nada reprovou, não há commit — e é o melhor resultado possível.
 - [ ] **Step 1: Registrar**
 
 ```bash
-claude mcp add tecjustica-sigilo -- /Users/leandroleitedacruz/.local/bin/tecjustica-sigilo mcp
+claude mcp add tecjustica-sigilo -- ~/.local/bin/tecjustica-sigilo mcp
 ```
 
 - [ ] **Step 2: Conferir que subiu com as 4 ferramentas**
@@ -474,8 +480,8 @@ Expected: a linha do servidor, conectado.
 - [ ] **Step 3: Exercer uma ferramenta pelo protocolo, sem depender do cliente**
 
 ```bash
-cd /Users/leandroleitedacruz/tecjustica-sigilo/python-backend && \
-  HF_HOME="/Volumes/SSD do Leandro/tecjustica-sigilo/hf-cache" PRESIDIO_NLP_MODE=spacy \
+cd $REPO/python-backend && \
+  HF_HOME="$PESO/hf-cache" PRESIDIO_NLP_MODE=spacy \
   ../.venv/bin/python -m pytest tests/test_mcp_protocolo.py -q
 ```
 
@@ -516,8 +522,8 @@ e caixa, então o valor guardado devolveria `joao da silva`; e não há como ped
 mapa.
 
 **Files:**
-- Modify: `/Users/leandroleitedacruz/tecjustica-sigilo/python-backend/mask_config.py:262-288`
-- Test: `/Users/leandroleitedacruz/tecjustica-sigilo/python-backend/tests/test_mapa_reverso.py`
+- Modify: `$REPO/python-backend/mask_config.py:262-288`
+- Test: `$REPO/python-backend/tests/test_mapa_reverso.py`
 
 - [ ] **Step 1: Escrever os testes que falham**
 
@@ -643,7 +649,7 @@ def test_politicas_sem_placeholder_nao_tem_mapa(politica):
 - [ ] **Step 2: Rodar e ver falhar**
 
 ```bash
-cd /Users/leandroleitedacruz/tecjustica-sigilo/python-backend && \
+cd $REPO/python-backend && \
   ../.venv/bin/python -m pytest tests/test_mapa_reverso.py -q
 ```
 
@@ -737,8 +743,8 @@ acrescentar `mapa()`:
 - [ ] **Step 4: Rodar a suíte INTEIRA, não só o arquivo novo**
 
 ```bash
-cd /Users/leandroleitedacruz/tecjustica-sigilo/python-backend && \
-  HF_HOME="/Volumes/SSD do Leandro/tecjustica-sigilo/hf-cache" \
+cd $REPO/python-backend && \
+  HF_HOME="$PESO/hf-cache" \
   ../.venv/bin/python -m pytest tests -q 2>&1 | tail -8
 ```
 
@@ -753,7 +759,7 @@ reportar.
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/leandroleitedacruz/tecjustica-sigilo
+cd $REPO
 git add python-backend/mask_config.py python-backend/tests/test_mapa_reverso.py
 git commit -m "Numera pseudônimo por rótulo, guarda a grafia e expõe mapa()"
 ```
@@ -775,8 +781,8 @@ A injeção resolve isso sem registro global nenhum: a CLI processa os arquivos
 num laço, no mesmo processo, e pode segurar um `Mascarador` ao longo dele.
 
 **Files:**
-- Modify: `/Users/leandroleitedacruz/tecjustica-sigilo/python-backend/engine.py:530-538` (assinatura), `:640` (criação), `:652-657` (retorno)
-- Test: `/Users/leandroleitedacruz/tecjustica-sigilo/python-backend/tests/test_mapa_reverso.py`
+- Modify: `$REPO/python-backend/engine.py:530-538` (assinatura), `:640` (criação), `:652-657` (retorno)
+- Test: `$REPO/python-backend/tests/test_mapa_reverso.py`
 
 - [ ] **Step 1: Acrescentar os testes ao fim de `tests/test_mapa_reverso.py`**
 
@@ -843,7 +849,7 @@ def test_anonymize_recusa_mascarador_de_outra_politica():
 - [ ] **Step 2: Rodar e ver falhar**
 
 ```bash
-cd /Users/leandroleitedacruz/tecjustica-sigilo/python-backend && \
+cd $REPO/python-backend && \
   ../.venv/bin/python -m pytest tests/test_mapa_reverso.py -q 2>&1 | tail -12
 ```
 
@@ -918,8 +924,8 @@ existente — antes de qualquer trabalho caro:
 - [ ] **Step 4: Rodar a suíte inteira, não só o arquivo novo**
 
 ```bash
-cd /Users/leandroleitedacruz/tecjustica-sigilo/python-backend && \
-  HF_HOME="/Volumes/SSD do Leandro/tecjustica-sigilo/hf-cache" \
+cd $REPO/python-backend && \
+  HF_HOME="$PESO/hf-cache" \
   ../.venv/bin/python -m pytest tests -q 2>&1 | tail -8
 ```
 
@@ -930,7 +936,7 @@ rodar tudo é o que confirma que nada lia o dicionário por igualdade estrita.
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/leandroleitedacruz/tecjustica-sigilo
+cd $REPO
 git add python-backend/engine.py python-backend/tests/test_mapa_reverso.py
 git commit -m "Permite compartilhar o Mascarador entre peças e devolve o mapa
 
@@ -956,8 +962,8 @@ defeito clássico. Trocar `[PESSOA_1]` antes de `[PESSOA_10]` corrompe o
 segundo, e o resultado (`João da Silva0`) parece um erro de digitação.
 
 **Files:**
-- Create: `/Users/leandroleitedacruz/tecjustica-sigilo/python-backend/mapa_reverso.py`
-- Test: `/Users/leandroleitedacruz/tecjustica-sigilo/python-backend/tests/test_mapa_reverso.py`
+- Create: `$REPO/python-backend/mapa_reverso.py`
+- Test: `$REPO/python-backend/tests/test_mapa_reverso.py`
 
 - [ ] **Step 1: Acrescentar os testes ao fim de `tests/test_mapa_reverso.py`**
 
@@ -1021,7 +1027,7 @@ def test_texto_sem_rotulo_atravessa_intacto():
 - [ ] **Step 2: Rodar e ver falhar**
 
 ```bash
-cd /Users/leandroleitedacruz/tecjustica-sigilo/python-backend && \
+cd $REPO/python-backend && \
   ../.venv/bin/python -m pytest tests/test_mapa_reverso.py -q 2>&1 | tail -6
 ```
 
@@ -1084,7 +1090,7 @@ def reidratar(texto: str, mapa: dict[str, str]) -> str:
 - [ ] **Step 4: Rodar e ver passar**
 
 ```bash
-cd /Users/leandroleitedacruz/tecjustica-sigilo/python-backend && \
+cd $REPO/python-backend && \
   ../.venv/bin/python -m pytest tests/test_mapa_reverso.py -q
 ```
 
@@ -1093,7 +1099,7 @@ Expected: PASS em todos.
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/leandroleitedacruz/tecjustica-sigilo
+cd $REPO
 git add python-backend/mapa_reverso.py python-backend/tests/test_mapa_reverso.py
 git commit -m "Acrescenta a substituição do mapa reverso, em uma passagem
 
@@ -1121,8 +1127,8 @@ vai para o SSD — e separá-los é ganho: o volume que pode ser levado embora n
 carrega mais a chave dele.
 
 **Files:**
-- Modify: `/Users/leandroleitedacruz/tecjustica-sigilo/python-backend/mapa_reverso.py`
-- Test: `/Users/leandroleitedacruz/tecjustica-sigilo/python-backend/tests/test_mapa_reverso.py`
+- Modify: `$REPO/python-backend/mapa_reverso.py`
+- Test: `$REPO/python-backend/tests/test_mapa_reverso.py`
 
 - [ ] **Step 1: Acrescentar os testes**
 
@@ -1222,7 +1228,7 @@ def test_ponto_de_montagem_com_parentese_no_nome_e_lido_certo():
 - [ ] **Step 2: Rodar e ver falhar**
 
 ```bash
-cd /Users/leandroleitedacruz/tecjustica-sigilo/python-backend && \
+cd $REPO/python-backend && \
   ../.venv/bin/python -m pytest tests/test_mapa_reverso.py -q 2>&1 | tail -6
 ```
 
@@ -1372,7 +1378,7 @@ def _chave() -> bytes:
 - [ ] **Step 4: Rodar e ver passar**
 
 ```bash
-cd /Users/leandroleitedacruz/tecjustica-sigilo/python-backend && \
+cd $REPO/python-backend && \
   ../.venv/bin/python -m pytest tests/test_mapa_reverso.py -q
 ```
 
@@ -1381,7 +1387,7 @@ Expected: PASS em todos.
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/leandroleitedacruz/tecjustica-sigilo
+cd $REPO
 git add python-backend/mapa_reverso.py python-backend/tests/test_mapa_reverso.py
 git commit -m "Põe a chave do mapa no disco interno, com falha fechada dupla
 
@@ -1406,8 +1412,8 @@ reprovaria o volume bem montado de outra pessoa."
 ## Task 10: Gravar, ler e esquecer o mapa
 
 **Files:**
-- Modify: `/Users/leandroleitedacruz/tecjustica-sigilo/python-backend/mapa_reverso.py`
-- Test: `/Users/leandroleitedacruz/tecjustica-sigilo/python-backend/tests/test_mapa_reverso.py`
+- Modify: `$REPO/python-backend/mapa_reverso.py`
+- Test: `$REPO/python-backend/tests/test_mapa_reverso.py`
 
 - [ ] **Step 1: Acrescentar os testes**
 
@@ -1594,7 +1600,7 @@ def test_nome_de_autos_que_escaparia_do_diretorio_e_recusado(cofre, ruim):
 - [ ] **Step 2: Rodar e ver falhar**
 
 ```bash
-cd /Users/leandroleitedacruz/tecjustica-sigilo/python-backend && \
+cd $REPO/python-backend && \
   ../.venv/bin/python -m pytest tests/test_mapa_reverso.py -q 2>&1 | tail -6
 ```
 
@@ -1609,7 +1615,7 @@ import json
 import re as _re
 import time
 
-DIR_PADRAO = Path("/Volumes/SSD do Leandro/tecjustica-sigilo/mapas")
+DIR_PADRAO = Path("$PESO/mapas")
 PRAZO_DIAS_PADRAO = 7
 
 # O nome dos autos vem da linha de comando e vira nome de arquivo. Sem esta
@@ -1772,7 +1778,7 @@ def esquecer(autos: str) -> bool:
 - [ ] **Step 4: Rodar e ver passar**
 
 ```bash
-cd /Users/leandroleitedacruz/tecjustica-sigilo/python-backend && \
+cd $REPO/python-backend && \
   ../.venv/bin/python -m pytest tests/test_mapa_reverso.py -q
 ```
 
@@ -1781,7 +1787,7 @@ Expected: PASS em todos.
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/leandroleitedacruz/tecjustica-sigilo
+cd $REPO
 git add python-backend/mapa_reverso.py python-backend/tests/test_mapa_reverso.py
 git commit -m "Grava o mapa cifrado, com fusão, prazo de 7 dias e troca atômica
 
@@ -1825,9 +1831,9 @@ A cura é semear: antes de anonimizar, o `Mascarador` recebe o mapa já gravado 
 continua de onde a execução anterior parou.
 
 **Files:**
-- Modify: `/Users/leandroleitedacruz/tecjustica-sigilo/python-backend/mask_config.py`
-- Modify: `/Users/leandroleitedacruz/tecjustica-sigilo/python-backend/mapa_reverso.py`
-- Test: `/Users/leandroleitedacruz/tecjustica-sigilo/python-backend/tests/test_mapa_reverso.py`
+- Modify: `$REPO/python-backend/mask_config.py`
+- Modify: `$REPO/python-backend/mapa_reverso.py`
+- Test: `$REPO/python-backend/tests/test_mapa_reverso.py`
 
 - [x] **Step 1: Escrever os testes que falham**
 
@@ -1943,7 +1949,7 @@ def test_semear_em_politica_sem_placeholder_e_recusado():
 - [x] **Step 2: Rodar e ver falhar**
 
 ```bash
-cd /Users/leandroleitedacruz/tecjustica-sigilo/python-backend && \
+cd $REPO/python-backend && \
   ../.venv/bin/python -m pytest tests/test_mapa_reverso.py -q 2>&1 | tail -8
 ```
 
@@ -2063,8 +2069,8 @@ este módulo pode produzir. Em `_placeholder`:
 - [x] **Step 4: Rodar a suíte INTEIRA**
 
 ```bash
-cd /Users/leandroleitedacruz/tecjustica-sigilo/python-backend && \
-  HF_HOME="/Volumes/SSD do Leandro/tecjustica-sigilo/hf-cache" \
+cd $REPO/python-backend && \
+  HF_HOME="$PESO/hf-cache" \
   ../.venv/bin/python -m pytest tests -q 2>&1 | tail -8
 ```
 
@@ -2077,7 +2083,7 @@ equivalentes (dicionário sem buraco), mas confirme rodando tudo, não raciocina
 - [x] **Step 5: Medir que o import segue leve**
 
 ```bash
-cd /Users/leandroleitedacruz/tecjustica-sigilo/python-backend && \
+cd $REPO/python-backend && \
   ../.venv/bin/python -X importtime -c "import mapa_reverso" 2>&1 | tail -3
 ```
 
@@ -2106,12 +2112,12 @@ vezes (no `huggingface_hub` e no `python-multipart`): funciona no venv, e some
 no instalador, que é montado com `--no-deps`.
 
 **Files:**
-- Modify: `/Users/leandroleitedacruz/tecjustica-sigilo/python-backend/requirements.txt`
+- Modify: `$REPO/python-backend/requirements.txt`
 
 - [x] **Step 1: Confirmar que hoje é transitivo**
 
 ```bash
-cd /Users/leandroleitedacruz/tecjustica-sigilo && grep -n "cryptography" python-backend/requirements.txt || echo "NÃO declarado — como esperado"
+cd $REPO && grep -n "cryptography" python-backend/requirements.txt || echo "NÃO declarado — como esperado"
 grep -n "^cryptography" python-backend/requirements-embed.txt
 ```
 
@@ -2134,7 +2140,7 @@ cryptography==48.0.1
 - [x] **Step 3: Confirmar que a resolução não mudou**
 
 ```bash
-cd /Users/leandroleitedacruz/tecjustica-sigilo && \
+cd $REPO && \
   VIRTUAL_ENV=.venv uv pip install -r python-backend/requirements.txt --dry-run 2>&1 | tail -5
 ```
 
@@ -2144,8 +2150,8 @@ que já estava lá, não traz pacote novo.
 - [x] **Step 4: Rodar a suíte**
 
 ```bash
-cd /Users/leandroleitedacruz/tecjustica-sigilo/python-backend && \
-  HF_HOME="/Volumes/SSD do Leandro/tecjustica-sigilo/hf-cache" \
+cd $REPO/python-backend && \
+  HF_HOME="$PESO/hf-cache" \
   ../.venv/bin/python -m pytest tests -q 2>&1 | tail -4
 ```
 
@@ -2154,7 +2160,7 @@ Expected: PASS.
 - [x] **Step 5: Commit**
 
 ```bash
-cd /Users/leandroleitedacruz/tecjustica-sigilo
+cd $REPO
 git add python-backend/requirements.txt
 git commit -m "Declara cryptography, que mapa_reverso.py passou a importar
 
@@ -2172,8 +2178,8 @@ nuvem."
 ## Task 12: `--autos` no `anonimizar`
 
 **Files:**
-- Modify: `/Users/leandroleitedacruz/tecjustica-sigilo/python-backend/cli.py` — `cmd_anonimizar` (`:281`), `_anonimizar_texto` (`:396`), `construir_parser` (`:519`), `comandos` em `main` (`:606`)
-- Test: `/Users/leandroleitedacruz/tecjustica-sigilo/python-backend/tests/test_reidratacao_cli.py`
+- Modify: `$REPO/python-backend/cli.py` — `cmd_anonimizar` (`:281`), `_anonimizar_texto` (`:396`), `construir_parser` (`:519`), `comandos` em `main` (`:606`)
+- Test: `$REPO/python-backend/tests/test_reidratacao_cli.py`
 
 - [x] **Step 1: Escrever os testes**
 
@@ -2334,7 +2340,7 @@ def test_autos_com_mascara_sem_mapa_e_recusado(cofre, capsys):
 - [x] **Step 2: Rodar e ver falhar**
 
 ```bash
-cd /Users/leandroleitedacruz/tecjustica-sigilo/python-backend && \
+cd $REPO/python-backend && \
   ../.venv/bin/python -m pytest tests/test_reidratacao_cli.py -q 2>&1 | tail -8
 ```
 
@@ -2584,8 +2590,8 @@ reaproveitado entre autos.
 - [x] **Step 4: Rodar e ver passar**
 
 ```bash
-cd /Users/leandroleitedacruz/tecjustica-sigilo/python-backend && \
-  HF_HOME="/Volumes/SSD do Leandro/tecjustica-sigilo/hf-cache" \
+cd $REPO/python-backend && \
+  HF_HOME="$PESO/hf-cache" \
   ../.venv/bin/python -m pytest tests -q 2>&1 | tail -6
 ```
 
@@ -2594,7 +2600,7 @@ Expected: PASS em tudo, inclusive `test_cli.py`, que cobre a forma antiga.
 - [x] **Step 5: Commit**
 
 ```bash
-cd /Users/leandroleitedacruz/tecjustica-sigilo
+cd $REPO
 git add python-backend/cli.py python-backend/tests/test_reidratacao_cli.py
 git commit -m "Dá ao anonimizar um --autos que grava o mapa dos pseudônimos
 
@@ -2617,8 +2623,8 @@ quantas pessoas há no processo."
 ## Task 13: O subcomando `reidratar`
 
 **Files:**
-- Modify: `/Users/leandroleitedacruz/tecjustica-sigilo/python-backend/cli.py`
-- Test: `/Users/leandroleitedacruz/tecjustica-sigilo/python-backend/tests/test_reidratacao_cli.py`
+- Modify: `$REPO/python-backend/cli.py`
+- Test: `$REPO/python-backend/tests/test_reidratacao_cli.py`
 
 - [x] **Step 1: Acrescentar os testes**
 
@@ -2692,7 +2698,7 @@ def test_reidratar_avisa_rotulo_sem_entrada(cofre, capsys):
 - [x] **Step 2: Rodar e ver falhar**
 
 ```bash
-cd /Users/leandroleitedacruz/tecjustica-sigilo/python-backend && \
+cd $REPO/python-backend && \
   ../.venv/bin/python -m pytest tests/test_reidratacao_cli.py -q 2>&1 | tail -8
 ```
 
@@ -2859,8 +2865,8 @@ Fase 2.
 - [x] **Step 4: Rodar e ver passar**
 
 ```bash
-cd /Users/leandroleitedacruz/tecjustica-sigilo/python-backend && \
-  HF_HOME="/Volumes/SSD do Leandro/tecjustica-sigilo/hf-cache" \
+cd $REPO/python-backend && \
+  HF_HOME="$PESO/hf-cache" \
   ../.venv/bin/python -m pytest tests -q 2>&1 | tail -6
 ```
 
@@ -2885,7 +2891,7 @@ teste com `python -c "import mapa_reverso; mapa_reverso.esquecer('teste-ciclo')"
 - [x] **Step 6: Commit**
 
 ```bash
-cd /Users/leandroleitedacruz/tecjustica-sigilo
+cd $REPO
 git add python-backend/cli.py python-backend/tests/test_reidratacao_cli.py
 git commit -m "Acrescenta o subcomando reidratar, e só como subcomando
 
@@ -2912,7 +2918,7 @@ Duas afirmações do desenho não estão travadas por nada: que o MCP **não** g
 morre no dia em que alguém achar prático expor a ferramenta.
 
 **Files:**
-- Create: `/Users/leandroleitedacruz/tecjustica-sigilo/python-backend/tests/test_mapa_nao_vaza.py`
+- Create: `$REPO/python-backend/tests/test_mapa_nao_vaza.py`
 
 - [x] **Step 1: Escrever os testes**
 
@@ -2975,8 +2981,8 @@ def test_rotas_de_anonimizacao_nao_devolvem_o_mapa():
 - [x] **Step 2: Rodar**
 
 ```bash
-cd /Users/leandroleitedacruz/tecjustica-sigilo/python-backend && \
-  HF_HOME="/Volumes/SSD do Leandro/tecjustica-sigilo/hf-cache" \
+cd $REPO/python-backend && \
+  HF_HOME="$PESO/hf-cache" \
   ../.venv/bin/python -m pytest tests/test_mapa_nao_vaza.py -q 2>&1 | tail -15
 ```
 
@@ -3001,8 +3007,8 @@ Repetir o teste do Step 2 até passar.
 - [x] **Step 4: Rodar a suíte inteira**
 
 ```bash
-cd /Users/leandroleitedacruz/tecjustica-sigilo/python-backend && \
-  HF_HOME="/Volumes/SSD do Leandro/tecjustica-sigilo/hf-cache" \
+cd $REPO/python-backend && \
+  HF_HOME="$PESO/hf-cache" \
   ../.venv/bin/python -m pytest tests -q 2>&1 | tail -4
 ```
 
@@ -3011,7 +3017,7 @@ Expected: PASS.
 - [x] **Step 5: Commit**
 
 ```bash
-cd /Users/leandroleitedacruz/tecjustica-sigilo
+cd $REPO
 git add python-backend/tests/test_mapa_nao_vaza.py python-backend/server.py
 git commit -m "Trava as duas promessas que nenhum teste segurava
 
@@ -3033,8 +3039,8 @@ a qualquer cliente pareado, extensão de navegador incluída."
 ## Task 15: `docs/macos.md` e o registro do que foi medido
 
 **Files:**
-- Create: `/Users/leandroleitedacruz/tecjustica-sigilo/docs/macos.md`
-- Modify: `/Users/leandroleitedacruz/tecjustica-sigilo/README.md`
+- Create: `$REPO/docs/macos.md`
+- Modify: `$REPO/README.md`
 
 - [x] **Step 1: Escrever `docs/macos.md`**
 
@@ -3165,7 +3171,7 @@ veja [`docs/macos.md`](docs/macos.md). A interface gráfica roda em modo dev;
 - [x] **Step 3: Conferir que os comandos do doc realmente rodam**
 
 ```bash
-cd /Users/leandroleitedacruz/tecjustica-sigilo && \
+cd $REPO && \
   grep -oE '^\s*(tecjustica-sigilo|scripts/|claude mcp)[^`]*' docs/macos.md | head -20
 ```
 
@@ -3175,10 +3181,10 @@ errado — o `README` deste projeto tem uma seção inteira sobre isso.
 - [x] **Step 4: Rodar a suíte uma última vez e conferir o repositório limpo**
 
 ```bash
-cd /Users/leandroleitedacruz/tecjustica-sigilo/python-backend && \
-  HF_HOME="/Volumes/SSD do Leandro/tecjustica-sigilo/hf-cache" \
+cd $REPO/python-backend && \
+  HF_HOME="$PESO/hf-cache" \
   ../.venv/bin/python -m pytest tests -q 2>&1 | tail -4
-cd /Users/leandroleitedacruz/tecjustica-sigilo && git status --short
+cd $REPO && git status --short
 ```
 
 Expected: PASS, e `git status` sem nada além do doc a commitar.
@@ -3188,7 +3194,7 @@ Expected: PASS, e `git status` sem nada além do doc a commitar.
   andamento num repositório público e essa é decisão do Leandro.
 
 ```bash
-cd /Users/leandroleitedacruz/tecjustica-sigilo
+cd $REPO
 git add docs/macos.md README.md
 git commit -m "Documenta o porte de macOS e corrige a linha que ficou falsa
 

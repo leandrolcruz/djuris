@@ -35,12 +35,16 @@ Apontar um link faz esses caminhos continuarem certos sem um único `if` novo.
 
 ### Por que o peso sai do disco interno
 
-O venv com torch, o BERT e os pesos de OCR passam de 2 GB. O padrão é
-`/Volumes/SSD do Leandro/tecjustica-sigilo`; para mudar:
+O venv com torch, o BERT e os pesos de OCR passam de 2 GB, e nem toda máquina
+tem isso sobrando no disco interno. O destino é `TECJUSTICA_PESO`:
 
 ```bash
-TECJUSTICA_PESO=/outro/caminho scripts/setup-macos.sh
+TECJUSTICA_PESO=/Volumes/<seu volume>/tecjustica-sigilo scripts/setup-macos.sh
 ```
+
+O default está escrito no `scripts/setup-macos.sh` e aponta para o volume
+externo desta máquina — quem clonar o repositório passa a variável, ou edita a
+linha.
 
 Com o volume desmontado, os comandos avisam com essas palavras em vez de soltar
 um `ModuleNotFoundError` de torch — que mandaria a pessoa depurar dependência
@@ -191,13 +195,18 @@ você**. Para o sistema, ele é você, e recebe o dado decifrado se pedir.
 ## Testes
 
 ```bash
+export TECJUSTICA_PESO=/Volumes/<seu volume>/tecjustica-sigilo   # o mesmo do setup
+
 cd python-backend && \
-  HF_HOME="/Volumes/SSD do Leandro/tecjustica-sigilo/hf-cache" \
+  HF_HOME="$TECJUSTICA_PESO/hf-cache" \
   ../.venv/bin/python -m pytest tests -q
 
 npm run test:electron    # suíte Node
 npm test                 # suíte do renderer (vitest)
 ```
+
+O `HF_HOME` importa: sem ele o `transformers` procura o BERT em `~/.cache` e
+baixa os ~415 MB de novo, no disco que justamente não tem espaço.
 
 ### Uma lacuna de cobertura, declarada
 

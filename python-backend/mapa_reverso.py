@@ -282,7 +282,11 @@ def _chave() -> bytes:
 import json
 import time
 
-DIR_PADRAO = Path("/Volumes/SSD do Leandro/tecjustica-sigilo/mapas")
+# O volume onde o peso deste projeto mora — o mesmo que o `setup-macos.sh` e o
+# `tecjustica-sigilo.sh` já leem de `TECJUSTICA_PESO`, com o mesmo default.
+# Repetido aqui porque este módulo não pode importar shell; se o default mudar
+# lá, muda aqui junto.
+PESO_PADRAO = "/Volumes/SSD do Leandro/tecjustica-sigilo"
 PRAZO_DIAS_PADRAO = 7
 
 # O nome dos autos vem da linha de comando e vira nome de arquivo. Sem esta
@@ -291,7 +295,24 @@ RE_AUTOS = re.compile(r"^[A-Za-z0-9._-]{1,120}$")
 
 
 def _dir_mapas() -> Path:
-    return Path(os.environ.get("PRESIDIO_MAPA_DIR") or DIR_PADRAO)
+    """
+    Onde os mapas moram, na ordem do mais explícito para o menos.
+
+    `PRESIDIO_MAPA_DIR` manda; na falta dela, os mapas seguem o volume de peso,
+    porque é o `setup-macos.sh` quem cria `$TECJUSTICA_PESO/mapas` e seria
+    estranho criar o diretório num volume e gravar noutro. Antes disto o
+    caminho era literal e ignorava `TECJUSTICA_PESO`: quem apontasse a variável
+    para outro volume teria o diretório criado num lugar e a gravação tentando
+    outro — e descobriria DEPOIS de anonimizar, que é quando o mapa é a única
+    coisa que falta para o ciclo fechar.
+
+    Lido a cada chamada, e não na carga do módulo, para que mudar a variável no
+    processo tenha efeito — é do que as fixturas da suíte dependem.
+    """
+    explicito = os.environ.get("PRESIDIO_MAPA_DIR")
+    if explicito:
+        return Path(explicito)
+    return Path(os.environ.get("TECJUSTICA_PESO") or PESO_PADRAO) / "mapas"
 
 
 def _prazo_dias() -> int:

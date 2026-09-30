@@ -967,3 +967,38 @@ def test_todo_rotulo_que_o_produto_gera_casa_com_a_forma():
         assert achado is not None, f"{etiqueta} não casa com RE_ETIQUETA"
         assert achado.group(1) == rotulo
         assert achado.group(2) == "1"
+
+
+# ---------------------------------------------------------------------------
+# Onde os mapas moram
+# ---------------------------------------------------------------------------
+
+
+def test_o_diretorio_de_mapas_segue_o_volume_de_peso(monkeypatch, tmp_path):
+    """
+    `TECJUSTICA_PESO` é a variável que o `setup-macos.sh` e o shim já leem, e é
+    ela que decide onde o venv e os modelos vão parar. O setup chega a criar
+    `$TECJUSTICA_PESO/mapas`.
+
+    Sem isto, quem apontasse a variável para outro volume teria o diretório
+    criado num lugar e a gravação tentando outro — o literal desta máquina, que
+    naquela pode nem existir. E a falha chegaria DEPOIS da anonimização, quando
+    o mapa é a única coisa que falta para o ciclo fechar.
+    """
+    monkeypatch.delenv("PRESIDIO_MAPA_DIR", raising=False)
+    monkeypatch.setenv("TECJUSTICA_PESO", str(tmp_path / "peso"))
+    assert mapa_reverso._dir_mapas() == tmp_path / "peso" / "mapas"
+
+
+def test_presidio_mapa_dir_tem_precedencia_sobre_o_volume_de_peso(monkeypatch, tmp_path):
+    """A variável específica manda na genérica — é a mais explícita das duas."""
+    monkeypatch.setenv("TECJUSTICA_PESO", str(tmp_path / "peso"))
+    monkeypatch.setenv("PRESIDIO_MAPA_DIR", str(tmp_path / "escolhido"))
+    assert mapa_reverso._dir_mapas() == tmp_path / "escolhido"
+
+
+def test_sem_nenhuma_das_duas_o_default_nao_muda(monkeypatch):
+    """O comportamento de quem não define nada continua o mesmo."""
+    monkeypatch.delenv("PRESIDIO_MAPA_DIR", raising=False)
+    monkeypatch.delenv("TECJUSTICA_PESO", raising=False)
+    assert mapa_reverso._dir_mapas() == Path(mapa_reverso.PESO_PADRAO) / "mapas"

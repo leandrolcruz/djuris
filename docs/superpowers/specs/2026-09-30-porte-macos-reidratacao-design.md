@@ -41,7 +41,7 @@ Não são suposições; foram medidos nesta máquina em 30/09/2026.
 |---|---|---|
 | Forma do porte | fork + branch `macos`, 4 fases, mudanças upstreamáveis | o projeto já foi escrito com essa disciplina; trabalhar a favor dela |
 | Repositório | `~/tecjustica-sigilo` (GitHub público, `upstream` configurado) | fora de `~/Documents` por causa do EPERM/TCC do macOS; precedente `~/gabinete-flows` |
-| Peso (venv + modelos) | `/Volumes/SSD do Leandro/tecjustica-sigilo/` | ~4-5 GB não cabem nos 10 GB livres do interno |
+| Peso (venv + modelos) | `$PESO/` | ~4-5 GB não cabem nos 10 GB livres do interno |
 | CLI | shim em `~/.local/bin/tecjustica-sigilo` | mesma convenção do `bot-convert` |
 | Melhoria da Fase 1 | reidratação | é a de maior retorno e a que a CLI/MCP nunca teve |
 | Chave do mapa reverso | chave `0600` no **disco interno**, mapa cifrado no SSD, `cryptography`, falha fechada | **Keychain foi descartado**: a CLI e o MCP rodam em tmux, fora da sessão gráfica, e ali o Keychain falha (erro 36 — o mesmo que derruba o auto-login da Honda). **O SSD foi descartado para a chave** por estar montado com `noowners` (ver 5.2) |
@@ -64,7 +64,7 @@ Acrescenta-se `scripts/setup-macos.sh`: cria o venv no SSD via `uv`, aponta
 `HF_HOME` para lá, baixa `pt_core_news_lg` e os modelos de OCR, instala o shim.
 
 **Guarda de SSD ausente.** O shim confere a montagem e falha com
-"monte o SSD do Leandro", não com `ModuleNotFoundError`.
+"monte o volume de peso", não com `ModuleNotFoundError`.
 
 Nada de Electron nesta fase.
 
@@ -109,7 +109,7 @@ volumes diferentes**:
 | | Onde | Por quê |
 |---|---|---|
 | **chave** | `~/.config/tecjustica-sigilo/mapa.key`, `0600`, disco interno | medido em 30/09: o SSD é APFS e aceita `chmod 0600`, **mas está montado com `noowners`** (`Owners: Disabled`) — o dono é ignorado e qualquer usuário da máquina é tratado como proprietário. `0600` ali não protege ninguém |
-| **mapa cifrado** | `/Volumes/SSD do Leandro/tecjustica-sigilo/mapas/` | é o volume com espaço, e separá-lo da chave é ganho: SSD levado ou roubado não carrega a chave |
+| **mapa cifrado** | `$PESO/mapas/` | é o volume com espaço, e separá-lo da chave é ganho: SSD levado ou roubado não carrega a chave |
 
 **Falha fechada** em dois testes, não um: recusa gravar se não puder cifrar, e
 recusa se a chave estiver num volume que ignora dono (`noowners`) ou com modo
