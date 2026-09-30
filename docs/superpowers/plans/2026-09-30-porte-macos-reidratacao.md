@@ -1968,6 +1968,33 @@ def cmd_reidratar(args) -> int:
     comandos = {"anonimizar", "ler", "ocr", "status", "conectar", "mcp", "reidratar"}
 ```
 
+3d. **Documentar o subcomando nos DOIS shims** — dívida deixada pela Task 3.
+
+O cabeçalho do `tecjustica-sigilo.sh` chegou a listar `reidratar` como exemplo
+antes de o comando existir, e a linha foi retirada: documentação de comando
+inexistente engana quem copia o exemplo. Agora que ele existe, a linha volta —
+e vai também para o par do Windows, porque dois arquivos que documentam
+conjuntos diferentes de comandos começam a contar histórias diferentes. É o
+problema que o `AGENTS.md` deste repositório foi escrito para descrever.
+
+Em `python-backend/tecjustica-sigilo.sh`, na lista de exemplos do cabeçalho:
+
+```
+#   tecjustica-sigilo reidratar resposta.txt --autos 5626981
+```
+
+Em `python-backend/tecjustica-sigilo.cmd`, na lista equivalente, com a forma do
+batch:
+
+```
+REM   tecjustica-sigilo.cmd reidratar resposta.txt --autos 5626981
+```
+
+Confira ao fim que os dois arquivos listam o mesmo conjunto de subcomandos,
+ressalvados `status` e `conectar` — que no `.sh` seguem de fora de propósito,
+porque dependem do aplicativo aberto, e no macOS ele só existe a partir da
+Fase 2.
+
 - [ ] **Step 4: Rodar e ver passar**
 
 ```bash
