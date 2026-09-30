@@ -1416,8 +1416,18 @@ from pathlib import Path
 
 
 @pytest.fixture
-def cofre(tmp_path, monkeypatch):
-    """Chave e mapas em tmp_path — nunca no cofre real do usuário."""
+def cofre(tmp_path, monkeypatch, volume_honra_dono):
+    """
+    Chave e mapas em tmp_path — nunca no cofre real do usuário.
+
+    Recebe `volume_honra_dono` porque é a política declarada no bloco da chave,
+    acima: teste que mede OUTRA coisa fixa a resposta da checagem de montagem.
+    Sem isso, estes testes passariam a depender de ONDE o pytest põe o
+    `tmp_path` — nesta máquina cai sob `/` e tudo passa, mas numa integração
+    contínua cujo temporário esteja em volume `noowners` eles falhariam todos de
+    uma vez, com `CifragemIndisponivel` reclamando de `noowners`: a mensagem
+    certa para o ambiente e a errada para o que o teste mede.
+    """
     monkeypatch.setenv("PRESIDIO_MAPA_CHAVE", str(tmp_path / "mapa.key"))
     monkeypatch.setenv("PRESIDIO_MAPA_DIR", str(tmp_path / "mapas"))
     return tmp_path
@@ -2184,6 +2194,13 @@ import mapa_reverso
 
 @pytest.fixture
 def cofre(tmp_path, monkeypatch):
+    """
+    Espelho da fixture de `test_mapa_reverso.py`. Aqui NÃO se neutraliza a
+    checagem de montagem, e é de propósito: estes testes chamam a CLI inteira,
+    que é o caminho real, e o `tmp_path` desta suíte cai sob `/`. Se um dia
+    falharem por `noowners`, é sinal de que o temporário mudou de volume — e a
+    resposta é a mesma fixture da outra suíte, não um remendo aqui.
+    """
     monkeypatch.setenv("PRESIDIO_MAPA_CHAVE", str(tmp_path / "mapa.key"))
     monkeypatch.setenv("PRESIDIO_MAPA_DIR", str(tmp_path / "mapas"))
     return tmp_path
@@ -3074,7 +3091,20 @@ Conteúdo obrigatório, nesta ordem:
     volume `noowners` não são defesa periférica — são a única coisa que faz
     "esta chave" significar "eu"**.
 
-13. **Uma lacuna de cobertura de teste, declarada.** Dois testes da suíte ficam
+13. **Onde o mapa mora, e o que o expurgo alcança.** O mapa de cada autos é
+    `<PRESIDIO_MAPA_DIR>/<autos>.mapa`, cifrado, `0600`. Duas coisas que não são
+    óbvias e foram medidas:
+    - **o nome dos autos é dobrado para minúsculas.** `--autos Caso-Ana` e
+      `--autos caso-ana` são os mesmos autos. Isso existe porque APFS e NTFS são
+      insensíveis a maiúsculas e ext4 não é: sem dobrar, a mesma sequência de
+      comandos produziria um mapa no Mac e dois no Linux;
+    - **uma gravação interrompida pode deixar um `<autos>.mapa.parcial`**, e o
+      expurgo o alcança — tanto o prazo de guarda quanto o `esquecer()`. Isso
+      teve de ser consertado: na primeira versão os dois olhavam só o `.mapa`, e
+      o `.parcial` era a única coisa do módulo que sobrevivia ao prazo. Prazo que
+      deixa resíduo não é prazo.
+
+14. **Uma lacuna de cobertura de teste, declarada.** Dois testes da suíte ficam
     `skipped` por dependerem de `PRESIDIO_CORPUS_OCR`, uma pasta de PDFs
     escaneados reais que não está no repositório. São justamente os de **PDF
     escaneado de verdade** — o caso que mais importa para uso judicial. Apontar
