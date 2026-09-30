@@ -3046,6 +3046,54 @@ Conteúdo obrigatório, nesta ordem:
      não a do shim — e procurar a mensagem do shim no log seria procurar a
      errada.
 
+10. **Os dois alarmes, e o que fazer com cada um.** Não são erros de uso; são as
+    duas recusas que o mapa reverso emite, e a reação certa é diferente:
+
+    | | O que houve | O que fazer |
+    |---|---|---|
+    | `MapaIlegivel` | o mapa **existe** e não decifra: a chave não é mais a que o cifrou | Se você recriou a chave de propósito, os mapas gravados antes dela são perda esperada — apague-os. Se **não** recriou, alguém mexeu na chave. O arquivo não é apagado automaticamente, de propósito |
+    | `EtiquetaConflitante` | `[PESSOA_1]` vale uma coisa no disco e chegou valendo outra | A numeração recomeçou. Normalmente significa que a semeadura não rodou — confira se o `--autos` está escrito igual ao da vez anterior (ver a ressalva de maiúsculas abaixo, se ela se aplicar) |
+
+    Nos dois casos **nada é gravado**, e a mensagem diz isso.
+
+11. **A diferença entre "o mapa venceu" e "o mapa não decifra".** As duas deixam
+    você sem reidratação, e é por isso que elas não podem ter a mesma cara.
+    Vencido é o prazo de guarda funcionando: o arquivo foi apagado e a saída
+    simplesmente não tem mapa. Ilegível é alarme, com a palavra `ALARME` na
+    saída. Se você vê rótulo em claro **sem** nenhuma mensagem, foi vencimento;
+    com mensagem, foi a chave.
+
+12. **Um limite que nenhuma cifragem alcança**, medido ao implementar a chave:
+    quem consegue trocar a chave pode recifrar um mapa **forjado** com ela. Aí o
+    `decrypt` tem sucesso, nenhum alarme dispara, e a reidratação escreve os
+    valores que a outra pessoa escolheu — sem erro e sem sintoma. Cifragem
+    autenticada não ajuda porque ela prova "isto foi escrito por quem tem esta
+    chave", e nesse cenário o atacante tem esta chave.
+
+    Consequência, dita com todas as letras: **o `0600` do arquivo e a recusa em
+    volume `noowners` não são defesa periférica — são a única coisa que faz
+    "esta chave" significar "eu"**.
+
+13. **Uma lacuna de cobertura de teste, declarada.** Dois testes da suíte ficam
+    `skipped` por dependerem de `PRESIDIO_CORPUS_OCR`, uma pasta de PDFs
+    escaneados reais que não está no repositório. São justamente os de **PDF
+    escaneado de verdade** — o caso que mais importa para uso judicial. Apontar
+    a variável para um punhado de digitalizações fecha isso. Não é porte, é dado
+    de teste; e teste pulado passa por teste aprovado em log corrido.
+
+- [ ] **Step 1b: Registrar no `CLAUDE.md` a decisão da chave**
+
+Levantado pelo implementador da Task 9, e ele está certo: a decisão "chave no
+disco interno porque o volume externo monta com `noowners`, e Keychain descartado
+porque a CLI e o MCP rodam fora da sessão gráfica" é exatamente do tipo que o
+`CLAUDE.md` deste repositório existe para guardar — e hoje ela vive só numa
+mensagem de commit, onde ninguém procura.
+
+Acrescente ao `CLAUDE.md`, na seção que couber, em três ou quatro linhas: a
+decisão, o fato medido que a sustenta (`Owners: Disabled` no volume externo), e
+por que o Keychain não serve aqui. **Não** duplique a explicação longa da
+`docs/macos.md` — aponte para ela.
+
 - [ ] **Step 2: Corrigir a linha do README que ficou falsa**
 
 Trocar `Linux/Mac: rode em modo dev (abaixo). Build nativo sob demanda.` por:
