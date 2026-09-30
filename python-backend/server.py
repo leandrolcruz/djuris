@@ -483,6 +483,13 @@ def resultado_do_job(job_id: str):
     # serializa o dicionário do motor inteiro, sem `response_model`, e quem
     # der escopo a ela amanhã não vai reler o `anonymize()` para descobrir que
     # passou a entregar o de-para do dado real junto.
+    #
+    # O `pop` muta `resultado` em vez de copiar, e só é seguro pela ordem das
+    # três linhas acima: `job.resultado` já foi zerado e o job já foi
+    # descartado do registro, então `resultado` é a única referência viva a
+    # este dicionário — não há segunda leitura para a mutação corromper. Quem
+    # reordenar isso num refactor tem de preservar essa premissa (ou voltar a
+    # copiar, `{c: v for c, v in resultado.items() if c != "mapa_reverso"}`).
     resultado.pop("mapa_reverso", None)
     return resultado
 
