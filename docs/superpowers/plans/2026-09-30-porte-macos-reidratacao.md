@@ -1824,7 +1824,7 @@ continua de onde a execução anterior parou.
 - Modify: `/Users/leandroleitedacruz/tecjustica-sigilo/python-backend/mapa_reverso.py`
 - Test: `/Users/leandroleitedacruz/tecjustica-sigilo/python-backend/tests/test_mapa_reverso.py`
 
-- [ ] **Step 1: Escrever os testes que falham**
+- [x] **Step 1: Escrever os testes que falham**
 
 Acrescentar ao fim de `tests/test_mapa_reverso.py`:
 
@@ -1935,7 +1935,7 @@ def test_semear_em_politica_sem_placeholder_e_recusado():
             m.semear({"[PESSOA_1]": "Ana Souza"})
 ```
 
-- [ ] **Step 2: Rodar e ver falhar**
+- [x] **Step 2: Rodar e ver falhar**
 
 ```bash
 cd /Users/leandroleitedacruz/tecjustica-sigilo/python-backend && \
@@ -1944,7 +1944,7 @@ cd /Users/leandroleitedacruz/tecjustica-sigilo/python-backend && \
 
 Expected: FAIL — `AttributeError: 'Mascarador' object has no attribute 'semear'`.
 
-- [ ] **Step 3: Implementar**
+- [x] **Step 3: Implementar**
 
 **3a.** A definição da etiqueta passa a morar em `mask_config.py`, que é quem a
 CRIA, e o `mapa_reverso.py` a importa em vez de repetir.
@@ -2055,7 +2055,7 @@ este módulo pode produzir. Em `_placeholder`:
             por_rotulo[chave] = (indice, original)
 ```
 
-- [ ] **Step 4: Rodar a suíte INTEIRA**
+- [x] **Step 4: Rodar a suíte INTEIRA**
 
 ```bash
 cd /Users/leandroleitedacruz/tecjustica-sigilo/python-backend && \
@@ -2069,7 +2069,7 @@ equivalentes (dicionário sem buraco), mas confirme rodando tudo, não raciocina
 
 **Proibido** afrouxar assertiva, `skip`, `xfail` ou ajustar esperado.
 
-- [ ] **Step 5: Medir que o import segue leve**
+- [x] **Step 5: Medir que o import segue leve**
 
 ```bash
 cd /Users/leandroleitedacruz/tecjustica-sigilo/python-backend && \
@@ -2080,7 +2080,7 @@ O módulo passou a importar `mask_config`. Confirme que nada de Presidio, spaCy 
 torch entrou por essa porta — o que sustenta a promessa do docstring de que os
 testes dele rodam em milissegundos.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add python-backend/mask_config.py python-backend/mapa_reverso.py \
