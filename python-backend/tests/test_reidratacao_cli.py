@@ -184,3 +184,69 @@ def test_autos_com_mascara_sem_mapa_e_recusado(cofre, capsys):
         "anonimizar", peca, "--offline", "--autos", "x", "-m", "total", "-o", "-"
     ]) == 1
     assert "placeholder" in capsys.readouterr().err
+
+
+# ---------------------------------------------------------------------------
+# reidratar
+# ---------------------------------------------------------------------------
+
+
+def test_reidratar_devolve_os_nomes(cofre, capsys):
+    mapa_reverso.gravar("5626981", {"[PESSOA_1]": "João da Silva"})
+    resposta = _peca(cofre, "resposta.txt", "Segundo a peça, [PESSOA_1] alega quitação.")
+    assert cli.main(["reidratar", resposta, "--autos", "5626981", "-o", "-"]) == 0
+    assert capsys.readouterr().out.strip() == (
+        "Segundo a peça, João da Silva alega quitação."
+    )
+
+
+def test_reidratar_le_de_stdin(cofre, capsys, monkeypatch):
+    import io
+    mapa_reverso.gravar("5626981", {"[PESSOA_1]": "João da Silva"})
+    monkeypatch.setattr("sys.stdin", io.StringIO("[PESSOA_1] compareceu."))
+    assert cli.main(["reidratar", "--autos", "5626981", "-o", "-"]) == 0
+    assert capsys.readouterr().out.strip() == "João da Silva compareceu."
+
+
+def test_reidratar_recusa_arquivo_binario(cofre, capsys):
+    """
+    O engano natural é passar o PDF dos autos: o `anonimizar` aceita PDF, e nada
+    na linha de comando sugere que este subcomando não aceita. Sem a recusa, sai
+    um UnicodeDecodeError cru.
+    """
+    mapa_reverso.gravar("5626981", {"[PESSOA_1]": "João da Silva"})
+    pdf = cofre / "autos.pdf"
+    pdf.write_bytes(b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n")
+    assert cli.main(["reidratar", str(pdf), "--autos", "5626981", "-o", "-"]) == 1
+    erro = capsys.readouterr().err
+    assert "não é texto" in erro
+    assert "autos.pdf" in erro
+
+
+def test_reidratar_recusa_texto_que_nao_e_utf8(cofre, capsys):
+    """Extensão de texto com bytes latin-1 — sai de sistema judicial antigo."""
+    mapa_reverso.gravar("5626981", {"[PESSOA_1]": "João da Silva"})
+    ruim = cofre / "resposta.txt"
+    ruim.write_bytes("[PESSOA_1] compareceu à audiência.".encode("latin-1"))
+    assert cli.main(["reidratar", str(ruim), "--autos", "5626981", "-o", "-"]) == 1
+    assert "não é UTF-8" in capsys.readouterr().err
+
+
+def test_reidratar_sem_mapa_avisa_e_falha(cofre, capsys):
+    """
+    Sem mapa, devolver o texto com os rótulos e sair 0 seria o pior resultado:
+    parece que funcionou. Autos errado e mapa vencido são os dois casos, e os
+    dois merecem código de saída diferente de zero.
+    """
+    resposta = _peca(cofre, "resposta.txt", "[PESSOA_1] alega quitação.")
+    assert cli.main(["reidratar", resposta, "--autos", "inexistente", "-o", "-"]) == 1
+    assert "não há mapa" in capsys.readouterr().err
+
+
+def test_reidratar_avisa_rotulo_sem_entrada(cofre, capsys):
+    mapa_reverso.gravar("5626981", {"[PESSOA_1]": "João da Silva"})
+    resposta = _peca(cofre, "resposta.txt", "[PESSOA_1] e [PESSOA_7] discordam.")
+    assert cli.main(["reidratar", resposta, "--autos", "5626981", "-o", "-"]) == 0
+    capturado = capsys.readouterr()
+    assert "João da Silva e [PESSOA_7]" in capturado.out
+    assert "[PESSOA_7]" in capturado.err

@@ -610,6 +610,115 @@ def cmd_ler(args) -> int:
     return 0
 
 
+def cmd_reidratar(args) -> int:
+    """
+    Desfaz a máscara num texto que voltou de fora, usando o mapa dos autos.
+
+    Não fala com o motor e não carrega modelo: é substituição de rótulo por
+    valor a partir de um mapa já gravado. Roda em milissegundos, e roda com o
+    SSD montado e nada mais.
+
+    Por que isto NÃO é ferramenta de MCP: chamada por um agente, ela devolve os
+    nomes reais ao contexto dele — que é a nuvem — e desfaz o que o programa
+    existe para fazer. `mcp_server.py` segue com quatro ferramentas, e o
+    `smoke-backend.sh` confere esse número.
+    """
+    import mapa_reverso
+
+    try:
+        mapa = mapa_reverso.ler(args.autos)
+    except (ValueError, mapa_reverso.CifragemIndisponivel) as erro:
+        print(f"erro: {erro}", file=sys.stderr)
+        return 1
+    except mapa_reverso.MapaIlegivel as erro:
+        # Ramo próprio, e não junto dos outros, porque a reação é outra: aqui o
+        # mapa EXISTE. Tratar isto como "não tenho mapa" devolveria o texto com
+        # os rótulos em claro e deixaria quem lê concluir que o prazo venceu.
+        print(f"ALARME: {erro}", file=sys.stderr)
+        print(
+            "Nada foi reidratado. Se você recriou a chave de propósito, os mapas "
+            "gravados antes dela são perda esperada. Se não recriou, alguém "
+            "mexeu na chave.",
+            file=sys.stderr,
+        )
+        return 1
+
+    if not mapa:
+        print(
+            f"erro: não há mapa para os autos {args.autos!r}.",
+            file=sys.stderr,
+        )
+        print(
+            "Ou o nome está errado, ou o prazo de guarda venceu e o mapa foi "
+            "apagado (padrão: 7 dias; veja PRESIDIO_MAPA_PRAZO_DIAS).",
+            file=sys.stderr,
+        )
+        return 1
+
+    if args.files:
+        # `reidratar` recebe a RESPOSTA que voltou de um modelo, que é texto.
+        # Recusar binário aqui, e não deixar o `read_text` explodir, porque o
+        # engano natural é passar o PDF dos autos — o `anonimizar` aceita PDF, e
+        # nada na linha de comando sugere que este subcomando não aceita. Um
+        # `UnicodeDecodeError` cru mandaria a pessoa procurar defeito de
+        # codificação num arquivo que simplesmente não é para entrar aqui.
+        binarios = [f for f in args.files if not _e_texto_puro(f)]
+        if binarios:
+            nomes = ", ".join(Path(f).name for f in binarios)
+            print(f"erro: reidratar recusa {nomes} — não é texto.", file=sys.stderr)
+            print(
+                "Este subcomando reidrata a RESPOSTA que voltou do modelo, que é "
+                "texto. Para ler um documento, use `ler` ou `anonimizar`.",
+                file=sys.stderr,
+            )
+            return 1
+
+        partes = []
+        for bruto in args.files:
+            caminho = Path(bruto)
+            if not caminho.exists():
+                print(f"erro: {caminho} não existe", file=sys.stderr)
+                return 1
+            try:
+                partes.append(caminho.read_text(encoding="utf-8"))
+            except UnicodeDecodeError:
+                # Extensão de texto com bytes que não são UTF-8 (um `.txt` salvo
+                # em latin-1, que sai de sistema judicial antigo). A régua acima
+                # olha a extensão e não o conteúdo, então este ramo existe.
+                print(
+                    f"erro: {caminho} não é UTF-8. Converta antes "
+                    f"(`iconv -f latin1 -t utf8`).",
+                    file=sys.stderr,
+                )
+                return 1
+        texto = "\n\n".join(partes)
+    else:
+        texto = sys.stdin.read()
+
+    saida = mapa_reverso.reidratar(texto, mapa)
+
+    # Rótulo que sobrou é informação, não ruído: significa que o texto fala de
+    # alguém que este mapa não conhece — autos trocados, ou peça anonimizada
+    # noutra sessão. Silenciar entregaria um documento com lacuna invisível.
+    #
+    # `finditer` e `group(0)`, e não `findall`: desde a Task 10b a expressão tem
+    # dois grupos de captura (o rótulo e o índice, que o `semear` precisa ler),
+    # e `findall` com grupos devolve as TUPLAS, não a etiqueta inteira. O aviso
+    # sairia como `('PESSOA', '7')` — ou nem sairia, porque o `join` recusa
+    # tupla. Um `findall` aqui é a mesma classe de defeito que esta rodada vem
+    # fechando: código que continua parecendo certo depois de o contrato mudar.
+    sobraram = sorted({m.group(0) for m in mapa_reverso.RE_ROTULO.finditer(saida)})
+    if sobraram:
+        print(
+            f"aviso: {len(sobraram)} rótulo(s) sem entrada no mapa, deixados "
+            f"como estão: {', '.join(sobraram)}",
+            file=sys.stderr,
+        )
+
+    _escrever(args.output, saida)
+    return 0
+
+
 def cmd_ocr(args) -> int:
     modo, sessao = _resolver(args)
     caminho = Path(args.imagem)
@@ -748,6 +857,20 @@ def construir_parser() -> argparse.ArgumentParser:
     p.add_argument("files", nargs="+")
     p.set_defaults(func=cmd_ler)
 
+    p = sub.add_parser(
+        "reidratar", parents=[pai],
+        help="Devolve os nomes reais a um texto que voltou mascarado de fora.",
+    )
+    p.add_argument(
+        "files", nargs="*",
+        help="Arquivos de texto. Sem argumento, lê de stdin.",
+    )
+    p.add_argument(
+        "--autos", required=True, metavar="ID",
+        help="Os autos cujo mapa usar (o mesmo ID passado no `anonimizar`).",
+    )
+    p.set_defaults(func=cmd_reidratar)
+
     p = sub.add_parser("ocr", parents=[pai], help="Reconhece o texto de uma imagem.")
     p.add_argument("imagem")
     p.set_defaults(func=cmd_ocr)
@@ -770,7 +893,7 @@ def main(argv: list[str] | None = None) -> int:
     # Forma clássica preservada: `tecjustica-sigilo arquivo.txt -o saida.txt`
     # continua valendo. Sem isto, quem já usa a CLI em script veria o comando
     # quebrar da noite para o dia — e o custo de manter é uma linha.
-    comandos = {"anonimizar", "ler", "ocr", "status", "conectar", "mcp"}
+    comandos = {"anonimizar", "ler", "ocr", "status", "conectar", "mcp", "reidratar"}
     if not argv or (argv[0] not in comandos and not argv[0].startswith("-")):
         argv = ["anonimizar", *argv]
     elif argv and argv[0].startswith("-") and argv[0] not in {"-h", "--help"}:

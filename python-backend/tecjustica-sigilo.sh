@@ -9,6 +9,7 @@
 #   cat arquivo.txt | tecjustica-sigilo
 #   tecjustica-sigilo ler autos.pdf          (extrai sem anonimizar)
 #   tecjustica-sigilo ocr pagina.png         (reconhece o texto de uma imagem)
+#   tecjustica-sigilo reidratar resposta.txt --autos 5626981
 #   tecjustica-sigilo mcp                    (servidor MCP em stdio)
 #
 # Este arquivo é instalado por symlink em ~/.local/bin, então ele resolve o

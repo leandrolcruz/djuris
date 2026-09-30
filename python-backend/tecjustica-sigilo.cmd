@@ -9,6 +9,7 @@ REM   tecjustica-sigilo.cmd arquivo.txt -o saida.md
 REM   type arquivo.txt | tecjustica-sigilo.cmd
 REM   tecjustica-sigilo.cmd ler autos.pdf          (extrai sem anonimizar)
 REM   tecjustica-sigilo.cmd ocr pagina.png
+REM   tecjustica-sigilo.cmd reidratar resposta.txt --autos 5626981
 REM   tecjustica-sigilo.cmd status                 (app no ar? em que modo?)
 REM   tecjustica-sigilo.cmd conectar               (autoriza esta CLI)
 REM   tecjustica-sigilo.cmd mcp                    (servidor MCP em stdio)
