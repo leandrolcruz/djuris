@@ -1412,6 +1412,9 @@ reprovaria o volume bem montado de outra pessoa."
 # ---------------------------------------------------------------------------
 
 
+from pathlib import Path
+
+
 @pytest.fixture
 def cofre(tmp_path, monkeypatch):
     """Chave e mapas em tmp_path — nunca no cofre real do usuário."""
@@ -1450,6 +1453,43 @@ def test_gravar_de_novo_funde_em_vez_de_substituir(cofre):
 
 def test_ler_autos_inexistente_devolve_vazio(cofre):
     assert mapa_reverso.ler("nao-existe") == {}
+
+
+def test_mapa_que_nao_decifra_levanta_alarme_em_vez_de_devolver_vazio(cofre):
+    """
+    A distinção que esta exceção preserva. Foi medida na Task 9: `Fernet` aceita
+    qualquer chave bem-formada de 44 bytes e só falha no `decrypt`, com
+    `InvalidToken` sem argumento nenhum — o mesmo evento de um mapa adulterado.
+
+    Devolver `{}` aqui faria a reidratação entregar o texto com os rótulos em
+    claro e sem mensagem, e quem lê concluiria "o prazo venceu". São coisas
+    muito diferentes e merecem reações muito diferentes.
+    """
+    from cryptography.fernet import Fernet
+
+    mapa_reverso.gravar("5626981", {"[PESSOA_1]": "Ana Souza"})
+
+    # Troca a chave por OUTRA bem-formada — não corrompe, substitui.
+    Path(os.environ["PRESIDIO_MAPA_CHAVE"]).write_bytes(Fernet.generate_key())
+
+    with pytest.raises(mapa_reverso.MapaIlegivel, match="5626981"):
+        mapa_reverso.ler("5626981")
+
+
+def test_mapa_ilegivel_nao_e_apagado(cofre):
+    """
+    Apagar seria irreversível e a causa pode ser benigna (a chave recriada de
+    propósito). Quem decide é a pessoa, com o arquivo ainda na mão.
+    """
+    from cryptography.fernet import Fernet
+
+    mapa_reverso.gravar("5626981", {"[PESSOA_1]": "Ana Souza"})
+    alvo = cofre / "mapas" / "5626981.mapa"
+    Path(os.environ["PRESIDIO_MAPA_CHAVE"]).write_bytes(Fernet.generate_key())
+
+    with pytest.raises(mapa_reverso.MapaIlegivel):
+        mapa_reverso.ler("5626981")
+    assert alvo.exists(), "mapa ilegível não pode ser apagado pela leitura"
 
 
 def test_mapa_vencido_e_apagado_e_nao_lido(cofre):
@@ -1626,12 +1666,33 @@ def gravar(autos: str, mapa: dict[str, str]) -> Path:
     return caminho
 
 
+class MapaIlegivel(RuntimeError):
+    """
+    O arquivo do mapa existe, está no prazo, e não decifra.
+
+    **Isto é alarme, não ausência**, e a distinção foi o achado que reescreveu
+    esta função. Arquivo ausente é benigno e esperado — é o expurgo funcionando.
+    Arquivo presente e ilegível significa que a chave não é mais a que cifrou
+    aquele mapa: ela foi recriada, ou substituída.
+
+    Colapsar os dois em `{}` seria o defeito pior: a reidratação devolveria o
+    texto com `[PESSOA_1]` em claro e nenhuma mensagem, e quem lê concluiria
+    "venceu, normal" — quando o que houve foi a chave ser trocada. É a mesma
+    lição que o `CLAUDE.md` deste repositório registra sobre o contador de OCR:
+    "na dúvida não afirme" é boa regra para afirmar fato e péssima para calar
+    alarme.
+    """
+
+
 def ler(autos: str) -> dict[str, str]:
     """
-    Devolve o mapa destes autos, ou `{}` se não existe, venceu ou não decifra.
+    Devolve o mapa destes autos, ou `{}` se não existe ou venceu.
 
-    Vencido é **apagado**, não apenas ignorado: o prazo de guarda que só
-    esconde não é prazo de guarda — o índice de CPF e nome continuaria no disco.
+    Vencido é **apagado**, não apenas ignorado: prazo de guarda que só esconde
+    não é prazo de guarda — o índice de CPF e nome continuaria no disco.
+
+    Levanta `MapaIlegivel` quando o arquivo existe, está no prazo e não decifra.
+    O porquê de não devolver `{}` está na exceção.
     """
     from cryptography.fernet import Fernet, InvalidToken
 
@@ -1645,11 +1706,13 @@ def ler(autos: str) -> dict[str, str]:
 
     try:
         corpo = Fernet(_chave()).decrypt(caminho.read_bytes())
-    except InvalidToken:
-        # Chave trocada, ou arquivo de outra máquina. Não é erro a propagar: a
-        # resposta honesta é "não tenho o mapa", e a reidratação então deixa os
-        # rótulos visíveis em vez de inventar nomes.
-        return {}
+    except InvalidToken as erro:
+        raise MapaIlegivel(
+            f"o mapa dos autos {autos!r} existe em {caminho} e não decifra com "
+            f"a chave atual. A chave foi recriada (o que torna ilegível todo "
+            f"mapa gravado antes dela) ou substituída. O arquivo NÃO foi "
+            f"apagado — apagá-lo é irreversível, e a decisão é sua."
+        ) from erro
     return json.loads(corpo)
 
 
@@ -2524,6 +2587,18 @@ def cmd_reidratar(args) -> int:
         mapa = mapa_reverso.ler(args.autos)
     except (ValueError, mapa_reverso.CifragemIndisponivel) as erro:
         print(f"erro: {erro}", file=sys.stderr)
+        return 1
+    except mapa_reverso.MapaIlegivel as erro:
+        # Ramo próprio, e não junto dos outros, porque a reação é outra: aqui o
+        # mapa EXISTE. Tratar isto como "não tenho mapa" devolveria o texto com
+        # os rótulos em claro e deixaria quem lê concluir que o prazo venceu.
+        print(f"ALARME: {erro}", file=sys.stderr)
+        print(
+            "Nada foi reidratado. Se você recriou a chave de propósito, os mapas "
+            "gravados antes dela são perda esperada. Se não recriou, alguém "
+            "mexeu na chave.",
+            file=sys.stderr,
+        )
         return 1
 
     if not mapa:

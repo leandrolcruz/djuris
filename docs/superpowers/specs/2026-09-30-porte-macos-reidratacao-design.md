@@ -147,6 +147,17 @@ corpus do autor. Medir é `PRESIDIO_EVAL_CORPUS=<caminho>` + `eval.run_eval`.
   desempenho não degrada devagar, desaba.
 - O mapa cifrado não protege contra programa malicioso rodando como o próprio
   usuário. Nenhuma cifragem atrelada à conta protege contra isso.
+- **E há um caso que nenhuma defesa dentro do Fernet alcança**, medido ao
+  implementar a chave: quem consegue trocar a chave pode recifrar um mapa
+  **forjado** com ela. Aí o `decrypt` tem sucesso, nenhum alarme dispara, e a
+  reidratação escreve os valores que a outra pessoa escolheu — sem erro e sem
+  sintoma. Cifragem autenticada não ajuda, porque ela prova "isto foi escrito por
+  quem tem esta chave", e nesse cenário o atacante tem esta chave.
+
+  Daí a consequência, dita com todas as letras: o `0600` do arquivo e a recusa em
+  volume `noowners` **não são defesa periférica do Fernet — são a única coisa que
+  faz "esta chave" significar "eu"**. Autenticar a própria chave exigiria
+  registrar uma impressão dela em outro lugar, e está fora do escopo deste plano.
 
 ## 8. Fases seguintes
 
