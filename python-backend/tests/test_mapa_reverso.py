@@ -607,14 +607,22 @@ def test_gravar_a_mesma_etiqueta_com_o_mesmo_valor_nao_e_conflito(cofre):
     }
 
 
-@pytest.mark.parametrize("ruim", ["../fuga", "a/b", "", "."])
+@pytest.mark.parametrize("ruim", ["../fuga", "a/b", "", ".", "../FUGA"])
 def test_nome_de_autos_que_escaparia_do_diretorio_e_recusado(cofre, ruim):
     """
     O nome dos autos vem da linha de comando e vira nome de arquivo. Sem
     validação, `--autos ../../algo` grava fora do diretório de mapas.
+
+    `../FUGA` está aqui por causa da ORDEM: a régua roda antes do `casefold()`,
+    e nada travava isso — um revisor trocou `_caminho` por uma versão que dobra
+    a caixa primeiro e os 50 testes passaram. Dobrando antes, a mensagem citaria
+    `'../fuga'` para quem digitou `../FUGA`, e a pessoa procuraria no terminal um
+    nome que não escreveu. Daí o assert sobre a grafia, e não só sobre o tipo do
+    erro.
     """
-    with pytest.raises(ValueError, match="autos"):
+    with pytest.raises(ValueError, match="autos") as erro:
         mapa_reverso.gravar(ruim, {"[PESSOA_1]": "Ana"})
+    assert ruim in str(erro.value)
 
 
 # ---------------------------------------------------------------------------
