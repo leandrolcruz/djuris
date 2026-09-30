@@ -2623,6 +2623,30 @@ def test_reidratar_le_de_stdin(cofre, capsys, monkeypatch):
     assert capsys.readouterr().out.strip() == "João da Silva compareceu."
 
 
+def test_reidratar_recusa_arquivo_binario(cofre, capsys):
+    """
+    O engano natural é passar o PDF dos autos: o `anonimizar` aceita PDF, e nada
+    na linha de comando sugere que este subcomando não aceita. Sem a recusa, sai
+    um UnicodeDecodeError cru.
+    """
+    mapa_reverso.gravar("5626981", {"[PESSOA_1]": "João da Silva"})
+    pdf = cofre / "autos.pdf"
+    pdf.write_bytes(b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n")
+    assert cli.main(["reidratar", str(pdf), "--autos", "5626981", "-o", "-"]) == 1
+    erro = capsys.readouterr().err
+    assert "não é texto" in erro
+    assert "autos.pdf" in erro
+
+
+def test_reidratar_recusa_texto_que_nao_e_utf8(cofre, capsys):
+    """Extensão de texto com bytes latin-1 — sai de sistema judicial antigo."""
+    mapa_reverso.gravar("5626981", {"[PESSOA_1]": "João da Silva"})
+    ruim = cofre / "resposta.txt"
+    ruim.write_bytes("[PESSOA_1] compareceu à audiência.".encode("latin-1"))
+    assert cli.main(["reidratar", str(ruim), "--autos", "5626981", "-o", "-"]) == 1
+    assert "não é UTF-8" in capsys.readouterr().err
+
+
 def test_reidratar_sem_mapa_avisa_e_falha(cofre, capsys):
     """
     Sem mapa, devolver o texto com os rótulos e sair 0 seria o pior resultado:
@@ -2703,13 +2727,41 @@ def cmd_reidratar(args) -> int:
         return 1
 
     if args.files:
+        # `reidratar` recebe a RESPOSTA que voltou de um modelo, que é texto.
+        # Recusar binário aqui, e não deixar o `read_text` explodir, porque o
+        # engano natural é passar o PDF dos autos — o `anonimizar` aceita PDF, e
+        # nada na linha de comando sugere que este subcomando não aceita. Um
+        # `UnicodeDecodeError` cru mandaria a pessoa procurar defeito de
+        # codificação num arquivo que simplesmente não é para entrar aqui.
+        binarios = [f for f in args.files if not _e_texto_puro(f)]
+        if binarios:
+            nomes = ", ".join(Path(f).name for f in binarios)
+            print(f"erro: reidratar recusa {nomes} — não é texto.", file=sys.stderr)
+            print(
+                "Este subcomando reidrata a RESPOSTA que voltou do modelo, que é "
+                "texto. Para ler um documento, use `ler` ou `anonimizar`.",
+                file=sys.stderr,
+            )
+            return 1
+
         partes = []
         for bruto in args.files:
             caminho = Path(bruto)
             if not caminho.exists():
                 print(f"erro: {caminho} não existe", file=sys.stderr)
                 return 1
-            partes.append(caminho.read_text(encoding="utf-8"))
+            try:
+                partes.append(caminho.read_text(encoding="utf-8"))
+            except UnicodeDecodeError:
+                # Extensão de texto com bytes que não são UTF-8 (um `.txt` salvo
+                # em latin-1, que sai de sistema judicial antigo). A régua acima
+                # olha a extensão e não o conteúdo, então este ramo existe.
+                print(
+                    f"erro: {caminho} não é UTF-8. Converta antes "
+                    f"(`iconv -f latin1 -t utf8`).",
+                    file=sys.stderr,
+                )
+                return 1
         texto = "\n\n".join(partes)
     else:
         texto = sys.stdin.read()
