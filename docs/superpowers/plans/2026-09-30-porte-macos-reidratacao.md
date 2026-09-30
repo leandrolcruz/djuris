@@ -1914,19 +1914,83 @@ fim. E antes de cada `return 0`, gravar:
         print(f"mapa dos autos {args.autos} -> {destino_mapa}", file=sys.stderr)
 ```
 
-3e. Garantir que `_formatar` não deixa o mapa sair. Trocar:
+3e. **Inverter a direção do filtro de `_formatar`** — de lista de negação para
+lista de permissão.
+
+O filtro em si já existe: foi adiantado para a Task 7b, porque a Task 7 abriu a
+saída e deixá-la aberta por cinco tarefas não se justificava. O que falta é
+consertar a **direção** dele, e é a revisão de qualidade da 7b que apontou:
 
 ```python
+publico = {c: v for c, v in resultado.items() if c != "mapa_reverso"}
+```
+
+Isso é lista de negação. Funciona para o campo que conhecemos e falha aberto
+para o próximo: quem acrescentar outro campo sensível ao retorno de
+`anonymize()` não precisa passar por aqui, e nada avisa.
+
+E não é hipótese — é o que já aconteceu. A Task 7 acrescentou `mapa_reverso` ao
+retorno do motor, e ele escapou por DUAS saídas que ninguém revisou. A correção
+por negação conserta as duas e mantém a terceira em aberto.
+
+**A correção não é arquitetura nova: é adotar o padrão que o próprio
+repositório já usa em dois dos quatro pontos de saída** — `response_model` do
+Pydantic na rota `/anonymize` (`server.py`), e dicionário montado campo a campo
+no `mcp_server.py`. Os dois são lista de permissão estrutural: campo novo no
+motor não sai por eles sem alguém escrever o nome.
+
+```python
+# O contrato público do `-f json`, declarado. Campo que não está aqui não sai —
+# e é essa a direção certa do filtro.
+#
+# A versão anterior negava `mapa_reverso` por nome, o que conserta o campo
+# conhecido e falha aberto no próximo: a Task 7 acrescentou uma chave ao retorno
+# do motor e ela escapou por duas saídas que ninguém tinha revisado. Com lista
+# de permissão, o campo novo fica de fora até que alguém decida que é público —
+# que é a decisão que deve ser explícita.
+#
+# `entities_found` SAI, e com o texto real dentro: é o contrato documentado do
+# `-f json` ("json = com a lista de ocorrências"), e a lista existe para auditar
+# o que foi mascarado. Quem não quer o valor real na saída usa o formato `text`.
+CAMPOS_PUBLICOS_JSON = (
+    "anonymized_text",
+    "entities_found",
+    "politica_mascara",
+    "valores_distintos",
+)
+
+
 def _formatar(resultado: dict, formato: str) -> str:
     if formato == "json":
-        # `mapa_reverso` sai FORA, sempre. Ele existe no dicionário porque a CLI
-        # precisa gravá-lo; imprimi-lo desfaria, num pipe ou numa linha de log,
-        # o que o programa inteiro existe para fazer. A remoção é aqui, no único
-        # ponto por onde a saída passa, e não em cada chamador.
-        publico = {c: v for c, v in resultado.items() if c != "mapa_reverso"}
+        publico = {c: resultado[c] for c in CAMPOS_PUBLICOS_JSON if c in resultado}
         return json.dumps(publico, ensure_ascii=False, indent=2)
     return resultado["anonymized_text"]
 ```
+
+O teste da Task 7b que confere a ausência de `mapa_reverso` e a presença de
+`anonymized_text`/`entities_found` continua valendo sem mudança — ele mede
+comportamento, não implementação. Acrescente um que trave a direção nova:
+um campo inventado (`"campo_sensivel_futuro"`) no dicionário de entrada **não
+pode** aparecer na saída.
+
+3f. **Amarrar o `Mascarador` ao identificador dos autos.**
+
+A revisão da Task 7 observou que nada impede um chamador de reusar o mesmo
+`Mascarador` entre autos DIFERENTES — o que misturaria pessoas de processos
+distintos num espaço de numeração comum, produzindo um texto internamente
+coerente e factualmente falso. Era inalcançável até aqui porque nenhum chamador
+passava `mascarador=`; esta tarefa é a primeira que passa.
+
+A defesa não precisa de mecanismo: o `Mascarador` nasce dentro de
+`cmd_anonimizar`, vive no escopo da função e morre com ela, e `args.autos` é
+lido uma vez. Não há caminho para ele atravessar duas invocações. **Mas isso é
+verdade por construção e não está dito em lugar nenhum** — e a próxima pessoa a
+mover essa criação para fora da função, ou para um cache de processo, não tem
+como saber que a vida curta era a garantia.
+
+Escreva isso no comentário da criação do `Mascarador` (passo 3c), em uma ou duas
+frases: por que ele nasce e morre aqui, e o que aconteceria se fosse
+reaproveitado entre autos.
 
 - [ ] **Step 4: Rodar e ver passar**
 
