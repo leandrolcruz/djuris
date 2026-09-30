@@ -205,11 +205,16 @@ def _chave() -> bytes:
     if caminho.exists():
         if stat.S_IMODE(caminho.stat().st_mode) != 0o600:
             raise CifragemIndisponivel(
-                f"{caminho} não está em 0600. Não corrijo em silêncio: não há "
-                f"como saber quem já a leu, e seguir usando afirmaria uma "
-                f"garantia que este arquivo não sustenta mais. "
-                f"Confira quem teve acesso, apague-a (os mapas gravados ficam "
-                f"ilegíveis) e deixe-a ser recriada."
+                f"{caminho} está em "
+                f"{stat.S_IMODE(caminho.stat().st_mode):04o}, não em 0600. As "
+                f"causas, da mais provável para a menos: um umask do processo "
+                f"que tirou bits na criação (0o200 deixa a chave em 0400), "
+                f"alguém ter mudado o modo, ou o arquivo ter vindo de outra "
+                f"máquina. Não corrijo em silêncio: se o modo foi AFROUXADO, "
+                f"não há como saber quem já a leu, e seguir usando afirmaria "
+                f"uma garantia que este arquivo não sustenta mais. Confira o "
+                f"modo e quem teve acesso; se decidir apagá-la, saiba que todo "
+                f"mapa gravado com ela fica ilegível."
             )
         return caminho.read_bytes()
 
@@ -231,11 +236,40 @@ def _chave() -> bytes:
     #    recusa cometer com a chave: consertar bit sem saber quem já leu.
     caminho.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     nova = Fernet.generate_key()
-    # Cria já fechado: gravar e depois chmod deixa uma janela em que o arquivo
-    # existe legível. `0o600` no `os.open`, e não `write_bytes` seguido de
-    # `chmod`.
-    descritor = os.open(caminho, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+
+    # Cria já fechado, e é por isso que não há `write_bytes` seguido de `chmod`:
+    # aquela sequência deixa uma janela em que o arquivo existe legível.
+    #
+    # O `O_EXCL` recusa criar sobre coisa existente. Vale pela corrida (dois
+    # processos cunhando ao mesmo tempo: o perdedor não sobrescreve a chave do
+    # vencedor) e, mais realisticamente, pelo symlink pendurado — `Path.exists()`
+    # segue o link e diz `False` para link quebrado, então o ramo de criação é
+    # alcançável com um link no caminho, e o `O_EXCL` se recusa a seguí-lo.
+    try:
+        descritor = os.open(caminho, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    except FileExistsError as erro:
+        raise CifragemIndisponivel(
+            f"algo já ocupa {caminho}, e a checagem anterior o tinha dado por "
+            f"ausente — então apareceu no meio da cunhagem, ou é um symlink "
+            f"pendurado (que se diz ausente e existe). Confira o que está "
+            f"nesse caminho antes de tentar de novo: a chave NÃO foi criada, e "
+            f"o que está lá não foi tocado."
+        ) from erro
+
     with os.fdopen(descritor, "wb") as arquivo:
+        # O modo do `os.open` é MASCARADO pelo umask, e o comentário anterior
+        # afirmava o contrário. Medido nesta máquina, com o diretório já
+        # existente (o estado normal depois da primeira execução): sob
+        # `umask 0o200` o arquivo nasce `0400`. O desfecho era o pior do módulo
+        # e não precisava de atacante nenhum — o primeiro `gravar()` cifrava um
+        # mapa com aquela chave, e toda chamada seguinte recusava por modo
+        # diferente de 0600, aconselhando apagar a chave e com ela o mapa que
+        # tinha acabado de ser gravado.
+        #
+        # O `fchmod` corre sobre o DESCRITOR já aberto, então não há janela nem
+        # corrida de caminho: o arquivo nasce em `0600 & ~umask`, que nunca é
+        # mais LARGO que 0600, e isto só estreita-para-exato.
+        os.fchmod(arquivo.fileno(), 0o600)
         arquivo.write(nova)
     return nova
 
@@ -272,7 +306,36 @@ def _caminho(autos: str) -> Path:
             f"nome de autos inválido: {autos!r} — use letras, números, ponto, "
             f"hífen e sublinhado (é nome de arquivo)"
         )
-    return _dir_mapas() / f"{autos}.mapa"
+    # A caixa é dobrada DE PROPÓSITO, e depois da régua acima (que é ASCII puro,
+    # então `casefold` aqui não tem o problema de normalização Unicode que o
+    # tornaria insuficiente).
+    #
+    # O motivo é portabilidade, não estética: `--autos abc` e `--autos ABC`
+    # apontam para o MESMO arquivo no APFS desta máquina, insensível à caixa, e
+    # para arquivos DIFERENTES no ext4. Sem dobrar, a mesma sequência de comandos
+    # produz um mapa no macOS e dois no Linux — comportamento contratado por
+    # teste dependendo de como o sistema foi formatado, que é a mesma armadilha
+    # do `noowners`. Este fork pretende voltar ao upstream.
+    #
+    # O caso perigoso (dois autos distintos com etiquetas em conflito) já é
+    # recusado por `EtiquetaConflitante`, que pega por conflito de de-para e não
+    # sabe de caixa. O que se conserta aqui é a divergência entre sistemas.
+    return _dir_mapas() / f"{autos.casefold()}.mapa"
+
+
+def _parcial(caminho: Path) -> Path:
+    """
+    O temporário da troca atômica, derivado do caminho definitivo.
+
+    Existe como função para que `gravar`, o vencimento e `esquecer` falem do
+    MESMO arquivo. Enquanto o nome vivia só dentro do `gravar`, ele era o único
+    resíduo deste módulo que sobrevivia ao expurgo.
+    """
+    return caminho.with_suffix(".mapa.parcial")
+
+
+def _vencido(caminho: Path) -> bool:
+    return time.time() - caminho.stat().st_mtime > _prazo_dias() * 86400
 
 
 class EtiquetaConflitante(RuntimeError):
@@ -337,11 +400,26 @@ def gravar(autos: str, mapa: dict[str, str]) -> Path:
     # Grava em temporário e renomeia: a troca é atômica no mesmo volume, então
     # uma interrupção no meio deixa o mapa anterior intacto em vez de um
     # arquivo truncado que não decifra.
-    temporario = caminho.with_suffix(".mapa.parcial")
-    descritor = os.open(temporario, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-    with os.fdopen(descritor, "wb") as arquivo:
-        arquivo.write(corpo)
-    os.replace(temporario, caminho)
+    #
+    # E o temporário é removido se algo der errado antes da troca. Ele não é
+    # rascunho inofensivo: é o de-para COMPLETO e fundido (o gravado mais o que
+    # chegou), cifrado e em 0600 — quem tem a chave lê tudo. Ficando para trás,
+    # era a única coisa deste módulo fora do alcance do prazo de guarda e do
+    # `esquecer()`, que olham só o `<autos>.mapa`. Prazo que deixa resíduo não é
+    # prazo.
+    temporario = _parcial(caminho)
+    try:
+        descritor = os.open(temporario, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(descritor, "wb") as arquivo:
+            os.fchmod(arquivo.fileno(), 0o600)  # pelo mesmo umask que a chave
+            arquivo.write(corpo)
+        os.replace(temporario, caminho)
+    except BaseException:
+        # `BaseException` porque KeyboardInterrupt e SIGTERM traduzido são
+        # justamente quando a interrupção acontece — e o resíduo importa mais
+        # nesse caso, não menos. Re-levanta sempre: limpar não é tratar.
+        temporario.unlink(missing_ok=True)
+        raise
     return caminho
 
 
@@ -376,11 +454,22 @@ def ler(autos: str) -> dict[str, str]:
     from cryptography.fernet import Fernet, InvalidToken
 
     caminho = _caminho(autos)
+    parcial = _parcial(caminho)
+
+    # O temporário é varrido pelo MESMO prazo, e antes do desvio de ausência
+    # abaixo. Sem isto, um `.parcial` órfão — o mapa definitivo já vencido e
+    # apagado, ou o processo morto por SIGKILL entre a escrita e a troca —
+    # ficaria no disco para sempre, porque a partir daí toda leitura devolve `{}`
+    # na primeira linha e nunca mais olha para ele.
+    if parcial.exists() and _vencido(parcial):
+        parcial.unlink(missing_ok=True)
+
     if not caminho.exists():
         return {}
 
-    if time.time() - caminho.stat().st_mtime > _prazo_dias() * 86400:
+    if _vencido(caminho):
         caminho.unlink(missing_ok=True)
+        parcial.unlink(missing_ok=True)
         return {}
 
     try:
@@ -396,9 +485,17 @@ def ler(autos: str) -> dict[str, str]:
 
 
 def esquecer(autos: str) -> bool:
-    """Apaga o mapa destes autos. `False` se não havia nada."""
+    """
+    Apaga o mapa destes autos. `False` se não havia nada.
+
+    Apaga o temporário também. Quem manda esquecer está pedindo que o de-para
+    saia do disco, e um `.parcial` deixado por uma troca interrompida é o de-para
+    inteiro — dizer `True` com ele ainda lá seria afirmar um expurgo que não
+    aconteceu.
+    """
     caminho = _caminho(autos)
-    if not caminho.exists():
-        return False
-    caminho.unlink()
-    return True
+    parcial = _parcial(caminho)
+    havia = caminho.exists() or parcial.exists()
+    caminho.unlink(missing_ok=True)
+    parcial.unlink(missing_ok=True)
+    return havia

@@ -412,10 +412,17 @@ def test_volume_honra_dono_reconhece_noowners():
     assert mapa_reverso._analisar_montagens(montagens, "/Volumes/X/k") is False
 
 
-def test_ponto_de_montagem_com_parentese_no_nome_e_lido_certo():
+def test_ponto_de_montagem_com_parentese_no_nome_casa_por_prefixo():
     """
-    `/Volumes/Backup (2024)` é nome legítimo, e a leitura do `mount` separa o
-    ponto das flags pelo ÚLTIMO ` (` justamente por isso.
+    Mede o CASAMENTO DE PREFIXO sobre um ponto de montagem cujo nome tem
+    parêntese — `/Volumes/Backup (2024)` é nome legítimo.
+
+    A docstring anterior afirmava que este teste exercia a separação do ponto e
+    das flags pelo último ` (`, e não era verdade: a tabela chega pronta, então o
+    `rpartition` do parser nunca roda aqui. Quem exerce o parser é
+    `test_parser_do_mount_*`, adiante — e ele não existia, de modo que a garantia
+    "vem do `mount`, não de um palpite pelo caminho" tinha cobertura zero
+    enquanto um teste afirmava na docstring que a cobria.
     """
     montagens = {"/": "apfs, local", "/Volumes/Backup (2024)": "apfs, noowners"}
     assert mapa_reverso._analisar_montagens(montagens, "/Volumes/Backup (2024)/k") is False
@@ -441,8 +448,17 @@ from pathlib import Path
 
 
 @pytest.fixture
-def cofre(tmp_path, monkeypatch):
-    """Chave e mapas em tmp_path — nunca no cofre real do usuário."""
+def cofre(tmp_path, monkeypatch, volume_honra_dono):
+    """
+    Chave e mapas em tmp_path — nunca no cofre real do usuário.
+
+    Recebe `volume_honra_dono` pela política declarada no bloco da chave, acima:
+    teste que mede OUTRA coisa fixa a checagem de montagem em `True`. Sem isso,
+    todos os testes daqui passariam nesta máquina só porque o `tmp_path` cai sob
+    `/`, e falhariam de uma vez numa CI cujo temporário esteja em volume
+    `noowners` — com `CifragemIndisponivel` reclamando de `noowners`, que é a
+    mensagem certa para o ambiente e errada para o que o teste mede.
+    """
     monkeypatch.setenv("PRESIDIO_MAPA_CHAVE", str(tmp_path / "mapa.key"))
     monkeypatch.setenv("PRESIDIO_MAPA_DIR", str(tmp_path / "mapas"))
     return tmp_path
@@ -599,3 +615,205 @@ def test_nome_de_autos_que_escaparia_do_diretorio_e_recusado(cofre, ruim):
     """
     with pytest.raises(ValueError, match="autos"):
         mapa_reverso.gravar(ruim, {"[PESSOA_1]": "Ana"})
+
+
+# ---------------------------------------------------------------------------
+# Os buracos da rodada de revisão
+# ---------------------------------------------------------------------------
+
+import subprocess
+
+
+def test_parser_do_mount_le_ponto_e_flags(monkeypatch):
+    """
+    O parser do `mount` é onde repousa a garantia "vem do `mount`, não de um
+    palpite pelo caminho" — e ele não tinha teste nenhum.
+
+    A saída é fabricada, então não depende de como ESTA máquina está montada: é
+    a mesma razão pela qual `_analisar_montagens` recebe a tabela pronta. A
+    terceira linha tem parêntese no nome do ponto, que é o caso que obriga o
+    `rpartition(" (")` a separar pelo ÚLTIMO ` (` em vez do primeiro.
+    """
+    saida = (
+        "/dev/disk3s5 on / (apfs, local, journaled, nobrowse)\n"
+        "/dev/disk4s1 on /Volumes/SSD (apfs, local, noowners)\n"
+        "/dev/disk5s1 on /Volumes/Backup (2024) (apfs, local, noowners)\n"
+        "map -hosts on /net (autofs, nosuid, automounted)\n"
+        "linha sem forma de montagem que deve ser ignorada\n"
+    )
+
+    def falso_run(*_a, **_k):
+        return subprocess.CompletedProcess(["/sbin/mount"], 0, stdout=saida, stderr="")
+
+    monkeypatch.setattr(mapa_reverso.subprocess, "run", falso_run)
+
+    # O cache é por processo, e é o único teste da suíte que o popula. Limpa
+    # ANTES (para não ler o que outra corrida deixou) e DEPOIS, num `finally`
+    # (para a tabela fabricada não vazar para quem vier a seguir). O `monkeypatch`
+    # desfaz o `subprocess.run`, mas não tem como desfazer um `lru_cache` — e
+    # cache que sobrevive entre testes é a fonte clássica do teste que passa
+    # sozinho e falha em conjunto.
+    mapa_reverso._tabela_de_montagens.cache_clear()
+    try:
+        tabela = mapa_reverso._tabela_de_montagens()
+        _conferir_tabela(tabela)
+    finally:
+        mapa_reverso._tabela_de_montagens.cache_clear()
+
+
+def _conferir_tabela(tabela):
+    assert tabela["/"] == "apfs, local, journaled, nobrowse"
+    assert tabela["/Volumes/SSD"] == "apfs, local, noowners"
+    assert tabela["/Volumes/Backup (2024)"] == "apfs, local, noowners", (
+        "o parêntese do NOME não pode ser confundido com o que abre as flags"
+    )
+    assert "linha sem forma de montagem que deve ser ignorada" not in tabela
+
+    # E a tabela lida do `mount` responde a pergunta que interessa.
+    assert mapa_reverso._analisar_montagens(tabela, "/Users/x/.config/k") is True
+    assert mapa_reverso._analisar_montagens(tabela, "/Volumes/SSD/k") is False
+    assert mapa_reverso._analisar_montagens(tabela, "/Volumes/Backup (2024)/k") is False
+
+
+def test_a_chave_sai_0600_mesmo_com_umask_que_tira_bits(tmp_path, volume_honra_dono):
+    """
+    O `0600` do `os.open` é MASCARADO pelo umask, e o comentário do módulo
+    afirmava o contrário com apoio numa medição que não se sustentava (o
+    `PermissionError` observado vinha do `mkdir` do diretório dentro de um
+    intermediário sem escrita, não do `os.open`).
+
+    Com o diretório da chave JÁ existente — o estado normal depois da primeira
+    execução — `umask 0o200` deixava a chave em `0400`. E o desfecho era o pior
+    do módulo sem atacante nenhum: o primeiro `gravar()` cifrava um mapa com
+    aquela chave, e toda chamada seguinte recusava por modo diferente de 0600.
+
+    Não usa `monkeypatch.setenv` porque o umask é estado de processo e precisa
+    ser restaurado na mesma função que o mexeu.
+    """
+    chave = tmp_path / "existente" / "mapa.key"
+    chave.parent.mkdir()  # criado ANTES do umask: o ramo que o bug alcançava
+    anterior_env = os.environ.get("PRESIDIO_MAPA_CHAVE")
+    anterior_umask = os.umask(0o200)
+    try:
+        os.environ["PRESIDIO_MAPA_CHAVE"] = str(chave)
+        mapa_reverso._chave()
+        assert stat.S_IMODE(chave.stat().st_mode) == 0o600
+    finally:
+        os.umask(anterior_umask)
+        if anterior_env is None:
+            os.environ.pop("PRESIDIO_MAPA_CHAVE", None)
+        else:
+            os.environ["PRESIDIO_MAPA_CHAVE"] = anterior_env
+
+
+def test_symlink_pendurado_no_caminho_da_chave_e_explicado(tmp_path, monkeypatch, volume_honra_dono):
+    """
+    `Path.exists()` segue o symlink e diz `False` para link pendurado, então o
+    ramo de criação é alcançável; o `O_EXCL` se recusa a seguir o link e devolve
+    `FileExistsError`. Era o único desfecho sem explicação num módulo em que toda
+    recusa é explicada.
+    """
+    chave = tmp_path / "mapa.key"
+    chave.symlink_to(tmp_path / "alvo-que-nao-existe")
+    assert not chave.exists(), "link pendurado se diz ausente — é a premissa do teste"
+    monkeypatch.setenv("PRESIDIO_MAPA_CHAVE", str(chave))
+
+    with pytest.raises(mapa_reverso.CifragemIndisponivel, match="symlink"):
+        mapa_reverso._chave()
+
+
+def test_o_parcial_nao_fica_para_tras_quando_a_troca_falha(cofre, monkeypatch):
+    """
+    O `.parcial` é o de-para COMPLETO e fundido, cifrado — quem tem a chave lê
+    tudo. Ficando para trás, era a única coisa deste módulo fora do alcance do
+    prazo de guarda e do `esquecer()`, que olham só o `<autos>.mapa`. Prazo que
+    deixa resíduo não é prazo.
+    """
+    mapa_reverso.gravar("5626981", {"[PESSOA_1]": "Ana Souza"})
+    parcial = cofre / "mapas" / "5626981.mapa.parcial"
+
+    # A falha é ligada e desligada por bandeira, em vez de `monkeypatch.undo()`:
+    # o `undo` desfaz TUDO o que aquele `monkeypatch` fez, e a fixture `cofre`
+    # usa o mesmo objeto — desfazendo também o `setenv` de PRESIDIO_MAPA_DIR.
+    # A leitura seguinte iria para o diretório real do usuário e devolveria `{}`,
+    # o que se lê como "o mapa anterior foi perdido" quando o que houve foi o
+    # teste perder o isolamento.
+    real = mapa_reverso.os.replace
+    falhar = {"agora": True}
+
+    def replace_que_falha(*a, **k):
+        if falhar["agora"]:
+            raise OSError(28, "No space left on device")
+        return real(*a, **k)
+
+    monkeypatch.setattr(mapa_reverso.os, "replace", replace_que_falha)
+    with pytest.raises(OSError):
+        mapa_reverso.gravar("5626981", {"[PESSOA_2]": "Bruno Lima"})
+
+    assert not parcial.exists(), "a troca falhou, então o temporário não pode ficar"
+
+    falhar["agora"] = False
+    assert mapa_reverso.ler("5626981") == {"[PESSOA_1]": "Ana Souza"}, (
+        "e o mapa anterior segue intacto — é para isso que a troca é atômica"
+    )
+
+
+def test_esquecer_apaga_o_parcial_tambem(cofre):
+    """
+    Quem manda esquecer pede que o de-para saia do disco. Dizer `True` com um
+    `.parcial` ainda lá afirmaria um expurgo que não aconteceu.
+    """
+    mapa_reverso.gravar("5626981", {"[PESSOA_1]": "Ana Souza"})
+    parcial = cofre / "mapas" / "5626981.mapa.parcial"
+    parcial.write_bytes(b"resto de uma troca interrompida")
+
+    assert mapa_reverso.esquecer("5626981") is True
+    assert not parcial.exists()
+
+    # E um `.parcial` órfão, sem mapa definitivo, ainda conta como "havia algo".
+    parcial.write_bytes(b"orfao")
+    assert mapa_reverso.esquecer("5626981") is True
+    assert not parcial.exists()
+
+
+def test_o_parcial_orfao_vence_pelo_mesmo_prazo(cofre):
+    """
+    Morto o processo entre a escrita e a troca (SIGKILL não roda `except`), sobra
+    um `.parcial` sem mapa definitivo. A partir daí toda leitura devolve `{}` na
+    primeira linha e nunca mais olharia para ele — ficaria no disco para sempre.
+    """
+    mapa_reverso.gravar("5626981", {"[PESSOA_1]": "Ana Souza"})
+    parcial = cofre / "mapas" / "5626981.mapa.parcial"
+    parcial.write_bytes(b"orfao cifrado")
+    (cofre / "mapas" / "5626981.mapa").unlink()
+
+    antigo = parcial.stat().st_mtime - (8 * 86400)
+    os.utime(parcial, (antigo, antigo))
+
+    assert mapa_reverso.ler("5626981") == {}
+    assert not parcial.exists(), "vencido é apagado, mesmo sendo o temporário"
+
+
+def test_a_caixa_do_nome_dos_autos_e_dobrada(cofre):
+    """
+    `--autos abc` e `--autos ABC` apontam para o MESMO arquivo no APFS desta
+    máquina e para arquivos DIFERENTES no ext4. Sem dobrar, a mesma sequência de
+    comandos produz um mapa no macOS e dois no Linux — comportamento contratado
+    por teste dependendo de como o sistema foi formatado, a mesma armadilha do
+    `noowners`. Este fork pretende voltar ao upstream.
+    """
+    mapa_reverso.gravar("Proc-ABC", {"[PESSOA_1]": "Ana Souza"})
+    assert mapa_reverso.ler("proc-abc") == {"[PESSOA_1]": "Ana Souza"}
+    assert mapa_reverso.ler("PROC-ABC") == {"[PESSOA_1]": "Ana Souza"}
+
+    arquivos = sorted(p.name for p in (cofre / "mapas").iterdir())
+    assert arquivos == ["proc-abc.mapa"], (
+        "um arquivo só, com o nome dobrado — em qualquer sistema de arquivos"
+    )
+
+    # E a fusão alcança o mesmo mapa, em vez de abrir um segundo.
+    mapa_reverso.gravar("PROC-abc", {"[PESSOA_2]": "Bruno Lima"})
+    assert mapa_reverso.ler("proc-ABC") == {
+        "[PESSOA_1]": "Ana Souza",
+        "[PESSOA_2]": "Bruno Lima",
+    }
