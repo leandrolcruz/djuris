@@ -476,6 +476,14 @@ def resultado_do_job(job_id: str):
     resultado = job.resultado
     job.resultado = None
     registro.descartar(job_id)
+
+    # `mapa_reverso` fica FORA da resposta. Hoje só o token de sessão alcança
+    # esta rota (`clientes.escopo_da_rota` não mapeia `/processar/*`), então
+    # não há vazamento para fora do aplicativo — o problema é que ela
+    # serializa o dicionário do motor inteiro, sem `response_model`, e quem
+    # der escopo a ela amanhã não vai reler o `anonymize()` para descobrir que
+    # passou a entregar o de-para do dado real junto.
+    resultado.pop("mapa_reverso", None)
     return resultado
 
 

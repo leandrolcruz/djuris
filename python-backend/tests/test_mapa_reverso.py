@@ -25,6 +25,8 @@ Reidratar `J**** d* S****` é impossível — a informação não existe mais no
 Quem pedir mapa com essas políticas tem de receber vazio, não uma aproximação.
 """
 
+import json
+
 import pytest
 
 from mask_config import Mascarador
@@ -171,3 +173,101 @@ def test_anonymize_recusa_mascarador_de_outra_politica():
             politica_mascara="placeholder",
             mascarador=Mascarador("total"),
         )
+
+
+# ---------------------------------------------------------------------------
+# Task 7b — o comentário de `engine.py` (linha 675: "A CLI e o MCP NUNCA o
+# imprimem — nem em `-f json`") era uma garantia escrita que o código não
+# cumpria: `_formatar` fazia `json.dumps(resultado)` sobre o dicionário CRU
+# devolvido por `anonymize()`, que desde a Task 7 carrega `mapa_reverso`. O
+# conserto filtra a chave no único ponto por onde a saída em json passa.
+#
+# `entities_found` continua expondo o texto real de cada ocorrência — isso é
+# por desenho (serve para auditar o que foi mascarado) e não muda aqui.
+# ---------------------------------------------------------------------------
+
+import cli
+
+
+def _resultado_de_exemplo() -> dict:
+    return {
+        "anonymized_text": "O autor [PESSOA_1] ajuizou a ação.",
+        "entities_found": [
+            {
+                "type": "PERSON",
+                "text": "JOÃO DA SILVA",
+                "start": 8,
+                "end": 21,
+                "score": 0.85,
+            }
+        ],
+        "politica_mascara": "placeholder",
+        "valores_distintos": {"PERSON": 1},
+        "mapa_reverso": {"[PESSOA_1]": "JOÃO DA SILVA"},
+    }
+
+
+def test_formatar_json_nao_expoe_mapa_reverso_mas_preserva_o_resto():
+    saida = cli._formatar(_resultado_de_exemplo(), "json")
+    assert "mapa_reverso" not in saida
+
+    corpo = json.loads(saida)
+    assert "mapa_reverso" not in corpo
+    # O contrato do `-f json` não pode ser quebrado pela correção: a lista de
+    # ocorrências (que documentadamente expõe o texto real) continua ali.
+    assert corpo["anonymized_text"] == "O autor [PESSOA_1] ajuizou a ação."
+    assert corpo["entities_found"] == [
+        {
+            "type": "PERSON",
+            "text": "JOÃO DA SILVA",
+            "start": 8,
+            "end": 21,
+            "score": 0.85,
+        }
+    ]
+
+
+def test_formatar_text_devolve_so_o_texto_anonimizado():
+    saida = cli._formatar(_resultado_de_exemplo(), "text")
+    assert saida == "O autor [PESSOA_1] ajuizou a ação."
+
+
+# ---------------------------------------------------------------------------
+# A rota `/processar/{job_id}/resultado` serializa o dicionário do motor sem
+# `response_model` — sem o filtro, ela devolveria `mapa_reverso` também.
+#
+# O job é fabricado diretamente (sem rodar extração/análise de verdade): o
+# que se testa é o comportamento da rota sobre um resultado pronto, não a
+# qualidade da detecção — mais barato e é a mesma coisa que os outros testes
+# de rota fazem para status/cancelamento.
+# ---------------------------------------------------------------------------
+
+import os
+
+TOKEN = os.environ["PRESIDIO_TOKEN"]
+
+
+@pytest.fixture(scope="module")
+def cliente_api():
+    from fastapi.testclient import TestClient
+
+    import server
+
+    return TestClient(server.app)
+
+
+def test_rota_resultado_do_job_nao_expoe_mapa_reverso(cliente_api):
+    import jobs
+
+    job = jobs.registro.criar("autos.txt")
+    job.resultado = _resultado_de_exemplo()
+    job.estado = jobs.CONCLUIDO
+
+    resposta = cliente_api.get(
+        f"/processar/{job.id}/resultado",
+        headers={"X-Presidio-Token": TOKEN},
+    )
+    assert resposta.status_code == 200
+    corpo = resposta.json()
+    assert "mapa_reverso" not in corpo
+    assert corpo["anonymized_text"] == "O autor [PESSOA_1] ajuizou a ação."

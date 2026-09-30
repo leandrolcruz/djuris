@@ -424,7 +424,17 @@ def _anonimizar_texto(
 
 def _formatar(resultado: dict, formato: str) -> str:
     if formato == "json":
-        return json.dumps(resultado, ensure_ascii=False, indent=2)
+        # `mapa_reverso` sai FORA, sempre. O comentário de `engine.py` promete
+        # que a CLI nunca o imprime — nem em `-f json` —, e até aqui essa
+        # garantia era só prosa: `resultado` é o dicionário cru que
+        # `anonymize()` devolve, e ele carrega o mapa desde a Task 7.
+        # `entities_found` fica: expor o texto real de cada ocorrência ali é
+        # por desenho, para auditar o que foi mascarado — o defeito era
+        # específico do mapa reverso, que desfaz a anonimização inteira. A
+        # remoção é aqui, no único ponto por onde a saída passa, e não em
+        # cada chamador.
+        publico = {c: v for c, v in resultado.items() if c != "mapa_reverso"}
+        return json.dumps(publico, ensure_ascii=False, indent=2)
     return resultado["anonymized_text"]
 
 
