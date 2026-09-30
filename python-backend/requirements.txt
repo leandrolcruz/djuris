@@ -86,5 +86,15 @@ huggingface_hub==0.36.2
 # largada com a tela presa em "Carregando motor de anonimização".
 mcp>=2.1,<3
 
+# Cifragem do mapa reverso (`mapa_reverso.py`, Fernet).
+#
+# Vinha de carona pela cadeia do `mcp` e por isso funcionava sem estar escrito.
+# Está declarado porque o embarcado instala com `--no-deps`: ali o que ninguém
+# lista não entra, e o pip ainda diz "pronto". É a mesma armadilha que o
+# `huggingface_hub` e o `python-multipart` documentam acima — e o mapa reverso
+# é pior de perder, porque a falha não é o backend não subir: é `reidratar`
+# morrer na importação depois de o documento já ter ido para a nuvem.
+cryptography==48.0.1
+
 # O modelo spaCy não é instalável por aqui — depende de `spacy download`:
 #   python -m spacy download pt_core_news_lg
