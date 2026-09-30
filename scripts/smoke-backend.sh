@@ -28,10 +28,28 @@ RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BACKEND="$RAIZ/resources/python-backend"
 PYTHON="$BACKEND/python-embed/python.exe"
 
-if [[ ! -f "$PYTHON" ]]; then
-  echo "python-embed/python.exe não encontrado — nada a verificar."
-  echo "(esperado fora do Windows/WSL; o build só roda com ele presente)"
-  exit 0
+# Ordem: o Python EMBARCADO primeiro, porque é ele que vai no instalador e é
+# o único cujo conjunto de bibliotecas o `--no-deps` pode ter deixado
+# incompleto. Onde ele não existe — macOS e Linux, onde o build nativo ainda
+# não é gerado — vale o venv sobre o código de origem: não é o mesmo
+# interpretador do produto, mas pega import quebrado, rota fora do ar e
+# tokenizador faltando, que é a maior parte do que este script existe para
+# achar.
+#
+# O que NÃO se faz aqui é sair com 0 sem verificar nada. Era o comportamento
+# anterior fora do Windows, e um `check` que sempre passa não se distingue de
+# um `check` que não roda — some no log junto dos que de fato passaram.
+if [[ -f "$PYTHON" ]]; then
+  echo "Importando o backend com o Python embarcado."
+  echo "(pela ponte do WSL leva minutos — o torch é lido arquivo a arquivo)"
+elif [[ -x "$RAIZ/.venv/bin/python" ]]; then
+  BACKEND="$RAIZ/python-backend"
+  PYTHON="$RAIZ/.venv/bin/python"
+  echo "Sem python-embed; verificando com o venv sobre python-backend/."
+else
+  echo "Nem python-embed nem .venv encontrados." >&2
+  echo "Rode scripts/setup-macos.sh (macOS) ou monte o embarcado." >&2
+  exit 1
 fi
 
 VERIFICACAO='
@@ -75,9 +93,6 @@ import spacy
 spacy.load("pt_core_news_lg")
 print("ok: pt_core_news_lg carrega (tokenizador dos dois modos)")
 '
-
-echo "Importando o backend com o Python embarcado."
-echo "(pela ponte do WSL leva minutos — o torch é lido arquivo a arquivo)"
 
 if ! saida="$(cd "$BACKEND" && "$PYTHON" -c "$VERIFICACAO" 2>&1)"; then
   echo "O BACKEND EMPACOTADO NÃO IMPORTA:" >&2
