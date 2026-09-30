@@ -220,6 +220,29 @@ tree-shaking do que nenhuma utility menciona, e uma string montada em runtime é
 invisível para ele. Daí as 14 cores de entidade serem declaradas à mão no
 `:root`.
 
+**A chave do mapa reverso fica no disco INTERNO, e o mapa cifrado no volume de
+peso.** Medido: o SSD externo é APFS e honra `chmod 0600`, mas monta com
+`noowners` — `diskutil info` diz `Owners: Disabled`. Com o dono ignorado,
+qualquer usuário da máquina responde como proprietário e o `0600` ali não
+protege ninguém; o programa recusa cunhar a chave num volume desses em vez de
+prometer proteção que não existe. Keychain foi descartado porque a CLI e o
+servidor MCP rodam em tmux, fora da sessão gráfica, que é onde ele falha nesta
+máquina. A explicação longa está em `docs/macos.md`.
+
+**`monkeypatch.undo()` desativa o isolamento do teste em silêncio.** Ele reverte
+tudo o que aquele objeto fez, **inclusive o `setenv` de uma fixture que
+compartilha o objeto**. Num teste do mapa reverso isso mandou a leitura seguinte
+ao diretório real do usuário; achou vazio, e o `assert {} == {...}` se leu como
+"a troca atômica perdeu o mapa" — defeito de dado onde havia defeito de
+isolamento. Use uma bandeira que liga e desliga a falha, não `undo()`.
+
+**Não meça o `umask` com ferramenta que também é mascarada por ele.**
+`tempfile.mkdtemp()` faz `mkdir(0o700)`, e `mkdir` passa pelo umask: sob
+`umask 0o200` o diretório nasce sem escrita, e o `PermissionError` vem dali, não
+do `os.open` que se queria medir. O erro sobreviveu a duas rodadas e a uma
+mensagem de commit afirmando a medição. Crie o diretório antes, fora do umask
+sob teste.
+
 ## O instalador NSIS
 
 O `build/installer.nsh` põe a CLI no PATH ao instalar e a tira ao desinstalar.

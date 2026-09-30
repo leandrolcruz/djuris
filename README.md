@@ -319,7 +319,11 @@ há auto-atualização: o aplicativo nunca busca versão nova sozinho.
 > exige certificado de pessoa jurídica; um órgão que tenha o seu próprio assina
 > o instalador alterando poucas linhas do `electron-builder.yml`.
 
-Linux/Mac: rode em modo dev (abaixo). Build nativo sob demanda.
+**macOS (Apple Silicon):** CLI e servidor MCP funcionam nativamente —
+veja [`docs/macos.md`](docs/macos.md). A interface gráfica roda em modo dev;
+`.dmg` ainda não é gerado.
+
+**Linux:** rode em modo dev. Build nativo sob demanda.
 
 ## Entidades reconhecidas
 
