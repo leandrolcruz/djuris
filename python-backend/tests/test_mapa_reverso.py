@@ -271,3 +271,59 @@ def test_rota_resultado_do_job_nao_expoe_mapa_reverso(cliente_api):
     corpo = resposta.json()
     assert "mapa_reverso" not in corpo
     assert corpo["anonymized_text"] == "O autor [PESSOA_1] ajuizou a ação."
+
+
+# ---------------------------------------------------------------------------
+# A substituição
+# ---------------------------------------------------------------------------
+
+import mapa_reverso
+
+
+def test_reidrata_substituindo_os_rotulos():
+    texto = "[PESSOA_1] alega que [PESSOA_2] não pagou. CPF: [CPF_1]."
+    mapa = {
+        "[PESSOA_1]": "Ana Souza",
+        "[PESSOA_2]": "Bruno Lima",
+        "[CPF_1]": "529.982.247-25",
+    }
+    assert mapa_reverso.reidratar(texto, mapa) == (
+        "Ana Souza alega que Bruno Lima não pagou. CPF: 529.982.247-25."
+    )
+
+
+def test_dois_digitos_nao_sao_corrompidos_pelo_de_um_digito():
+    """
+    O defeito clássico: substituir `[PESSOA_1]` por varredura ingênua atinge o
+    prefixo de `[PESSOA_10]` e produz `Ana Souza0` — que não parece defeito de
+    programa, parece erro de digitação de quem escreveu o documento.
+    """
+    mapa = {f"[PESSOA_{i}]": f"Pessoa{i}" for i in range(1, 13)}
+    texto = " ".join(f"[PESSOA_{i}]" for i in (1, 10, 2, 11, 12))
+    assert mapa_reverso.reidratar(texto, mapa) == (
+        "Pessoa1 Pessoa10 Pessoa2 Pessoa11 Pessoa12"
+    )
+
+
+def test_rotulo_com_cedilha_e_reconhecido():
+    """`ENDEREÇO` tem cedilha: uma classe [A-Z_] o deixaria de fora em silêncio."""
+    mapa = {"[ENDEREÇO_1]": "Rua Cassiano Correia, 4"}
+    assert mapa_reverso.reidratar("Reside em [ENDEREÇO_1].", mapa) == (
+        "Reside em Rua Cassiano Correia, 4."
+    )
+
+
+def test_rotulo_fora_do_mapa_fica_como_esta():
+    """
+    Um rótulo sem entrada é o caso de autos trocados, ou de mapa vencido e
+    apagado. Deixá-lo visível é a única saída honesta: apagar fingiria que o
+    trecho não existia, e adivinhar seria pior.
+    """
+    saida = mapa_reverso.reidratar("[PESSOA_1] e [PESSOA_9]", {"[PESSOA_1]": "Ana"})
+    assert saida == "Ana e [PESSOA_9]"
+
+
+def test_texto_sem_rotulo_atravessa_intacto():
+    assert mapa_reverso.reidratar("Nada a substituir.", {"[PESSOA_1]": "Ana"}) == (
+        "Nada a substituir."
+    )
