@@ -2,6 +2,10 @@ import { Icone, Tecla, type NomeIcone } from "../ui";
 import { Marca } from "./Marca";
 import type { Destino } from "../estado/tipos";
 
+/* Lido uma vez, no módulo: o valor não muda enquanto o programa roda, e fora
+   do Electron não existe — aí é zero, porque não há botão de janela nenhum. */
+const recuoDosSemaforos = window.electronAPI?.janela?.recuoDosSemaforos ?? 0;
+
 /**
  * Trilho de operações — 240px, cinco destinos, pod de estado no pé.
  *
@@ -107,8 +111,16 @@ export function BarraLateral({
       <div className="flex min-h-0 flex-col">
         {/* A faixa da marca tem a altura do cabeçalho e arrasta a janela junto
             com ele. Sem isto, a janela ficaria imóvel por toda a coluna
-            esquerda — 240 dos 1440px da largura padrão. */}
-        <div className="arrasto flex h-cabecalho shrink-0 items-center bg-surface-container-lowest/60 px-gutter-sm lg:px-gutter-md">
+            esquerda — 240 dos 1440px da largura padrão.
+
+            O recuo à esquerda é por causa do macOS: os três semáforos ficam
+            exatamente neste canto, e sem reservar espaço eles caem sobre a
+            marca. Quem calcula é o preload — o renderer não aprende a regra de
+            cada sistema, e fora do Electron não há botão nenhum, daí o `?? 0`. */}
+        <div
+          className="arrasto flex h-cabecalho shrink-0 items-center bg-surface-container-lowest/60 px-gutter-sm lg:px-gutter-md"
+          style={{ paddingLeft: recuoDosSemaforos || undefined }}
+        >
           <div className="lg:hidden">
             <Marca versao={__VERSAO_DO_APP__} compacta />
           </div>

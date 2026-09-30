@@ -105,6 +105,8 @@ interface ElectronAPI {
   /** Opcional porque fora do Electron não há barra de título para pintar. */
   janela?: {
     pintarBarra: (cores: { fundo: string; simbolo: string }) => Promise<void>;
+    /** Pixels a reservar à esquerda pelos botões da janela (macOS: ~78; resto: 0). */
+    recuoDosSemaforos: number;
   };
   /** Caminho absoluto de um File — substitui o antigo File.path. */
   getPathForFile: (file: File) => string;

@@ -25,6 +25,7 @@ import * as conversa from "./conversa";
 import * as openrouter from "./openrouter";
 import { MODELOS, atualizarProvedoresZdr } from "./catalogo";
 import type { Ocorrencia } from "./pseudonimos";
+import { ALTURA_MOLDURA, moldurAceitaPintura, opcoesDeMoldura } from "./moldura";
 
 const execFileP = promisify(execFile);
 
@@ -166,7 +167,7 @@ function stopPythonBackend(): void {
  * sobrepostos ao canto direito do cabeçalho. Divergindo, ou os botões flutuam
  * sobre o conteúdo ou sobra uma faixa morta acima dele.
  */
-const ALTURA_MOLDURA = 64;
+
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -188,12 +189,10 @@ function createWindow(): void {
        que separa "programa" de "página dentro de uma moldura". A cor
        acompanha o tema — o renderer avisa por `barra-de-titulo` a cada troca,
        e a inicial segue o sistema, como o `backgroundColor` abaixo. */
-    titleBarStyle: "hidden",
-    titleBarOverlay: {
-      color: nativeTheme.shouldUseDarkColors ? "#0c1323" : "#faf8ff",
-      symbolColor: nativeTheme.shouldUseDarkColors ? "#dce2f9" : "#131b2e",
-      height: ALTURA_MOLDURA,
-    },
+    ...opcoesDeMoldura(process.platform, {
+      fundo: nativeTheme.shouldUseDarkColors ? "#0c1323" : "#faf8ff",
+      simbolo: nativeTheme.shouldUseDarkColors ? "#dce2f9" : "#131b2e",
+    }),
     /* O menu nativo (File, Edit, View…) fica escondido. Ele continua
        acessível pelo Alt, para os atalhos de zoom e de DevTools em
        desenvolvimento, mas não ocupa uma faixa da janela em produção. */
@@ -681,6 +680,10 @@ ipcMain.handle(
   (_evento, cores: { fundo?: unknown; simbolo?: unknown }) => {
     const hex = /^#[0-9a-f]{6}$/i;
     if (!mainWindow || mainWindow.isDestroyed()) return;
+    // No macOS quem pinta os semáforos é o sistema, que já segue o tema — e
+    // `setTitleBarOverlay` nem existe lá. Sem esta linha o handler morria com
+    // `TypeError` a cada troca de tema, num log que não dizia de onde vinha.
+    if (!moldurAceitaPintura(process.platform)) return;
     if (typeof cores?.fundo !== "string" || typeof cores?.simbolo !== "string") return;
     if (!hex.test(cores.fundo) || !hex.test(cores.simbolo)) return;
     mainWindow.setTitleBarOverlay({

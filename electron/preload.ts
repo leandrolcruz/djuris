@@ -1,5 +1,7 @@
 import { contextBridge, ipcRenderer, webUtils } from "electron";
 
+import { recuoDosSemaforos } from "./moldura";
+
 contextBridge.exposeInMainWorld("electronAPI", {
   getBackendPort: (): Promise<number> => ipcRenderer.invoke("get-backend-port"),
   getBackendToken: (): Promise<string> => ipcRenderer.invoke("get-backend-token"),
@@ -7,6 +9,16 @@ contextBridge.exposeInMainWorld("electronAPI", {
     /** Cor da barra de título nativa, para acompanhar o tema da interface. */
     pintarBarra: (cores: { fundo: string; simbolo: string }): Promise<void> =>
       ipcRenderer.invoke("barra-de-titulo", cores),
+    /**
+     * Quanto o conteúdo precisa recuar à esquerda para não ficar sob os botões
+     * da janela. No macOS os três semáforos ficam nesse canto, que é onde a
+     * barra lateral põe a marca; nas outras plataformas é zero.
+     *
+     * Vai calculado daqui, e não como o nome da plataforma: o renderer não tem
+     * por que aprender a regra de cada sistema, e um `if (mac)` espalhado pela
+     * interface é como a regra começa a divergir de si mesma.
+     */
+    recuoDosSemaforos: recuoDosSemaforos(process.platform),
   },
   /** Caminho absoluto de um File vindo de drag-and-drop ou <input type="file">. */
   getPathForFile: (file: File): string => {
