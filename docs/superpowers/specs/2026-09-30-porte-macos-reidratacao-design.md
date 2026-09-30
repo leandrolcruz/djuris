@@ -32,6 +32,8 @@ Não são suposições; foram medidos nesta máquina em 30/09/2026.
 | A numeração estável entre peças existe **só no Electron/TS** (`pseudonimos.ts`), é mão única (rótulo→rótulo), e a CLI/MCP não a têm | leitura dos dois módulos |
 | `safeStorage` do Electron já usa Keychain no macOS — o cofre da GUI não precisa de porte, só os comentários | `cofre.ts:23-40` |
 | Disco interno: **10 GB livres**. SSD externo: **858 GB** | `df -h` |
+| O SSD é APFS e honra `chmod 0600`, **mas monta com `noowners`** — dono ignorado, qualquer usuário é tratado como proprietário | `mount`, `diskutil info`, `chmod` de teste |
+| `cryptography==48.0.1` já entra no fecho transitivo, em arm64 e no `requirements-embed.txt` | `uv pip compile` |
 
 ## 3. Decisões
 
@@ -42,7 +44,7 @@ Não são suposições; foram medidos nesta máquina em 30/09/2026.
 | Peso (venv + modelos) | `/Volumes/SSD do Leandro/tecjustica-sigilo/` | ~4-5 GB não cabem nos 10 GB livres do interno |
 | CLI | shim em `~/.local/bin/tecjustica-sigilo` | mesma convenção do `bot-convert` |
 | Melhoria da Fase 1 | reidratação | é a de maior retorno e a que a CLI/MCP nunca teve |
-| Chave do mapa reverso | arquivo `0600` no SSD, `cryptography`, falha fechada | **Keychain foi descartado**: a CLI e o MCP rodam em tmux, fora da sessão gráfica, e ali o Keychain falha (erro 36 — o mesmo que derruba o auto-login da Honda) |
+| Chave do mapa reverso | chave `0600` no **disco interno**, mapa cifrado no SSD, `cryptography`, falha fechada | **Keychain foi descartado**: a CLI e o MCP rodam em tmux, fora da sessão gráfica, e ali o Keychain falha (erro 36 — o mesmo que derruba o auto-login da Honda). **O SSD foi descartado para a chave** por estar montado com `noowners` (ver 5.2) |
 | Persistência do mapa | padrão **só memória**; disco é opt-in (`--sessao`) com prazo | o mapa é um índice de CPF e nome: a joia da coroa |
 
 ## 4. Fase 1 — o porte
@@ -101,10 +103,22 @@ contexto dele e desfazem exatamente o que a ferramenta existe para fazer.
 
 ### 5.2 O mapa em repouso
 
-Cifrado com `cryptography` (já é dependência), chave em arquivo `0600` no SSD.
-**Falha fechada**: não podendo cifrar, recusa gravar — nunca grava em claro. É
-a cultura do próprio projeto (`cofre.ts`, `fetch-ocr-models.sh`). Propriedade
-de brinde: SSD desmontado = mapa ilegível.
+Cifrado com `cryptography` (já é dependência), **chave e texto cifrado em
+volumes diferentes**:
+
+| | Onde | Por quê |
+|---|---|---|
+| **chave** | `~/.config/tecjustica-sigilo/mapa.key`, `0600`, disco interno | medido em 30/09: o SSD é APFS e aceita `chmod 0600`, **mas está montado com `noowners`** (`Owners: Disabled`) — o dono é ignorado e qualquer usuário da máquina é tratado como proprietário. `0600` ali não protege ninguém |
+| **mapa cifrado** | `/Volumes/SSD do Leandro/tecjustica-sigilo/mapas/` | é o volume com espaço, e separá-lo da chave é ganho: SSD levado ou roubado não carrega a chave |
+
+**Falha fechada** em dois testes, não um: recusa gravar se não puder cifrar, e
+recusa se a chave estiver num volume que ignora dono (`noowners`) ou com modo
+diferente de `0600`. Nunca grava em claro. É a cultura do próprio projeto
+(`cofre.ts`, `fetch-ocr-models.sh`).
+
+Prazo de guarda: **7 dias** (o cofre da GUI usa 30, mas ele guarda documento
+anonimizado; este guarda o de-para para o dado real). Ajustável por
+`PRESIDIO_MAPA_PRAZO_DIAS`.
 
 ## 6. Testes
 
