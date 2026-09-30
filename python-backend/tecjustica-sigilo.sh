@@ -29,11 +29,17 @@ PYTHON="$RAIZ/.venv/bin/python"
 
 # A mensagem importa: o modo de falha mais provável desta instalação é o volume
 # externo desmontado, e o sintoma cru seria um ModuleNotFoundError de torch —
-# que manda a pessoa depurar dependência quando o problema é um cabo.
+# que manda a pessoa depurar dependência quando o problema é um cabo. Mas
+# TECJUSTICA_PESO é override do usuário: só teria a forma "dois níveis sob
+# /Volumes" no caso padrão desta máquina, e para qualquer outra forma
+# (`dirname "$PESO"`) apontar como "o volume" seria afirmar algo que não se
+# sabe — dirname de `$HOME/peso-sigilo` dá `$HOME`, que não é volume nenhum.
+# Por isso a mensagem nomeia o que de fato se sabe (o caminho que faltou) e
+# sugere a causa provável sem afirmá-la como fato.
 if [[ ! -x "$PYTHON" ]]; then
   echo "O motor não está acessível em $PYTHON." >&2
   if [[ ! -d "$PESO" ]]; then
-    echo "O volume '$(dirname "$PESO")' não está montado — monte-o e tente de novo." >&2
+    echo "O caminho '$PESO' não existe. Se ele fica num volume externo, monte-o e tente de novo." >&2
   else
     echo "Rode $RAIZ/scripts/setup-macos.sh para montar o ambiente." >&2
   fi
