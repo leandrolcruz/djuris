@@ -1051,6 +1051,7 @@ milissegundos.
 
 from __future__ import annotations
 
+import functools
 import re
 
 # A classe de caracteres cobre `Ç` (U+00C7) e as vogais acentuadas porque
@@ -1123,6 +1124,20 @@ carrega mais a chave dele.
 ```python
 # ---------------------------------------------------------------------------
 # A chave e a falha fechada
+#
+# ## Por que quase todo teste daqui finge que o volume honra dono
+#
+# `_volume_honra_dono` lê o `mount` da máquina de verdade. Se os testes o
+# deixassem real, eles passariam a depender de ONDE o pytest põe o `tmp_path` —
+# nesta máquina cai sob `/`, que honra dono, e tudo passa. Numa máquina cujo
+# temporário fique num volume `noowners`, ou num contêiner de integração
+# contínua, os mesmos testes falhariam com `CifragemIndisponivel` reclamando de
+# `noowners`: a mensagem certa para o ambiente e a errada para o que o teste
+# queria medir, apontando o depurador para o lugar errado.
+#
+# Este fork pretende voltar ao upstream, onde roda na máquina de outra gente.
+# Então: os testes que medem OUTRA coisa fixam a resposta em `True`, e os dois
+# que medem a checagem em si a exercem de propósito.
 # ---------------------------------------------------------------------------
 
 import os
@@ -1131,7 +1146,13 @@ import stat
 import pytest
 
 
-def test_cria_a_chave_com_modo_0600(tmp_path, monkeypatch):
+@pytest.fixture
+def volume_honra_dono(monkeypatch):
+    """Isola os testes da configuração de montagem da máquina que os roda."""
+    monkeypatch.setattr(mapa_reverso, "_volume_honra_dono", lambda _c: True)
+
+
+def test_cria_a_chave_com_modo_0600(tmp_path, monkeypatch, volume_honra_dono):
     chave = tmp_path / "mapa.key"
     monkeypatch.setenv("PRESIDIO_MAPA_CHAVE", str(chave))
     primeira = mapa_reverso._chave()
@@ -1140,14 +1161,14 @@ def test_cria_a_chave_com_modo_0600(tmp_path, monkeypatch):
     assert len(primeira) > 0
 
 
-def test_reusa_a_chave_existente(tmp_path, monkeypatch):
+def test_reusa_a_chave_existente(tmp_path, monkeypatch, volume_honra_dono):
     """Recunhar a chave tornaria ilegível todo mapa já gravado."""
     chave = tmp_path / "mapa.key"
     monkeypatch.setenv("PRESIDIO_MAPA_CHAVE", str(chave))
     assert mapa_reverso._chave() == mapa_reverso._chave()
 
 
-def test_recusa_chave_com_modo_frouxo(tmp_path, monkeypatch):
+def test_recusa_chave_com_modo_frouxo(tmp_path, monkeypatch, volume_honra_dono):
     """
     Chave legível por outros não é chave. Corrigir o modo em silêncio seria
     pior: não há como saber quem já a leu, e o programa seguiria afirmando uma
@@ -1162,11 +1183,13 @@ def test_recusa_chave_com_modo_frouxo(tmp_path, monkeypatch):
 
 
 def test_recusa_chave_em_volume_que_ignora_dono(tmp_path, monkeypatch):
+    """Este exerce a checagem, então NÃO usa a fixture que a neutraliza."""
     chave = tmp_path / "mapa.key"
     monkeypatch.setenv("PRESIDIO_MAPA_CHAVE", str(chave))
     monkeypatch.setattr(mapa_reverso, "_volume_honra_dono", lambda _c: False)
     with pytest.raises(mapa_reverso.CifragemIndisponivel, match="noowners"):
         mapa_reverso._chave()
+    assert not chave.exists(), "recusou, então não pode ter criado a chave"
 
 
 def test_volume_honra_dono_reconhece_noowners():
@@ -1174,10 +1197,21 @@ def test_volume_honra_dono_reconhece_noowners():
     A leitura vem do `mount`, não de um palpite pelo caminho. O volume externo
     desta máquina monta com noowners, e um `/Volumes/...` hardcoded como
     'inseguro' reprovaria um volume corretamente montado de outra pessoa.
+
+    Recebe a tabela pronta, então não toca no sistema e vale em qualquer máquina.
     """
     montagens = {"/": "apfs, local, journaled", "/Volumes/X": "apfs, local, noowners"}
     assert mapa_reverso._analisar_montagens(montagens, "/Users/x/.config/k") is True
     assert mapa_reverso._analisar_montagens(montagens, "/Volumes/X/k") is False
+
+
+def test_ponto_de_montagem_com_parentese_no_nome_e_lido_certo():
+    """
+    `/Volumes/Backup (2024)` é nome legítimo, e a leitura do `mount` separa o
+    ponto das flags pelo ÚLTIMO ` (` justamente por isso.
+    """
+    montagens = {"/": "apfs, local", "/Volumes/Backup (2024)": "apfs, noowners"}
+    assert mapa_reverso._analisar_montagens(montagens, "/Volumes/Backup (2024)/k") is False
 ```
 
 - [ ] **Step 2: Rodar e ver falhar**
@@ -1234,6 +1268,42 @@ def _analisar_montagens(montagens: dict[str, str], caminho: str) -> bool:
     return "noowners" not in flags
 
 
+@functools.lru_cache(maxsize=1)
+def _tabela_de_montagens() -> dict[str, str]:
+    """
+    `{ponto_de_montagem: flags}`, lido uma vez por processo.
+
+    O cache existe porque `gravar()` chama `_chave()` e também `ler()`, que
+    chama `_chave()` de novo — sem ele, cada gravação de mapa gastaria dois
+    processos `/sbin/mount`, e a CLI grava uma vez por lote de peças.
+
+    Cachear é seguro para o que se pergunta aqui: a chave mora no disco interno,
+    cuja montagem não muda no meio de uma execução. O volume EXTERNO pode ser
+    desmontado a qualquer momento, mas quem responde por ele é a falha de
+    leitura do arquivo cifrado, não esta tabela.
+    """
+    try:
+        saida = subprocess.run(
+            ["/sbin/mount"], capture_output=True, text=True, timeout=5, check=True
+        ).stdout
+    except (OSError, subprocess.SubprocessError):
+        # Não sabendo, devolve tabela vazia — e `_analisar_montagens` não acha
+        # montagem, o que `_volume_honra_dono` trata como recusa. É a direção
+        # certa do erro: o custo de um falso alarme é uma mensagem; o de um
+        # falso "seguro" é um mapa desprotegido.
+        return {}
+
+    montagens: dict[str, str] = {}
+    for linha in saida.splitlines():
+        # `/dev/disk3s5 on / (apfs, local, journaled)`
+        if " on " not in linha or "(" not in linha:
+            continue
+        resto = linha.split(" on ", 1)[1]
+        ponto, _, flags = resto.rpartition(" (")
+        montagens[ponto.strip()] = flags.rstrip(")")
+    return montagens
+
+
 def _volume_honra_dono(caminho: Path) -> bool:
     """
     `noowners` faz o sistema ignorar o dono: todo arquivo do volume responde
@@ -1245,23 +1315,9 @@ def _volume_honra_dono(caminho: Path) -> bool:
     por definição reprovaria o volume corretamente montado de outra pessoa —
     seria uma regra que acerta aqui por coincidência.
     """
-    try:
-        saida = subprocess.run(
-            ["/sbin/mount"], capture_output=True, text=True, timeout=5, check=True
-        ).stdout
-    except (OSError, subprocess.SubprocessError):
-        # Não sabendo, recusa. É a direção certa do erro: o custo de um falso
-        # alarme é uma mensagem; o de um falso "seguro" é um mapa desprotegido.
+    montagens = _tabela_de_montagens()
+    if not montagens:
         return False
-
-    montagens: dict[str, str] = {}
-    for linha in saida.splitlines():
-        # `/dev/disk3s5 on / (apfs, local, journaled)`
-        if " on " not in linha or "(" not in linha:
-            continue
-        resto = linha.split(" on ", 1)[1]
-        ponto, _, flags = resto.rpartition(" (")
-        montagens[ponto.strip()] = flags.rstrip(")")
     return _analisar_montagens(montagens, str(caminho.resolve()))
 
 
