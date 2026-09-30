@@ -2245,6 +2245,29 @@ def test_a_mesma_pessoa_em_invocacoes_diferentes_mantem_o_numero(cofre, capsys):
     assert mapa_reverso.ler("5626981") == {"[PESSOA_1]": "ANA SOUZA"}
 
 
+def test_anonimizar_para_quando_o_mapa_dos_autos_nao_decifra(cofre, capsys):
+    """
+    A chave trocada tem de parar a anonimização ANTES de escrever arquivo, não
+    depois. Seguir criaria um segundo mapa para os mesmos autos, e ficariam duas
+    numerações incompatíveis sem nada dizendo qual explica qual peça.
+    """
+    from cryptography.fernet import Fernet
+
+    a = _peca(cofre, "inicial.txt", "ANA SOUZA propôs a ação.")
+    assert cli.main(["anonimizar", a, "--offline", "--autos", "5626981", "-o", "-"]) == 0
+    capsys.readouterr()
+
+    Path(os.environ["PRESIDIO_MAPA_CHAVE"]).write_bytes(Fernet.generate_key())
+
+    b = _peca(cofre, "procuracao.txt", "BRUNO LIMA outorga poderes.")
+    saida_b = cofre / "saida-b.txt"
+    assert cli.main([
+        "anonimizar", b, "--offline", "--autos", "5626981", "-o", str(saida_b)
+    ]) == 1
+    assert "ALARME" in capsys.readouterr().err
+    assert not saida_b.exists(), "parou antes de escrever, como tem de ser"
+
+
 def test_autos_com_mascara_sem_mapa_e_recusado(cofre, capsys):
     """
     `parcial` e `total` não produzem mapa. Aceitar `--autos` com elas gravaria
@@ -2342,10 +2365,23 @@ o modo remoto:
         # dentro de uma. Sem ela, esta chamada numeraria do `[PESSOA_1]` outra
         # vez e a gravação recusaria por `EtiquetaConflitante` — porque a peça de
         # segunda-feira já gastou aquele número com outra pessoa.
+        # Ler o mapa aqui, ANTES de qualquer trabalho caro, tem duas funções: dá
+        # a semente da numeração e valida que a chave abre o que está gravado.
+        # Descobrir que o mapa não decifra depois de minutos de OCR seria
+        # descobrir tarde — e com os arquivos já escritos.
         try:
             gravado = mapa_reverso.ler(args.autos)
         except mapa_reverso.CifragemIndisponivel as erro:
             print(f"erro: {erro}", file=sys.stderr)
+            return 1
+        except mapa_reverso.MapaIlegivel as erro:
+            print(f"ALARME: {erro}", file=sys.stderr)
+            print(
+                "Não anonimizei nada. Seguir criaria um segundo mapa para os "
+                "mesmos autos, e você ficaria com duas numerações incompatíveis "
+                "sem saber qual explica qual peça.",
+                file=sys.stderr,
+            )
             return 1
         if gravado:
             mascarador.semear(gravado)
@@ -2386,7 +2422,31 @@ fim. E antes de cada `return 0`, gravar:
 ```python
     if mascarador is not None:
         import mapa_reverso
-        destino_mapa = mapa_reverso.gravar(args.autos, mascarador.mapa())
+
+        # Esta gravação acontece DEPOIS de os arquivos anonimizados estarem no
+        # disco, e não há como ser antes: o mapa só está completo quando a última
+        # peça foi lida. Então a falha aqui tem um efeito específico e precisa ser
+        # dita com essas palavras — os arquivos existem, parecem certos, e não há
+        # como reidratá-los. Um traceback deixaria a pessoa achando que o
+        # problema foi na anonimização.
+        try:
+            destino_mapa = mapa_reverso.gravar(args.autos, mascarador.mapa())
+        except (
+            mapa_reverso.EtiquetaConflitante,
+            mapa_reverso.CifragemIndisponivel,
+            mapa_reverso.MapaIlegivel,
+            OSError,
+        ) as erro:
+            print(f"erro ao gravar o mapa dos autos {args.autos}: {erro}", file=sys.stderr)
+            print(
+                "ATENÇÃO: a anonimização foi concluída e os arquivos de saída "
+                "estão gravados, mas SEM mapa não há como reidratá-los depois. "
+                "Resolva o que impediu a gravação e rode de novo sobre os mesmos "
+                "arquivos — a anonimização é determinística, então a segunda "
+                "passada produz os mesmos rótulos.",
+                file=sys.stderr,
+            )
+            return 1
         # Só o caminho no stderr. O mapa é o de-para para o dado real: mesmo o
         # tamanho dele já diz quantas pessoas há no processo.
         print(f"mapa dos autos {args.autos} -> {destino_mapa}", file=sys.stderr)
