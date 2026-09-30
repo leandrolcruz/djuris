@@ -483,11 +483,32 @@ stdio — é a verificação de que o registro vai funcionar, independente do cl
 
 # FASE 1b — REIDRATAÇÃO
 
-## Task 6: `Mascarador` guarda a grafia original e expõe `mapa()`
+## Task 6: `Mascarador` — um rótulo um valor, grafia original, e `mapa()`
 
-O mapa reverso já existe em `self._indices` e é jogado fora. Duas coisas
-faltam: a chave é `_normalizar(texto)`, que tira acento e caixa, então o valor
-guardado hoje devolveria `joao da silva`; e não há como pedir o mapa.
+Três mudanças no mesmo método, porque são a mesma edição e separá-las criaria
+fronteira artificial.
+
+**A que foi descoberta ao executar o plano, e é a mais séria.**
+`ROTULO_ENTIDADE` mapeia `PHONE_NUMBER_BR` **e** `PHONE_NUMBER` ao mesmo rótulo
+`TELEFONE`, e `_placeholder` numera por `entity_type` — cada tipo começando do 1.
+O motor inicializado suporta os dois (27 entidades; `PHONE_NUMBER` é o embutido
+do Presidio, `PHONE_NUMBER_BR` é o do projeto, ambos em `PRIORIDADE_ENTIDADE`,
+`engine.py:104`). Demonstrado nesta máquina:
+
+```
+(64) 99999-1111    -> [TELEFONE_1]
++55 11 98888-2222  -> [TELEFONE_1]      # valores diferentes, MESMO rótulo
+```
+
+Sem reidratação isso já é um texto ambíguo: um modelo que o leia conflui dois
+telefones num só. Com reidratação fica pior — a chave `[TELEFONE_1]` do mapa
+recebe um dos dois e a substituição escreve **o telefone errado** num documento
+com toda a aparência de correto. É defeito herdado do upstream, não criado aqui,
+e é por isso que entra nesta tarefa: `mapa()` não pode nascer sobre ele.
+
+**As outras duas.** A chave de `_indices` é `_normalizar(texto)`, que tira acento
+e caixa, então o valor guardado devolveria `joao da silva`; e não há como pedir o
+mapa.
 
 **Files:**
 - Modify: `/Users/leandroleitedacruz/tecjustica-sigilo/python-backend/mask_config.py:262-288`
@@ -502,8 +523,15 @@ Criar `tests/test_mapa_reverso.py`:
 O mapa reverso é o de-para entre `[PESSOA_1]` e o valor real.
 
 Ele existe para uma coisa só: a resposta que voltou de um modelo na nuvem fala
-em `[PESSOA_1]`, e quem lê precisa do nome. Duas propriedades sustentam isso, e
-nenhuma é óbvia:
+em `[PESSOA_1]`, e quem lê precisa do nome. Três propriedades sustentam isso, e
+nenhuma é óbvia.
+
+**Um rótulo designa um valor só.** `ROTULO_ENTIDADE` manda dois tipos
+(`PHONE_NUMBER_BR` e `PHONE_NUMBER`) para o mesmo `TELEFONE`, e o motor suporta
+os dois. Numerar por tipo dava `[TELEFONE_1]` a dois telefones diferentes: texto
+ambíguo antes de qualquer reidratação, e substituição do valor errado depois. A
+numeração é por RÓTULO porque o rótulo é a identidade que o leitor e o modelo
+enxergam — `entity_type` é detalhe interno de quem detectou.
 
 **A grafia tem de ser a original.** A chave de deduplicação é
 `_normalizar(texto)`, que tira acento e caixa de propósito — é o que faz
@@ -513,15 +541,40 @@ não é erro que quebre nada, é erro que entrega um documento com nome errado
 parecendo certo.
 
 **As políticas `parcial` e `total` não têm mapa, e não é omissão.** Elas não
-passam pelo `_placeholder`, então `_indices` fica vazio e `mapa()` devolve
-`{}`. Reidratar `J**** d* S****` é impossível — a informação não existe mais no
-texto. Quem pedir mapa com essas políticas tem de receber vazio, não uma
-aproximação.
+passam pelo `_placeholder`, então nada é numerado e `mapa()` devolve `{}`.
+Reidratar `J**** d* S****` é impossível — a informação não existe mais no texto.
+Quem pedir mapa com essas políticas tem de receber vazio, não uma aproximação.
 """
 
 import pytest
 
 from mask_config import Mascarador
+
+
+def test_um_rotulo_designa_um_valor_so_entre_tipos_diferentes():
+    """
+    O defeito que esta tarefa conserta. Antes, os dois viravam `[TELEFONE_1]`.
+    """
+    m = Mascarador("placeholder")
+    a = m.mascarar("PHONE_NUMBER_BR", "(64) 99999-1111")
+    b = m.mascarar("PHONE_NUMBER", "+55 11 98888-2222")
+    assert a == "[TELEFONE_1]"
+    assert b == "[TELEFONE_2]", "dois telefones diferentes não podem colidir"
+    assert m.mapa() == {
+        "[TELEFONE_1]": "(64) 99999-1111",
+        "[TELEFONE_2]": "+55 11 98888-2222",
+    }
+
+
+def test_mesmo_valor_em_tipos_diferentes_recebe_um_numero_so():
+    """
+    O outro lado da mesma moeda: se dois detectores acham o MESMO telefone e o
+    classificam diferente, ele é um telefone, e merece um rótulo.
+    """
+    m = Mascarador("placeholder")
+    assert m.mascarar("PHONE_NUMBER_BR", "(64) 99999-1111") == "[TELEFONE_1]"
+    assert m.mascarar("PHONE_NUMBER", "(64) 99999-1111") == "[TELEFONE_1]"
+    assert m.mapa() == {"[TELEFONE_1]": "(64) 99999-1111"}
 
 
 def test_mapa_devolve_a_grafia_original_com_acento_e_caixa():
@@ -542,7 +595,7 @@ def test_a_primeira_grafia_vista_e_a_que_fica():
     assert m.mapa() == {"[PESSOA_1]": "JOÃO DA SILVA"}
 
 
-def test_numeracao_segue_a_ordem_de_chamada_e_separa_tipos():
+def test_numeracao_segue_a_ordem_de_chamada_e_separa_rotulos():
     m = Mascarador("placeholder")
     m.mascarar("PERSON", "Ana Souza")
     m.mascarar("CPF_BR", "529.982.247-25")
@@ -554,13 +607,25 @@ def test_numeracao_segue_a_ordem_de_chamada_e_separa_tipos():
     }
 
 
-def test_resumo_continua_contando_valores_distintos():
-    """Contrato antigo: mudar `_indices` não pode mexer no que `resumo()` diz."""
+def test_resumo_continua_contando_por_TIPO_e_nao_por_rotulo():
+    """
+    Contrato antigo que NÃO pode mudar de forma: `resumo()` vira
+    `valores_distintos` e atravessa `api_v1.py:152`, `server.py:331` e a
+    interface (`src/hooks/useLote.ts`). A numeração passou a ser por rótulo; a
+    contagem continua por tipo.
+    """
     m = Mascarador("placeholder")
     m.mascarar("PERSON", "Ana Souza")
     m.mascarar("PERSON", "ana souza")
     m.mascarar("PERSON", "Bruno Lima")
     assert m.resumo() == {"PERSON": 2}
+
+
+def test_resumo_separa_os_dois_tipos_de_telefone_mesmo_com_rotulo_comum():
+    m = Mascarador("placeholder")
+    m.mascarar("PHONE_NUMBER_BR", "(64) 99999-1111")
+    m.mascarar("PHONE_NUMBER", "+55 11 98888-2222")
+    assert m.resumo() == {"PHONE_NUMBER_BR": 1, "PHONE_NUMBER": 1}
 
 
 @pytest.mark.parametrize("politica", ["parcial", "total"])
@@ -577,11 +642,17 @@ cd /Users/leandroleitedacruz/tecjustica-sigilo/python-backend && \
   ../.venv/bin/python -m pytest tests/test_mapa_reverso.py -q
 ```
 
-Expected: FAIL — `AttributeError: 'Mascarador' object has no attribute 'mapa'`.
+Expected: FAIL. O primeiro erro deve ser `AttributeError: 'Mascarador' object
+has no attribute 'mapa'`; ao acrescentar `mapa()` sem corrigir a numeração, o
+que falha passa a ser `test_um_rotulo_designa_um_valor_so_entre_tipos_diferentes`
+com `[TELEFONE_1] != [TELEFONE_2]`. **Confirme que esse teste falha por essa
+razão antes de corrigir a numeração** — é a prova de que o defeito é real e não
+uma precaução teórica.
 
 - [ ] **Step 3: Implementar**
 
-Em `mask_config.py`, trocar o `__init__`, o `_placeholder` e acrescentar `mapa()`:
+Em `mask_config.py`, substituir `__init__`, `_placeholder` e `resumo()`, e
+acrescentar `mapa()`:
 
 ```python
     def __init__(self, politica: str = POLITICA_PADRAO):
@@ -591,14 +662,26 @@ Em `mask_config.py`, trocar o `__init__`, o `_placeholder` e acrescentar `mapa()
                 f"(use uma de {', '.join(POLITICAS)})"
             )
         self.politica = politica
-        # O valor é `(indice, primeira_grafia_vista)`, e não só o índice.
+        # Duas estruturas, porque são duas perguntas diferentes — e juntá-las
+        # numa só foi o defeito.
         #
-        # A chave é `_normalizar(texto)` — sem acento, minúscula — porque é isso
-        # que faz `JOÃO DA SILVA` e `joao da silva` receberem o mesmo número, o
-        # que o OCR torna obrigatório. Mas a chave normalizada não serve para
-        # reidratar: devolveria `joao da silva`, um nome errado num documento que
-        # parece certo. Guardar a grafia ao lado custa uma referência e resolve.
-        self._indices: dict[str, dict[str, tuple[int, str]]] = {}
+        # `_numeros` decide o TEXTO, e numera por RÓTULO. O rótulo é a
+        # identidade que o leitor e o modelo enxergam; `entity_type` é detalhe
+        # de quem detectou. `ROTULO_ENTIDADE` manda `PHONE_NUMBER_BR` e
+        # `PHONE_NUMBER` ao mesmo `TELEFONE`, e o motor suporta os dois: numerar
+        # por tipo dava `[TELEFONE_1]` a dois telefones diferentes — texto
+        # ambíguo, e mapa reverso que substitui o valor errado.
+        #
+        # O valor é `(indice, primeira_grafia_vista)`, e não só o índice. A chave
+        # é `_normalizar(texto)` — sem acento, minúscula — porque é o que faz
+        # `JOÃO DA SILVA` e `joao da silva` receberem o mesmo número, o que o OCR
+        # torna obrigatório. Mas a chave normalizada não reidrata: devolveria
+        # `joao da silva`, um nome errado num documento que parece certo.
+        self._numeros: dict[str, dict[str, tuple[int, str]]] = {}
+        # `_tipos` conta por `entity_type`, porque é isso que `resumo()` promete
+        # e `valores_distintos` atravessa a API (`api_v1.py:152`,
+        # `server.py:331`) até a interface. Mudar a forma disso quebraria a tela.
+        self._tipos: dict[str, set[str]] = {}
 
     def mascarar(self, entity_type: str, texto: str) -> str:
         if self.politica == "parcial":
@@ -608,66 +691,71 @@ Em `mask_config.py`, trocar o `__init__`, o `_placeholder` e acrescentar `mapa()
         return self._placeholder(entity_type, texto)
 
     def _placeholder(self, entity_type: str, texto: str) -> str:
-        por_tipo = self._indices.setdefault(entity_type, {})
-        chave = _normalizar(texto)
-        if chave not in por_tipo:
-            por_tipo[chave] = (len(por_tipo) + 1, texto)
-        indice, _ = por_tipo[chave]
         rotulo = ROTULO_ENTIDADE.get(entity_type, entity_type)
+        chave = _normalizar(texto)
+
+        por_rotulo = self._numeros.setdefault(rotulo, {})
+        if chave not in por_rotulo:
+            por_rotulo[chave] = (len(por_rotulo) + 1, texto)
+
+        self._tipos.setdefault(entity_type, set()).add(chave)
+
+        indice, _ = por_rotulo[chave]
         return f"[{rotulo}_{indice}]"
 
     def resumo(self) -> dict[str, int]:
         """Quantos valores distintos foram encontrados por tipo."""
-        return {tipo: len(vals) for tipo, vals in self._indices.items()}
+        return {tipo: len(chaves) for tipo, chaves in self._tipos.items()}
 
     def mapa(self) -> dict[str, str]:
         """
         O de-para `{"[PESSOA_1]": "João da Silva"}`.
+
+        Não há colisão possível aqui, e a garantia é ESTRUTURAL, não conferida:
+        `_numeros` é indexado pelo rótulo e numera dentro dele, então duas
+        entradas distintas nunca produzem a mesma etiqueta. Uma verificação em
+        tempo de execução seria mais fraca — pegaria o erro depois de existir,
+        em vez de torná-lo impossível de escrever.
 
         Vazio nas políticas `parcial` e `total`: elas não passam por
         `_placeholder`, e reidratar `J**** d* S****` é impossível porque a
         informação não está mais no texto. Vazio é a resposta correta, não uma
         lacuna a preencher por aproximação.
         """
-        saida: dict[str, str] = {}
-        for tipo, valores in self._indices.items():
-            rotulo = ROTULO_ENTIDADE.get(tipo, tipo)
-            for indice, original in valores.values():
-                saida[f"[{rotulo}_{indice}]"] = original
-        return saida
+        return {
+            f"[{rotulo}_{indice}]": original
+            for rotulo, valores in self._numeros.items()
+            for indice, original in valores.values()
+        }
 ```
 
-- [ ] **Step 4: Rodar e ver passar — inclusive o contrato antigo**
+- [ ] **Step 4: Rodar a suíte INTEIRA, não só o arquivo novo**
 
 ```bash
 cd /Users/leandroleitedacruz/tecjustica-sigilo/python-backend && \
-  ../.venv/bin/python -m pytest tests/test_mapa_reverso.py tests/test_mascaramento.py -q
+  HF_HOME="/Volumes/SSD do Leandro/tecjustica-sigilo/hf-cache" \
+  ../.venv/bin/python -m pytest tests -q 2>&1 | tail -8
 ```
 
-Expected: PASS nos dois arquivos. `test_mascaramento.py` é o que trava a
-numeração antiga; ele passando é a prova de que a mudança é aditiva.
+Expected: 179 passed + os novos, 2 skipped. A suíte inteira é obrigatória aqui,
+e não só `test_mapa_reverso.py`: esta tarefa mexe na numeração dos placeholders,
+que `test_mascaramento.py` trava de propósito, e em `resumo()`, que
+`test_api_v1.py` e `test_mascaramento.py:230,249` conferem pela API. Se algum
+deles reprovar, **não afrouxe o teste** — ou a implementação está errada, ou a
+mudança de contrato é maior do que esta tarefa previu, e nos dois casos é para
+reportar.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 cd /Users/leandroleitedacruz/tecjustica-sigilo
 git add python-backend/mask_config.py python-backend/tests/test_mapa_reverso.py
-git commit -m "Faz o Mascarador lembrar a grafia original e expor mapa()
-
-O mapa reverso já existia em _indices e era jogado fora: só resumo(),
-que conta, chegava à saída.
-
-Faltava uma coisa para ele servir. A chave de deduplicação é
-_normalizar(texto), sem acento e minúscula, porque é o que faz JOÃO DA
-SILVA e joao da silva receberem o mesmo número — obrigatório com OCR.
-Mas essa chave não reidrata: devolveria 'joao da silva', um nome errado
-num documento com toda a aparência de certo. Agora o índice guarda
-(numero, primeira_grafia_vista).
-
-mapa() é vazio em 'parcial' e 'total', e isso é a resposta certa:
-reidratar J**** d* S**** é impossível porque a informação não está mais
-no texto."
+git commit -m "Numera pseudônimo por rótulo, guarda a grafia e expõe mapa()"
 ```
+
+A mensagem deve dizer as três coisas e, na primeira, que o defeito é herdado e
+foi demonstrado: dois telefones diferentes recebiam `[TELEFONE_1]` porque
+`ROTULO_ENTIDADE` manda dois tipos ao mesmo rótulo e a numeração era por tipo.
 
 ---
 
