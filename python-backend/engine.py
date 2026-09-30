@@ -314,6 +314,37 @@ def _vista_linear(texto: str) -> str:
     return texto.replace("\n", " ").replace("\r", " ").replace("\t", " ")
 
 
+# Marcadores de markdown que grudam em palavra e escondem o nome do detector.
+#
+# `#` só conta no COMEÇO da linha, que é onde ele é título: no meio do texto
+# `#` é número ("Processo # 123"), e apagá-lo mudaria o que o detector lê sem
+# necessidade. `_` fica de fora de propósito — em peça judicial ele aparece
+# muito mais em nome de arquivo (`contrato_final.pdf`) do que como ênfase, e
+# trocá-lo por espaço inventaria separações de palavra que o NER leria como
+# nome.
+_RE_MARCACAO_MD = re.compile(r"[*`~]|^[ \t]{0,3}#{1,6}(?=[ \t])", re.M)
+
+
+def _vista_sem_marcacao(texto: str) -> str:
+    """
+    Troca marcador de markdown por espaço, preservando o comprimento.
+
+    Existe porque o caminho principal do produto produz markdown — o
+    `bot-convert` manda PDF ao docling justamente para preservar títulos e
+    tabelas — e nome de parte em peça judicial vive em negrito e em título.
+    Medido com BERT: `O autor **JOÃO DA SILVA**` saía intacto, e o mesmo texto
+    sem os asteriscos virava `[PESSOA_1]`. O CPF ao lado era mascarado nos
+    dois, o que deixa a saída com cara de anonimizada.
+
+    Mesma técnica do `_vista_linear` e do Title Case do modo spaCy: o
+    comprimento não muda, então os offsets achados aqui valem no texto
+    ORIGINAL — a máscara cai no lugar certo e a marcação sobrevive na saída
+    (`**[PESSOA_1]**`, e não um `[PESSOA_1]` que desmontaria o markdown que a
+    IA precisa ler).
+    """
+    return _RE_MARCACAO_MD.sub(lambda m: " " * len(m.group(0)), texto)
+
+
 def _janelas(texto: str, tamanho: int, overlap: int) -> list[tuple[int, int]]:
     """
     Divide o texto em janelas com sobreposição, cortando sempre em fim de
@@ -576,7 +607,13 @@ class PresidioEngine:
         # Vista linear: mesmo comprimento, sem quebras de linha. É sobre ela
         # que tudo é analisado, para que uma entidade partida entre duas linhas
         # pelo OCR volte a ser contígua.
-        vista = _vista_linear(text)
+        # A ordem importa e não é óbvia: a marcação sai PRIMEIRO, enquanto as
+        # quebras de linha ainda existem. O `#` de título só conta no começo da
+        # linha, e o `_vista_linear` já teria trocado as quebras por espaço —
+        # aí `^` só acharia o começo do documento, e todo título do meio do
+        # texto passaria batido. Os dois preservam o comprimento, então compor
+        # é seguro; o que não é seguro é inverter.
+        vista = _vista_linear(_vista_sem_marcacao(text))
         assert len(vista) == len(text), "a vista precisa preservar o comprimento"
 
         # No modo spaCy, ALL CAPS vira Title Case para o NER reconhecer nomes.
