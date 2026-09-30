@@ -47,7 +47,12 @@ export function opcoesDeMoldura(
 ): OpcoesDeMoldura {
   if (plataforma === "darwin") {
     return {
-      titleBarStyle: "hiddenInset",
+      // `hidden`, e NÃO `hiddenInset`: a posição dos semáforos só é respeitada
+      // com `hidden`. Com `hiddenInset` o sistema aplica o recuo dele e ignora
+      // a nossa `trafficLightPosition` — foi a primeira tentativa, e os botões
+      // continuaram caindo sobre a marca. Com `hidden` a posição é nossa, e
+      // determinística: os três ocupam de x até x+52.
+      titleBarStyle: "hidden",
       // Centrado na faixa: os semáforos têm 16px de altura, então metade da
       // diferença os alinha com o texto da marca em vez de encostá-los no topo.
       trafficLightPosition: { x: 18, y: (ALTURA_MOLDURA - 16) / 2 },

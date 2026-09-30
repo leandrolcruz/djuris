@@ -38,7 +38,10 @@ test("no Linux vale o mesmo que no Windows", () => {
 test("no macOS não se manda titleBarOverlay, que lá não existe", () => {
   const o = opcoesDeMoldura("darwin", CORES);
   assert.equal(o.titleBarOverlay, undefined);
-  assert.equal(o.titleBarStyle, "hiddenInset");
+  // `hidden`, não `hiddenInset`: só com `hidden` a posição dos semáforos é
+  // respeitada. Com `hiddenInset` o sistema ignora a nossa e põe os botões
+  // onde quiser — foi assim que eles continuaram caindo sobre a marca.
+  assert.equal(o.titleBarStyle, "hidden");
 });
 
 test("no macOS os semáforos são centrados na faixa, não encostados no topo", () => {
