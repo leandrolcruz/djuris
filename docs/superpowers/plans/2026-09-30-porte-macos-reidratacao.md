@@ -1477,6 +1477,36 @@ def test_esquecer_apaga(cofre):
     assert mapa_reverso.esquecer("5626981") is False
 
 
+def test_etiqueta_conflitante_e_recusada_em_vez_de_sobrescrita(cofre):
+    """
+    O defeito que esta recusa existe para impedir, demonstrado antes de existir:
+
+        segunda:  anonimizar inicial.pdf    --autos X  ->  [PESSOA_1] = Ana
+        quarta:   anonimizar procuracao.pdf --autos X  ->  [PESSOA_1] = Bruno
+        fusão sem recusa: {'[PESSOA_1]': 'Bruno Lima'}   <- a Ana desapareceu
+
+    Cada invocação da CLI é um processo novo, com Mascarador novo, numerando do
+    1. Sem recusa, reidratar a resposta sobre a peça de segunda escreveria
+    "Bruno Lima" onde estava a Ana — com confiança, num texto bem formado.
+    """
+    mapa_reverso.gravar("5626981", {"[PESSOA_1]": "Ana Souza"})
+    with pytest.raises(mapa_reverso.EtiquetaConflitante, match="PESSOA_1"):
+        mapa_reverso.gravar("5626981", {"[PESSOA_1]": "Bruno Lima"})
+    assert mapa_reverso.ler("5626981") == {"[PESSOA_1]": "Ana Souza"}, (
+        "recusou, então o mapa anterior tem de estar intacto"
+    )
+
+
+def test_gravar_a_mesma_etiqueta_com_o_mesmo_valor_nao_e_conflito(cofre):
+    """Reprocessar a mesma peça é idempotente, não erro."""
+    mapa_reverso.gravar("5626981", {"[PESSOA_1]": "Ana Souza"})
+    mapa_reverso.gravar("5626981", {"[PESSOA_1]": "Ana Souza", "[CPF_1]": "529.982.247-25"})
+    assert mapa_reverso.ler("5626981") == {
+        "[PESSOA_1]": "Ana Souza",
+        "[CPF_1]": "529.982.247-25",
+    }
+
+
 @pytest.mark.parametrize("ruim", ["../fuga", "a/b", "", "."])
 def test_nome_de_autos_que_escaparia_do_diretorio_e_recusado(cofre, ruim):
     """
@@ -1536,6 +1566,21 @@ def _caminho(autos: str) -> Path:
     return _dir_mapas() / f"{autos}.mapa"
 
 
+class EtiquetaConflitante(RuntimeError):
+    """
+    A mesma etiqueta designa valores diferentes no mapa gravado e no que chega.
+
+    É o sintoma de numeração que recomeçou: `Mascarador` novo numera do 1, então
+    uma segunda invocação da CLI sobre os mesmos autos produz `[PESSOA_1]` para
+    outra pessoa. Fundir sobrescreveria, e a reidratação da primeira peça
+    escreveria o nome de quem apareceu na segunda — num texto bem formado.
+
+    A cura é semear o `Mascarador` com o mapa gravado (ver `Mascarador.semear`),
+    e esta exceção é a rede embaixo dela: se a semeadura falhar ou for esquecida,
+    a gravação para em vez de corromper.
+    """
+
+
 def gravar(autos: str, mapa: dict[str, str]) -> Path:
     """
     Funde `mapa` no que já estava gravado para estes autos e grava cifrado.
@@ -1544,13 +1589,29 @@ def gravar(autos: str, mapa: dict[str, str]) -> Path:
     perderia o mapa da peça anterior e a reidratação sairia PARCIAL — pior que
     falhar, porque um documento meio reidratado tem toda a aparência de
     completo.
+
+    **Recusa etiqueta conflitante**, e isso é o oposto de fundir cegamente. Se
+    `[PESSOA_1]` já vale "Ana Souza" no disco e chega valendo "Bruno Lima", não
+    há fusão possível que preserve as duas — e escolher uma em silêncio produz
+    reidratação errada na outra. Levanta `EtiquetaConflitante`.
     """
     from cryptography.fernet import Fernet
 
     caminho = _caminho(autos)
     chave = _chave()  # antes de criar diretório: falhando, nada toca o disco
 
-    juntos = {**ler(autos), **mapa}
+    gravado = ler(autos)
+    for etiqueta, valor in mapa.items():
+        anterior = gravado.get(etiqueta)
+        if anterior is not None and anterior != valor:
+            raise EtiquetaConflitante(
+                f"{etiqueta} vale {anterior!r} no mapa dos autos {autos!r} e "
+                f"chegou valendo {valor!r}. A numeração recomeçou — semeie o "
+                f"Mascarador com o mapa gravado antes de anonimizar (ver "
+                f"Mascarador.semear). Nada foi gravado."
+            )
+
+    juntos = {**gravado, **mapa}
     caminho.parent.mkdir(parents=True, exist_ok=True)
     corpo = Fernet(chave).encrypt(json.dumps(juntos, ensure_ascii=False).encode())
 
@@ -1633,6 +1694,271 @@ anterior intacto em vez de um arquivo truncado que não decifra.
 O nome dos autos passa por régua de nome de arquivo — sem ela,
 --autos ../../algo grava fora do diretório."
 ```
+
+---
+
+## Task 10b: `Mascarador.semear()` — a numeração CONTINUA entre invocações
+
+A Task 10 pôs uma rede (`EtiquetaConflitante`). Esta é a cura.
+
+**O defeito, demonstrado antes de a tarefa existir.** Cada invocação da CLI é um
+processo novo, com `Mascarador` novo, numerando do 1:
+
+```
+segunda:  tecjustica-sigilo anonimizar inicial.pdf    --autos 5626981  ->  [PESSOA_1] = Ana
+quarta:   tecjustica-sigilo anonimizar procuracao.pdf --autos 5626981  ->  [PESSOA_1] = Bruno
+```
+
+O `--autos` desenhado até aqui compartilha numeração **dentro de** uma invocação
+e não **entre** invocações — mas acrescentar peça dias depois é o uso normal de
+um processo judicial, e a promessa da opção é justamente a de que `[PESSOA_1]`
+seja a mesma pessoa em todas as peças.
+
+A cura é semear: antes de anonimizar, o `Mascarador` recebe o mapa já gravado e
+continua de onde a execução anterior parou.
+
+**Files:**
+- Modify: `/Users/leandroleitedacruz/tecjustica-sigilo/python-backend/mask_config.py`
+- Modify: `/Users/leandroleitedacruz/tecjustica-sigilo/python-backend/mapa_reverso.py`
+- Test: `/Users/leandroleitedacruz/tecjustica-sigilo/python-backend/tests/test_mapa_reverso.py`
+
+- [ ] **Step 1: Escrever os testes que falham**
+
+Acrescentar ao fim de `tests/test_mapa_reverso.py`:
+
+```python
+# ---------------------------------------------------------------------------
+# Semeadura: a numeração continua entre invocações
+# ---------------------------------------------------------------------------
+
+
+def test_semear_continua_a_numeracao_em_vez_de_recomecar():
+    """
+    O caso que motiva o método. A segunda invocação sobre os mesmos autos tem de
+    dar `[PESSOA_2]` a quem chegou depois, não `[PESSOA_1]` de novo.
+    """
+    primeira = Mascarador("placeholder")
+    assert primeira.mascarar("PERSON", "Ana Souza") == "[PESSOA_1]"
+
+    segunda = Mascarador("placeholder")
+    segunda.semear(primeira.mapa())
+    assert segunda.mascarar("PERSON", "Bruno Lima") == "[PESSOA_2]"
+    assert segunda.mapa() == {"[PESSOA_1]": "Ana Souza", "[PESSOA_2]": "Bruno Lima"}
+
+
+def test_semear_reconhece_quem_ja_tinha_numero():
+    """
+    A mesma pessoa numa peça nova recebe o número que já era dela — é isso que
+    faz o modelo entender que a Ana da inicial é a Ana da procuração.
+    """
+    primeira = Mascarador("placeholder")
+    primeira.mascarar("PERSON", "Ana Souza")
+
+    segunda = Mascarador("placeholder")
+    segunda.semear(primeira.mapa())
+    assert segunda.mascarar("PERSON", "ANA SOUZA") == "[PESSOA_1]"
+
+
+def test_semear_com_buraco_na_sequencia_nao_reusa_numero():
+    """
+    `remascarar()` renumera do zero ao liberar um falso positivo, e um mapa
+    gravado antes disso pode chegar com buraco. Numerar por `len()+1` reusaria um
+    número já tomado e faria duas pessoas virarem a mesma. O próximo é
+    `max(...)+1`.
+    """
+    m = Mascarador("placeholder")
+    m.semear({"[PESSOA_1]": "Ana Souza", "[PESSOA_3]": "Carla Dias"})
+    assert m.mascarar("PERSON", "Bruno Lima") == "[PESSOA_4]"
+
+
+def test_semear_separa_rotulos():
+    m = Mascarador("placeholder")
+    m.semear({"[PESSOA_1]": "Ana Souza", "[CPF_1]": "529.982.247-25"})
+    assert m.mascarar("PERSON", "Bruno Lima") == "[PESSOA_2]"
+    assert m.mascarar("CPF_BR", "111.444.777-35") == "[CPF_2]"
+
+
+def test_semear_nao_conta_para_o_resumo():
+    """
+    `resumo()` vira `valores_distintos` e diz o que ESTA execução encontrou.
+    Semear não é encontrar: contar o que veio do disco inflaria o número que a
+    interface mostra sobre o documento que acabou de ser lido.
+    """
+    m = Mascarador("placeholder")
+    m.semear({"[PESSOA_1]": "Ana Souza"})
+    assert m.resumo() == {}
+    m.mascarar("PERSON", "Bruno Lima")
+    assert m.resumo() == {"PERSON": 1}
+
+
+def test_semear_recusa_etiqueta_fora_de_forma():
+    m = Mascarador("placeholder")
+    with pytest.raises(ValueError, match="etiqueta"):
+        m.semear({"PESSOA_1": "Ana Souza"})
+
+
+def test_semear_recusa_dois_numeros_para_o_mesmo_valor():
+    """
+    Mapa em que a mesma pessoa aparece com dois números é mapa corrompido, e
+    seguir com ele escolheria um dos dois em silêncio.
+    """
+    m = Mascarador("placeholder")
+    with pytest.raises(ValueError, match="dois números"):
+        m.semear({"[PESSOA_1]": "Ana Souza", "[PESSOA_2]": "ana souza"})
+
+
+def test_semear_em_politica_sem_placeholder_e_recusado():
+    """Semear um Mascarador que não numera é pedido sem sentido — e silencioso."""
+    for politica in ("parcial", "total"):
+        m = Mascarador(politica)
+        with pytest.raises(ValueError, match="placeholder"):
+            m.semear({"[PESSOA_1]": "Ana Souza"})
+```
+
+- [ ] **Step 2: Rodar e ver falhar**
+
+```bash
+cd /Users/leandroleitedacruz/tecjustica-sigilo/python-backend && \
+  ../.venv/bin/python -m pytest tests/test_mapa_reverso.py -q 2>&1 | tail -8
+```
+
+Expected: FAIL — `AttributeError: 'Mascarador' object has no attribute 'semear'`.
+
+- [ ] **Step 3: Implementar**
+
+**3a.** A definição da etiqueta passa a morar em `mask_config.py`, que é quem a
+CRIA, e o `mapa_reverso.py` a importa em vez de repetir.
+
+Hoje há duas cópias do mesmo padrão: `RE_ROTULO` em `mapa_reverso.py` (Task 8) e
+o f-string `f"[{rotulo}_{indice}]"` em `_placeholder`. Com o `semear` precisando
+**ler** a etiqueta de volta, seriam três lugares descrevendo a mesma forma. Este
+repositório tem um `AGENTS.md` escrito inteiro sobre isso: "documento duplicado
+não diverge com aviso — a versão desatualizada continua parecendo atual".
+
+Em `mask_config.py`, junto de `ROTULO_ENTIDADE`:
+
+```python
+# A forma de uma etiqueta, num lugar só.
+#
+# Ela é ESCRITA aqui (`_placeholder`), LIDA aqui (`Mascarador.semear`) e LIDA em
+# `mapa_reverso.reidratar`. Três descrições da mesma forma divergiriam sem aviso,
+# e o sintoma seria um rótulo que a reidratação não reconhece — texto que sai
+# "reidratado" com um pedaço ainda mascarado, sem erro nenhum.
+#
+# A classe cobre `Ç` (U+00C7) porque `ENDEREÇO` é um dos rótulos; com `[A-Z_]+`
+# ele ficaria de fora em silêncio. Conferido contra os 27 tipos que o motor
+# suporta, inclusive os que caem no fallback `rotulo == entity_type`
+# (`ORGANIZATION`, `DATE_TIME`, `LAW`).
+RE_ETIQUETA = re.compile(r"\[([A-ZÀ-Þ_]+)_(\d+)\]")
+```
+
+Em `mapa_reverso.py`, trocar a definição local por importação, mantendo o nome
+`RE_ROTULO` como apelido para não mexer em quem já o usa:
+
+```python
+# A forma da etiqueta vem de quem a cria. Repeti-la aqui daria duas descrições
+# da mesma coisa, e a desatualizada continuaria parecendo atual — o sintoma
+# seria texto "reidratado" com um pedaço ainda mascarado, sem erro nenhum.
+from mask_config import RE_ETIQUETA as RE_ROTULO
+```
+
+Isso faz `mapa_reverso` importar `mask_config` — o que **não** quebra a promessa
+de "não carrega modelo": `mask_config` é regex e dicionário, sem Presidio nem
+torch. Confirme medindo o tempo de `import mapa_reverso`.
+
+**3b.** O contador passa a ser `max(...)+1`, não `len(...)+1`.
+
+Com semeadura, o índice pode vir com buraco (o `remascarar()` renumera do zero,
+e um mapa gravado antes disso chega descontínuo). `len()+1` reusaria um número
+já tomado, e **duas pessoas virariam a mesma** — que é o defeito mais grave que
+este módulo pode produzir. Em `_placeholder`:
+
+```python
+        por_rotulo = self._numeros.setdefault(rotulo, {})
+        if chave not in por_rotulo:
+            # `max(...)+1`, e não `len(...)+1`: com semeadura o índice pode vir
+            # com buraco, e reusar um número já tomado fundiria duas pessoas numa.
+            proximo = max((i for i, _ in por_rotulo.values()), default=0) + 1
+            por_rotulo[chave] = (proximo, texto)
+```
+
+**3c.** O método `semear`:
+
+```python
+    def semear(self, mapa: dict[str, str]) -> None:
+        """
+        Restaura a numeração de um mapa já gravado, para que esta execução
+        CONTINUE de onde a anterior parou.
+
+        Sem isto, `--autos` compartilha numeração dentro de UMA invocação e não
+        entre invocações — e acrescentar peça dias depois é o uso normal de um
+        processo. A segunda chamada começaria do `[PESSOA_1]` outra vez, e a
+        gravação recusaria por `EtiquetaConflitante` (ou, sem a recusa,
+        sobrescreveria e faria a peça de segunda reidratar com o nome de quem
+        apareceu na quarta).
+
+        Não conta para o `resumo()`: semear não é encontrar, e `valores_distintos`
+        diz o que ESTA execução achou no documento que acabou de ler.
+        """
+        if self.politica != "placeholder":
+            raise ValueError(
+                f"semear não faz sentido na política {self.politica!r}: ela não "
+                f"numera nada, então não há numeração a continuar (use placeholder)"
+            )
+
+        for etiqueta, original in mapa.items():
+            achado = RE_ETIQUETA.fullmatch(etiqueta)
+            if achado is None:
+                raise ValueError(f"etiqueta fora de forma no mapa: {etiqueta!r}")
+            rotulo, indice = achado.group(1), int(achado.group(2))
+
+            por_rotulo = self._numeros.setdefault(rotulo, {})
+            chave = _normalizar(original)
+            anterior = por_rotulo.get(chave)
+            if anterior is not None and anterior[0] != indice:
+                raise ValueError(
+                    f"o mapa dá dois números ao mesmo valor {original!r}: "
+                    f"{anterior[0]} e {indice}. Mapa corrompido — seguir com ele "
+                    f"escolheria um dos dois em silêncio."
+                )
+            por_rotulo[chave] = (indice, original)
+```
+
+- [ ] **Step 4: Rodar a suíte INTEIRA**
+
+```bash
+cd /Users/leandroleitedacruz/tecjustica-sigilo/python-backend && \
+  HF_HOME="/Volumes/SSD do Leandro/tecjustica-sigilo/hf-cache" \
+  ../.venv/bin/python -m pytest tests -q 2>&1 | tail -8
+```
+
+A troca de `len()+1` para `max()+1` é mudança de contrato da numeração, e
+`test_mascaramento.py` a trava de propósito — sem semeadura os dois são
+equivalentes (dicionário sem buraco), mas confirme rodando tudo, não raciocinando.
+
+**Proibido** afrouxar assertiva, `skip`, `xfail` ou ajustar esperado.
+
+- [ ] **Step 5: Medir que o import segue leve**
+
+```bash
+cd /Users/leandroleitedacruz/tecjustica-sigilo/python-backend && \
+  ../.venv/bin/python -X importtime -c "import mapa_reverso" 2>&1 | tail -3
+```
+
+O módulo passou a importar `mask_config`. Confirme que nada de Presidio, spaCy ou
+torch entrou por essa porta — o que sustenta a promessa do docstring de que os
+testes dele rodam em milissegundos.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add python-backend/mask_config.py python-backend/mapa_reverso.py \
+        python-backend/tests/test_mapa_reverso.py
+```
+
+A mensagem deve trazer o exemplo de duas invocações em dias diferentes, dizer que
+`max()+1` existe porque semeadura pode trazer buraco e reusar número fundiria
+duas pessoas numa, e que a forma da etiqueta passou a morar num lugar só.
 
 ---
 
@@ -1792,6 +2118,41 @@ def test_duas_pecas_dos_mesmos_autos_compartilham_a_numeracao(cofre, capsys):
     }
 
 
+def test_duas_invocacoes_nos_mesmos_autos_continuam_a_numeracao(cofre, capsys):
+    """
+    O caso que o `--autos` promete e que só a semeadura entrega: acrescentar peça
+    dias depois é o uso normal de um processo.
+
+    Sem semear, a segunda invocação daria `[PESSOA_1]` a Bruno — e a gravação
+    recusaria por EtiquetaConflitante, porque aquele número já é da Ana.
+    """
+    a = _peca(cofre, "inicial.txt", "ANA SOUZA propôs a ação.")
+    assert cli.main(["anonimizar", a, "--offline", "--autos", "5626981", "-o", "-"]) == 0
+
+    b = _peca(cofre, "procuracao.txt", "BRUNO LIMA outorga poderes.")
+    assert cli.main(["anonimizar", b, "--offline", "--autos", "5626981", "-o", "-"]) == 0
+
+    saida = capsys.readouterr().out
+    assert "[PESSOA_2]" in saida, "a segunda peça tem de continuar a numeração"
+
+    assert mapa_reverso.ler("5626981") == {
+        "[PESSOA_1]": "ANA SOUZA",
+        "[PESSOA_2]": "BRUNO LIMA",
+    }
+
+
+def test_a_mesma_pessoa_em_invocacoes_diferentes_mantem_o_numero(cofre, capsys):
+    a = _peca(cofre, "inicial.txt", "ANA SOUZA propôs a ação.")
+    cli.main(["anonimizar", a, "--offline", "--autos", "5626981", "-o", "-"])
+    capsys.readouterr()
+
+    b = _peca(cofre, "depoimento.txt", "Ana Souza foi ouvida em audiência.")
+    cli.main(["anonimizar", b, "--offline", "--autos", "5626981", "-o", "-"])
+
+    assert "[PESSOA_1]" in capsys.readouterr().out
+    assert mapa_reverso.ler("5626981") == {"[PESSOA_1]": "ANA SOUZA"}
+
+
 def test_autos_com_mascara_sem_mapa_e_recusado(cofre, capsys):
     """
     `parcial` e `total` não produzem mapa. Aceitar `--autos` com elas gravaria
@@ -1874,8 +2235,33 @@ o modo remoto:
                 file=sys.stderr,
             )
             return 1
+
+        import mapa_reverso
         from mask_config import Mascarador
+
+        # O Mascarador nasce e morre AQUI, no escopo desta função, e `args.autos`
+        # é lido uma vez. É isso que impede que ele atravesse duas invocações e
+        # misture pessoas de autos diferentes num espaço de numeração comum — o
+        # que produziria um texto internamente coerente e factualmente falso.
+        # A vida curta é a garantia; movê-lo para um cache de processo a desfaz.
         mascarador = Mascarador(args.mascara)
+
+        # E a semeadura é o que faz `--autos` valer ENTRE invocações, não só
+        # dentro de uma. Sem ela, esta chamada numeraria do `[PESSOA_1]` outra
+        # vez e a gravação recusaria por `EtiquetaConflitante` — porque a peça de
+        # segunda-feira já gastou aquele número com outra pessoa.
+        try:
+            gravado = mapa_reverso.ler(args.autos)
+        except mapa_reverso.CifragemIndisponivel as erro:
+            print(f"erro: {erro}", file=sys.stderr)
+            return 1
+        if gravado:
+            mascarador.semear(gravado)
+            print(
+                f"autos {args.autos}: continuando a numeração de "
+                f"{len(gravado)} pseudônimo(s) já gravado(s).",
+                file=sys.stderr,
+            )
 ```
 
 3d. Repassar o `mascarador` às duas chamadas de `_anonimizar_texto` e gravar no
