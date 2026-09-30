@@ -33,7 +33,13 @@ fi
 mkdir -p "$PESO/hf-cache" "$PESO/mapas"
 
 echo "==> venv em $VENV"
-uv venv --python 3.12 "$VENV"
+# `--allow-existing`, não `--clear`: numa segunda execução (depois de mexer no
+# requirements.txt, para recuperar de um passo que falhou no meio, para
+# reonboardar) o venv já está aqui com 1,6 GB de torch e BERT — `--clear` os
+# apagaria só para reconstruir idêntico. Quem converge para o requirements.txt
+# atual é o `uv pip install` da linha seguinte; recriar do zero não muda o
+# resultado, só o tempo.
+uv venv --python 3.12 --allow-existing "$VENV"
 
 echo "==> dependências (runtime + desenvolvimento)"
 VIRTUAL_ENV="$VENV" uv pip install \
