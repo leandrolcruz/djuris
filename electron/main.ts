@@ -25,7 +25,12 @@ import * as conversa from "./conversa";
 import * as openrouter from "./openrouter";
 import { MODELOS, atualizarProvedoresZdr } from "./catalogo";
 import type { Ocorrencia } from "./pseudonimos";
-import { ALTURA_MOLDURA, moldurAceitaPintura, opcoesDeMoldura } from "./moldura";
+import {
+  ALTURA_MOLDURA,
+  moldurAceitaPintura,
+  opcoesDeMoldura,
+  recuoDosSemaforos,
+} from "./moldura";
 
 const execFileP = promisify(execFile);
 
@@ -183,6 +188,13 @@ function createWindow(): void {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
+      /* O preload roda em sandbox e não consegue importar módulo do projeto,
+         então o que depende de lógica é calculado AQUI e atravessa como
+         argumento. Tentar importar de lá derruba o preload inteiro em
+         silêncio, e o sintoma é a interface subir sem `electronAPI`. */
+      additionalArguments: [
+        `--recuo-semaforos=${recuoDosSemaforos(process.platform)}`,
+      ],
     },
     /* Barra de título do próprio aplicativo, com os controles da janela
        sobrepostos ao canto: é o que todo aplicativo de mesa atual faz, e o

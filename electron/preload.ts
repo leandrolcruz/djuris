@@ -1,6 +1,22 @@
 import { contextBridge, ipcRenderer, webUtils } from "electron";
 
-import { recuoDosSemaforos } from "./moldura";
+/**
+ * O preload roda em SANDBOX, e ali `require` de arquivo do projeto não resolve
+ * — o módulo não é encontrado, a exceção derruba o preload inteiro e
+ * `window.electronAPI` simplesmente não existe. Nada aparece no terminal: a
+ * interface sobe, o cofre fica "indisponível", o backend parece mudo, e nada
+ * aponta para aqui. Foi o que aconteceu ao importar `./moldura` daqui.
+ *
+ * Por isso o que precisa de lógica é calculado no MAIN (que pode importar à
+ * vontade) e chega por `additionalArguments`, que o sandbox deixa passar.
+ */
+function argumentoNumerico(nome: string, padrao: number): number {
+  const prefixo = `--${nome}=`;
+  const achado = process.argv.find((a) => a.startsWith(prefixo));
+  if (achado === undefined) return padrao;
+  const valor = Number(achado.slice(prefixo.length));
+  return Number.isFinite(valor) ? valor : padrao;
+}
 
 contextBridge.exposeInMainWorld("electronAPI", {
   getBackendPort: (): Promise<number> => ipcRenderer.invoke("get-backend-port"),
@@ -18,7 +34,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
      * por que aprender a regra de cada sistema, e um `if (mac)` espalhado pela
      * interface é como a regra começa a divergir de si mesma.
      */
-    recuoDosSemaforos: recuoDosSemaforos(process.platform),
+    recuoDosSemaforos: argumentoNumerico("recuo-semaforos", 0),
   },
   /** Caminho absoluto de um File vindo de drag-and-drop ou <input type="file">. */
   getPathForFile: (file: File): string => {
