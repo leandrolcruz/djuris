@@ -335,16 +335,99 @@ def cmd_anonimizar(args) -> int:
             )
             return 1
 
+    # As políticas `parcial` e `total` não passam pelo `_placeholder`, então não
+    # produzem mapa nenhum. Aceitar `--autos` com elas gravaria um mapa vazio e
+    # prometeria uma reidratação que nunca funcionaria — e o sintoma apareceria
+    # só depois, com o documento já enviado.
+    if args.autos and args.mascara != "placeholder":
+        print(
+            f"erro: --autos exige -m placeholder (recebi {args.mascara!r}).",
+            file=sys.stderr,
+        )
+        print(
+            "Máscara parcial e cobertura total não deixam o que reidratar: "
+            "o valor não está mais no texto.",
+            file=sys.stderr,
+        )
+        return 1
+
+    # O nome dos autos é validado AQUI, junto das outras checagens de linha de
+    # comando, e não no fim: ele vira nome de arquivo, e descobrir que é
+    # inválido depois de minutos de OCR seria descobrir tarde. A régua é do
+    # `mapa_reverso`, para não haver duas.
+    if args.autos:
+        import mapa_reverso as _mr
+        try:
+            _mr._caminho(args.autos)
+        except ValueError as erro:
+            print(f"erro: {erro}", file=sys.stderr)
+            return 1
+
     modo, sessao = _resolver(args)
     entidades = _entidades(args.entities)
     token = _exigir_credencial() if modo == "remoto" else None
 
+    mascarador = None
+    if args.autos:
+        if modo == "remoto":
+            print(
+                "erro: --autos ainda só funciona no modo local.\n"
+                "Rode com --offline (o motor carrega neste processo).",
+                file=sys.stderr,
+            )
+            return 1
+
+        import mapa_reverso
+        from mask_config import Mascarador
+
+        # O Mascarador nasce e morre AQUI, no escopo desta função, e `args.autos`
+        # é lido uma vez. É isso que impede que ele atravesse duas invocações e
+        # misture pessoas de autos DIFERENTES num espaço de numeração comum — o
+        # que produziria um texto internamente coerente e factualmente falso, do
+        # tipo que ninguém revisa porque parece certo. A vida curta é a garantia:
+        # movê-lo para um cache de processo, ou para fora desta função, a desfaz
+        # sem que nada acuse.
+        mascarador = Mascarador(args.mascara)
+
+        # E a semeadura é o que faz `--autos` valer ENTRE invocações, não só
+        # dentro de uma. Sem ela, esta chamada numeraria do `[PESSOA_1]` outra
+        # vez e a gravação recusaria por `EtiquetaConflitante` — porque a peça de
+        # segunda-feira já gastou aquele número com outra pessoa.
+        # Ler o mapa aqui, ANTES de qualquer trabalho caro, tem duas funções: dá
+        # a semente da numeração e valida que a chave abre o que está gravado.
+        # Descobrir que o mapa não decifra depois de minutos de OCR seria
+        # descobrir tarde — e com os arquivos já escritos.
+        try:
+            gravado = mapa_reverso.ler(args.autos)
+        except mapa_reverso.CifragemIndisponivel as erro:
+            print(f"erro: {erro}", file=sys.stderr)
+            return 1
+        except mapa_reverso.MapaIlegivel as erro:
+            print(f"ALARME: {erro}", file=sys.stderr)
+            print(
+                "Não anonimizei nada. Seguir criaria um segundo mapa para os "
+                "mesmos autos, e você ficaria com duas numerações incompatíveis "
+                "sem saber qual explica qual peça.",
+                file=sys.stderr,
+            )
+            return 1
+        if gravado:
+            mascarador.semear(gravado)
+            print(
+                f"autos {args.autos}: continuando a numeração de "
+                f"{len(gravado)} pseudônimo(s) já gravado(s).",
+                file=sys.stderr,
+            )
+
     # stdin quando não há arquivo: mantém `cat x.txt | tecjustica-sigilo`.
     if not args.files:
         texto = sys.stdin.read()
-        resultado = _anonimizar_texto(texto, entidades, args.mascara, modo, sessao, token, args)
+        resultado = _anonimizar_texto(
+            texto, entidades, args.mascara, modo, sessao, token, args,
+            mascarador=mascarador,
+        )
         _escrever(args.output, _formatar(resultado, args.format))
-        return 0
+        return _gravar_mapa(args, mascarador)
 
     contexto = local.MotorLocal(quieto=args.quiet) if modo == "local" else _NoOp()
     with contexto as ctx:
@@ -368,7 +451,8 @@ def cmd_anonimizar(args) -> int:
                 }
             else:
                 resultado = _anonimizar_texto(
-                    lido["texto"], entidades, args.mascara, modo, sessao, token, args, motor
+                    lido["texto"], entidades, args.mascara, modo, sessao, token, args,
+                    motor, mascarador=mascarador,
                 )
 
             saida = _formatar(resultado, args.format)
@@ -390,11 +474,60 @@ def cmd_anonimizar(args) -> int:
             if destino and destino != "-":
                 print(f"{caminho} -> {destino}", file=sys.stderr)
 
+    return _gravar_mapa(args, mascarador)
+
+
+def _gravar_mapa(args, mascarador) -> int:
+    """
+    Fecha o `--autos`: grava o de-para cifrado e devolve o código de saída.
+
+    Existe como função porque `cmd_anonimizar` tem DOIS caminhos de sucesso — o
+    stdin e o laço de arquivos —, e a Task 7 já mostrou o que acontece quando
+    uma saída do motor passa por dois pontos que ninguém revisou junto: a
+    segunda fica para trás. Uma cópia deste bloco em cada `return` seria a mesma
+    armadilha com outra roupa.
+
+    Devolve 0 quando não há `--autos`: não gravar mapa nenhum é o caminho
+    normal, não uma falha.
+    """
+    if mascarador is None:
+        return 0
+
+    import mapa_reverso
+
+    # Esta gravação acontece DEPOIS de os arquivos anonimizados estarem no
+    # disco, e não há como ser antes: o mapa só está completo quando a última
+    # peça foi lida. Então a falha aqui tem um efeito específico e precisa ser
+    # dita com essas palavras — os arquivos existem, parecem certos, e não há
+    # como reidratá-los. Um traceback deixaria a pessoa achando que o problema
+    # foi na anonimização.
+    try:
+        destino_mapa = mapa_reverso.gravar(args.autos, mascarador.mapa())
+    except (
+        mapa_reverso.EtiquetaConflitante,
+        mapa_reverso.CifragemIndisponivel,
+        mapa_reverso.MapaIlegivel,
+        OSError,
+    ) as erro:
+        print(f"erro ao gravar o mapa dos autos {args.autos}: {erro}", file=sys.stderr)
+        print(
+            "ATENÇÃO: a anonimização foi concluída e os arquivos de saída "
+            "estão gravados, mas SEM mapa não há como reidratá-los depois. "
+            "Resolva o que impediu a gravação e rode de novo sobre os mesmos "
+            "arquivos — a anonimização é determinística, então a segunda "
+            "passada produz os mesmos rótulos.",
+            file=sys.stderr,
+        )
+        return 1
+
+    # Só o caminho no stderr. O mapa é o de-para para o dado real: mesmo o
+    # tamanho dele já diz quantas pessoas há no processo.
+    print(f"mapa dos autos {args.autos} -> {destino_mapa}", file=sys.stderr)
     return 0
 
 
 def _anonimizar_texto(
-    texto, entidades, politica, modo, sessao, token, args, motor=None
+    texto, entidades, politica, modo, sessao, token, args, motor=None, mascarador=None
 ) -> dict:
     if modo == "remoto":
         status, corpo = local.pedir(
@@ -415,25 +548,43 @@ def _anonimizar_texto(
     if motor is None:
         with local.MotorLocal(quieto=args.quiet) as ctx:
             return ctx.engine.anonymize(
-                text=texto, entities=entidades, politica_mascara=politica
+                text=texto, entities=entidades, politica_mascara=politica,
+                mascarador=mascarador,
             )
     return motor.anonymize(
-        text=texto, entities=entidades, politica_mascara=politica
+        text=texto, entities=entidades, politica_mascara=politica,
+        mascarador=mascarador,
     )
+
+
+# O contrato público do `-f json`, declarado. Campo que não está aqui não sai —
+# e é essa a direção certa do filtro.
+#
+# A versão anterior negava `mapa_reverso` por nome, o que conserta o campo
+# conhecido e falha aberto no próximo: a Task 7 acrescentou uma chave ao retorno
+# do motor e ela escapou por duas saídas que ninguém tinha revisado. Com lista
+# de permissão, o campo novo fica de fora até que alguém decida que é público —
+# que é a decisão que deve ser explícita.
+#
+# É o padrão que este repositório já usa em dois dos quatro pontos de saída: o
+# `response_model` do Pydantic na rota `/anonymize` (`server.py`) e o dicionário
+# montado campo a campo no `mcp_server.py`. Os dois são lista de permissão
+# estrutural — campo novo no motor não sai por eles sem alguém escrever o nome.
+#
+# `entities_found` SAI, e com o texto real dentro: é o contrato documentado do
+# `-f json` ("json = com a lista de ocorrências"), e a lista existe para auditar
+# o que foi mascarado. Quem não quer o valor real na saída usa o formato `text`.
+CAMPOS_PUBLICOS_JSON = (
+    "anonymized_text",
+    "entities_found",
+    "politica_mascara",
+    "valores_distintos",
+)
 
 
 def _formatar(resultado: dict, formato: str) -> str:
     if formato == "json":
-        # `mapa_reverso` sai FORA, sempre. O comentário de `engine.py` promete
-        # que a CLI nunca o imprime — nem em `-f json` —, e até aqui essa
-        # garantia era só prosa: `resultado` é o dicionário cru que
-        # `anonymize()` devolve, e ele carrega o mapa desde a Task 7.
-        # `entities_found` fica: expor o texto real de cada ocorrência ali é
-        # por desenho, para auditar o que foi mascarado — o defeito era
-        # específico do mapa reverso, que desfaz a anonimização inteira. A
-        # remoção é aqui, no único ponto por onde a saída passa, e não em
-        # cada chamador.
-        publico = {c: v for c, v in resultado.items() if c != "mapa_reverso"}
+        publico = {c: resultado[c] for c in CAMPOS_PUBLICOS_JSON if c in resultado}
         return json.dumps(publico, ensure_ascii=False, indent=2)
     return resultado["anonymized_text"]
 
@@ -566,6 +717,14 @@ def construir_parser() -> argparse.ArgumentParser:
     anonimizacao.add_argument(
         "--nlp-mode", choices=["transformer", "spacy"],
         help="Sobrescreve PRESIDIO_NLP_MODE nesta execução (só no modo offline).",
+    )
+    anonimizacao.add_argument(
+        "--autos", metavar="ID",
+        help=(
+            "Dá a estas peças um espaço de pseudônimos comum e grava o mapa "
+            "cifrado, para depois usar em `reidratar`. Sem isto, cada arquivo "
+            "numera do zero e o mapa é descartado."
+        ),
     )
 
     parser = argparse.ArgumentParser(
