@@ -430,3 +430,172 @@ def test_caminho_sem_montagem_correspondente_recusa():
     """
     montagens = {"/Volumes/X": "apfs, local"}
     assert mapa_reverso._analisar_montagens(montagens, "/Users/x/.config/k") is False
+
+
+# ---------------------------------------------------------------------------
+# Gravação, leitura e prazo
+# ---------------------------------------------------------------------------
+
+
+from pathlib import Path
+
+
+@pytest.fixture
+def cofre(tmp_path, monkeypatch):
+    """Chave e mapas em tmp_path — nunca no cofre real do usuário."""
+    monkeypatch.setenv("PRESIDIO_MAPA_CHAVE", str(tmp_path / "mapa.key"))
+    monkeypatch.setenv("PRESIDIO_MAPA_DIR", str(tmp_path / "mapas"))
+    return tmp_path
+
+
+def test_grava_e_le_o_mesmo_mapa(cofre):
+    mapa = {"[PESSOA_1]": "Ana Souza", "[CPF_1]": "529.982.247-25"}
+    mapa_reverso.gravar("5626981", mapa)
+    assert mapa_reverso.ler("5626981") == mapa
+
+
+def test_o_arquivo_gravado_nao_contem_o_valor_em_claro(cofre):
+    """O teste que importa: se este passar por acidente, a cifragem não rodou."""
+    mapa_reverso.gravar("5626981", {"[PESSOA_1]": "Ana Souza"})
+    bruto = (cofre / "mapas" / "5626981.mapa").read_bytes()
+    assert b"Ana Souza" not in bruto
+    assert b"PESSOA_1" not in bruto
+
+
+def test_gravar_de_novo_funde_em_vez_de_substituir(cofre):
+    """
+    Cada peça dos autos chega numa execução. Substituir perderia o mapa da peça
+    anterior e a reidratação sairia parcial — pior que falhar, porque parece
+    completa.
+    """
+    mapa_reverso.gravar("5626981", {"[PESSOA_1]": "Ana Souza"})
+    mapa_reverso.gravar("5626981", {"[PESSOA_2]": "Bruno Lima"})
+    assert mapa_reverso.ler("5626981") == {
+        "[PESSOA_1]": "Ana Souza",
+        "[PESSOA_2]": "Bruno Lima",
+    }
+
+
+def test_gravar_nao_sobrescreve_mapa_que_nao_decifra(cofre):
+    """
+    Gravar em cima apagaria o de-para de tudo que já foi anonimizado nestes
+    autos, e a causa da ilegibilidade pode ser benigna e reversível (a chave
+    errada na variável de ambiente, o arquivo vindo de outra máquina).
+    """
+    from cryptography.fernet import Fernet
+
+    mapa_reverso.gravar("5626981", {"[PESSOA_1]": "Ana Souza"})
+    antes = (cofre / "mapas" / "5626981.mapa").read_bytes()
+    Path(os.environ["PRESIDIO_MAPA_CHAVE"]).write_bytes(Fernet.generate_key())
+
+    with pytest.raises(mapa_reverso.MapaIlegivel):
+        mapa_reverso.gravar("5626981", {"[PESSOA_2]": "Bruno Lima"})
+    assert (cofre / "mapas" / "5626981.mapa").read_bytes() == antes, (
+        "recusou, então o arquivo anterior tem de estar byte a byte intacto"
+    )
+
+
+def test_ler_autos_inexistente_devolve_vazio(cofre):
+    assert mapa_reverso.ler("nao-existe") == {}
+
+
+def test_mapa_que_nao_decifra_levanta_alarme_em_vez_de_devolver_vazio(cofre):
+    """
+    A distinção que esta exceção preserva. Foi medida na Task 9: `Fernet` aceita
+    qualquer chave bem-formada de 44 bytes e só falha no `decrypt`, com
+    `InvalidToken` sem argumento nenhum — o mesmo evento de um mapa adulterado.
+
+    Devolver `{}` aqui faria a reidratação entregar o texto com os rótulos em
+    claro e sem mensagem, e quem lê concluiria "o prazo venceu". São coisas
+    muito diferentes e merecem reações muito diferentes.
+    """
+    from cryptography.fernet import Fernet
+
+    mapa_reverso.gravar("5626981", {"[PESSOA_1]": "Ana Souza"})
+
+    # Troca a chave por OUTRA bem-formada — não corrompe, substitui.
+    Path(os.environ["PRESIDIO_MAPA_CHAVE"]).write_bytes(Fernet.generate_key())
+
+    with pytest.raises(mapa_reverso.MapaIlegivel, match="5626981"):
+        mapa_reverso.ler("5626981")
+
+
+def test_mapa_ilegivel_nao_e_apagado(cofre):
+    """
+    Apagar seria irreversível e a causa pode ser benigna (a chave recriada de
+    propósito). Quem decide é a pessoa, com o arquivo ainda na mão.
+    """
+    from cryptography.fernet import Fernet
+
+    mapa_reverso.gravar("5626981", {"[PESSOA_1]": "Ana Souza"})
+    alvo = cofre / "mapas" / "5626981.mapa"
+    Path(os.environ["PRESIDIO_MAPA_CHAVE"]).write_bytes(Fernet.generate_key())
+
+    with pytest.raises(mapa_reverso.MapaIlegivel):
+        mapa_reverso.ler("5626981")
+    assert alvo.exists(), "mapa ilegível não pode ser apagado pela leitura"
+
+
+def test_mapa_vencido_e_apagado_e_nao_lido(cofre):
+    mapa_reverso.gravar("5626981", {"[PESSOA_1]": "Ana Souza"})
+    alvo = cofre / "mapas" / "5626981.mapa"
+    antigo = alvo.stat().st_mtime - (8 * 86400)
+    os.utime(alvo, (antigo, antigo))
+    assert mapa_reverso.ler("5626981") == {}
+    assert not alvo.exists(), "vencido tem de ser apagado, não só ignorado"
+
+
+def test_prazo_configuravel_por_ambiente(cofre, monkeypatch):
+    monkeypatch.setenv("PRESIDIO_MAPA_PRAZO_DIAS", "30")
+    mapa_reverso.gravar("5626981", {"[PESSOA_1]": "Ana Souza"})
+    alvo = cofre / "mapas" / "5626981.mapa"
+    antigo = alvo.stat().st_mtime - (8 * 86400)
+    os.utime(alvo, (antigo, antigo))
+    assert mapa_reverso.ler("5626981") == {"[PESSOA_1]": "Ana Souza"}
+
+
+def test_esquecer_apaga(cofre):
+    mapa_reverso.gravar("5626981", {"[PESSOA_1]": "Ana Souza"})
+    assert mapa_reverso.esquecer("5626981") is True
+    assert mapa_reverso.ler("5626981") == {}
+    assert mapa_reverso.esquecer("5626981") is False
+
+
+def test_etiqueta_conflitante_e_recusada_em_vez_de_sobrescrita(cofre):
+    """
+    O defeito que esta recusa existe para impedir, demonstrado antes de existir:
+
+        segunda:  anonimizar inicial.pdf    --autos X  ->  [PESSOA_1] = Ana
+        quarta:   anonimizar procuracao.pdf --autos X  ->  [PESSOA_1] = Bruno
+        fusão sem recusa: {'[PESSOA_1]': 'Bruno Lima'}   <- a Ana desapareceu
+
+    Cada invocação da CLI é um processo novo, com Mascarador novo, numerando do
+    1. Sem recusa, reidratar a resposta sobre a peça de segunda escreveria
+    "Bruno Lima" onde estava a Ana — com confiança, num texto bem formado.
+    """
+    mapa_reverso.gravar("5626981", {"[PESSOA_1]": "Ana Souza"})
+    with pytest.raises(mapa_reverso.EtiquetaConflitante, match="PESSOA_1"):
+        mapa_reverso.gravar("5626981", {"[PESSOA_1]": "Bruno Lima"})
+    assert mapa_reverso.ler("5626981") == {"[PESSOA_1]": "Ana Souza"}, (
+        "recusou, então o mapa anterior tem de estar intacto"
+    )
+
+
+def test_gravar_a_mesma_etiqueta_com_o_mesmo_valor_nao_e_conflito(cofre):
+    """Reprocessar a mesma peça é idempotente, não erro."""
+    mapa_reverso.gravar("5626981", {"[PESSOA_1]": "Ana Souza"})
+    mapa_reverso.gravar("5626981", {"[PESSOA_1]": "Ana Souza", "[CPF_1]": "529.982.247-25"})
+    assert mapa_reverso.ler("5626981") == {
+        "[PESSOA_1]": "Ana Souza",
+        "[CPF_1]": "529.982.247-25",
+    }
+
+
+@pytest.mark.parametrize("ruim", ["../fuga", "a/b", "", "."])
+def test_nome_de_autos_que_escaparia_do_diretorio_e_recusado(cofre, ruim):
+    """
+    O nome dos autos vem da linha de comando e vira nome de arquivo. Sem
+    validação, `--autos ../../algo` grava fora do diretório de mapas.
+    """
+    with pytest.raises(ValueError, match="autos"):
+        mapa_reverso.gravar(ruim, {"[PESSOA_1]": "Ana"})

@@ -15,6 +15,26 @@ declarando quatro ferramentas. Ela é comando de linha, roda nesta máquina, e
 escreve arquivo. Se algum dia virar ferramenta, devolve o CAMINHO do arquivo,
 nunca o conteúdo.
 
+## Três desfechos de leitura, e por que não podem se confundir
+
+Pedir um mapa termina de três maneiras. As três se parecem com "não veio mapa"
+para quem só olha o resultado, e pedem reações opostas de quem cuida da máquina
+— então ficam declaradas aqui, uma vez, no lugar em que as duas exceções deste
+módulo podem ser lidas lado a lado:
+
+- **`{}`** — o mapa não existe, ou venceu e foi apagado. Ausência benigna: é o
+  expurgo funcionando, e não há nada a fazer.
+- **`CifragemIndisponivel`** — a CHAVE não está em condições de uso: mora em
+  volume montado com `noowners`, ou não está em `0600`. Vale igual para gravar e
+  para ler, porque as duas passam por `_chave()`.
+- **`MapaIlegivel`** — a chave está em condições de uso, e não é a que cifrou
+  ESTE mapa: alguém a recriou ou a substituiu. É alarme, não ausência.
+
+A fronteira entre as duas últimas é a que importa na prática: a primeira diz
+"não consigo proteger", a segunda diz "a chave mudou". Uma se resolve apontando
+`PRESIDIO_MAPA_CHAVE` para onde o dono valha; a outra, recuperando a chave
+antiga — e nenhuma das duas se resolve tentando de novo.
+
 ## O que este módulo NÃO faz
 
 Não detecta e não mascara. Recebe o mapa pronto de quem mascarou. É por isso que
@@ -69,6 +89,12 @@ class CifragemIndisponivel(RuntimeError):
     pin). Quando a garantia não pode ser dada, a operação não acontece: um mapa
     reverso em claro é um índice de CPF e nome, exatamente o artefato que este
     programa existe para não criar.
+
+    **Levantada por `gravar` e por `ler`**, porque as duas passam por `_chave()`.
+    O "nada é gravado" acima descreve a escrita, não o escopo desta exceção: na
+    leitura o desfecho é o mesmo em espírito — sem chave em condições, o módulo
+    não afirma nada sobre o mapa, em vez de devolver `{}` como se ele não
+    existisse.
     """
 
 
@@ -212,3 +238,167 @@ def _chave() -> bytes:
     with os.fdopen(descritor, "wb") as arquivo:
         arquivo.write(nova)
     return nova
+
+
+import json
+import re as _re
+import time
+
+DIR_PADRAO = Path("/Volumes/SSD do Leandro/tecjustica-sigilo/mapas")
+PRAZO_DIAS_PADRAO = 7
+
+# O nome dos autos vem da linha de comando e vira nome de arquivo. Sem esta
+# régua, `--autos ../../algo` grava fora do diretório de mapas.
+RE_AUTOS = _re.compile(r"^[A-Za-z0-9._-]{1,120}$")
+
+
+def _dir_mapas() -> Path:
+    return Path(os.environ.get("PRESIDIO_MAPA_DIR") or DIR_PADRAO)
+
+
+def _prazo_dias() -> int:
+    bruto = os.environ.get("PRESIDIO_MAPA_PRAZO_DIAS")
+    if not bruto:
+        return PRAZO_DIAS_PADRAO
+    try:
+        return max(1, int(bruto))
+    except ValueError:
+        return PRAZO_DIAS_PADRAO
+
+
+def _caminho(autos: str) -> Path:
+    if not RE_AUTOS.match(autos) or autos in {".", ".."}:
+        raise ValueError(
+            f"nome de autos inválido: {autos!r} — use letras, números, ponto, "
+            f"hífen e sublinhado (é nome de arquivo)"
+        )
+    return _dir_mapas() / f"{autos}.mapa"
+
+
+class EtiquetaConflitante(RuntimeError):
+    """
+    A mesma etiqueta designa valores diferentes no mapa gravado e no que chega.
+
+    É o sintoma de numeração que recomeçou: `Mascarador` novo numera do 1, então
+    uma segunda invocação da CLI sobre os mesmos autos produz `[PESSOA_1]` para
+    outra pessoa. Fundir sobrescreveria, e a reidratação da primeira peça
+    escreveria o nome de quem apareceu na segunda — num texto bem formado.
+
+    A cura é semear o `Mascarador` com o mapa gravado (ver `Mascarador.semear`),
+    e esta exceção é a rede embaixo dela: se a semeadura falhar ou for esquecida,
+    a gravação para em vez de corromper.
+    """
+
+
+def gravar(autos: str, mapa: dict[str, str]) -> Path:
+    """
+    Funde `mapa` no que já estava gravado para estes autos e grava cifrado.
+
+    Funde, e não substitui, porque cada peça chega numa execução: substituir
+    perderia o mapa da peça anterior e a reidratação sairia PARCIAL — pior que
+    falhar, porque um documento meio reidratado tem toda a aparência de
+    completo.
+
+    **Recusa etiqueta conflitante**, e isso é o oposto de fundir cegamente. Se
+    `[PESSOA_1]` já vale "Ana Souza" no disco e chega valendo "Bruno Lima", não
+    há fusão possível que preserve as duas — e escolher uma em silêncio produz
+    reidratação errada na outra. Levanta `EtiquetaConflitante`.
+
+    **Propaga `MapaIlegivel`** — vindo do `ler()` desta mesma função —, e isso é
+    de propósito: um mapa que existe e não decifra não pode ser sobrescrito por
+    um novo. Gravar em cima apagaria o de-para de tudo que já foi anonimizado
+    nestes autos, e o que motiva a ilegibilidade pode ser benigno e reversível
+    (a chave errada em `PRESIDIO_MAPA_CHAVE`, o volume de outra máquina). Quem
+    decide apagar é a pessoa, com o arquivo na mão.
+
+    E `CifragemIndisponivel`, de `_chave()`, pela mesma razão do módulo inteiro:
+    sem poder cifrar, não grava.
+    """
+    from cryptography.fernet import Fernet
+
+    caminho = _caminho(autos)
+    chave = _chave()  # antes de criar diretório: falhando, nada toca o disco
+
+    gravado = ler(autos)
+    for etiqueta, valor in mapa.items():
+        anterior = gravado.get(etiqueta)
+        if anterior is not None and anterior != valor:
+            raise EtiquetaConflitante(
+                f"{etiqueta} vale {anterior!r} no mapa dos autos {autos!r} e "
+                f"chegou valendo {valor!r}. A numeração recomeçou — semeie o "
+                f"Mascarador com o mapa gravado antes de anonimizar (ver "
+                f"Mascarador.semear). Nada foi gravado."
+            )
+
+    juntos = {**gravado, **mapa}
+    caminho.parent.mkdir(parents=True, exist_ok=True)
+    corpo = Fernet(chave).encrypt(json.dumps(juntos, ensure_ascii=False).encode())
+
+    # Grava em temporário e renomeia: a troca é atômica no mesmo volume, então
+    # uma interrupção no meio deixa o mapa anterior intacto em vez de um
+    # arquivo truncado que não decifra.
+    temporario = caminho.with_suffix(".mapa.parcial")
+    descritor = os.open(temporario, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(descritor, "wb") as arquivo:
+        arquivo.write(corpo)
+    os.replace(temporario, caminho)
+    return caminho
+
+
+class MapaIlegivel(RuntimeError):
+    """
+    O arquivo do mapa existe, está no prazo, e não decifra.
+
+    **Isto é alarme, não ausência**, e a distinção foi o achado que reescreveu
+    esta função. Arquivo ausente é benigno e esperado — é o expurgo funcionando.
+    Arquivo presente e ilegível significa que a chave não é mais a que cifrou
+    aquele mapa: ela foi recriada, ou substituída.
+
+    Colapsar os dois em `{}` seria o defeito pior: a reidratação devolveria o
+    texto com `[PESSOA_1]` em claro e nenhuma mensagem, e quem lê concluiria
+    "venceu, normal" — quando o que houve foi a chave ser trocada. É a mesma
+    lição que o `CLAUDE.md` deste repositório registra sobre o contador de OCR:
+    "na dúvida não afirme" é boa regra para afirmar fato e péssima para calar
+    alarme.
+    """
+
+
+def ler(autos: str) -> dict[str, str]:
+    """
+    Devolve o mapa destes autos, ou `{}` se não existe ou venceu.
+
+    Vencido é **apagado**, não apenas ignorado: prazo de guarda que só esconde
+    não é prazo de guarda — o índice de CPF e nome continuaria no disco.
+
+    Levanta `MapaIlegivel` quando o arquivo existe, está no prazo e não decifra.
+    O porquê de não devolver `{}` está na exceção.
+    """
+    from cryptography.fernet import Fernet, InvalidToken
+
+    caminho = _caminho(autos)
+    if not caminho.exists():
+        return {}
+
+    if time.time() - caminho.stat().st_mtime > _prazo_dias() * 86400:
+        caminho.unlink(missing_ok=True)
+        return {}
+
+    try:
+        corpo = Fernet(_chave()).decrypt(caminho.read_bytes())
+    except InvalidToken as erro:
+        raise MapaIlegivel(
+            f"o mapa dos autos {autos!r} existe em {caminho} e não decifra com "
+            f"a chave atual. A chave foi recriada (o que torna ilegível todo "
+            f"mapa gravado antes dela) ou substituída. O arquivo NÃO foi "
+            f"apagado — apagá-lo é irreversível, e a decisão é sua."
+        ) from erro
+    return json.loads(corpo)
+
+
+def esquecer(autos: str) -> bool:
+    """Apaga o mapa destes autos. `False` se não havia nada."""
+    caminho = _caminho(autos)
+    if not caminho.exists():
+        return False
+    caminho.unlink()
+    return True
