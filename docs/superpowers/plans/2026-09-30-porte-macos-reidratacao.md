@@ -2103,7 +2103,7 @@ no instalador, que é montado com `--no-deps`.
 **Files:**
 - Modify: `/Users/leandroleitedacruz/tecjustica-sigilo/python-backend/requirements.txt`
 
-- [ ] **Step 1: Confirmar que hoje é transitivo**
+- [x] **Step 1: Confirmar que hoje é transitivo**
 
 ```bash
 cd /Users/leandroleitedacruz/tecjustica-sigilo && grep -n "cryptography" python-backend/requirements.txt || echo "NÃO declarado — como esperado"
@@ -2112,7 +2112,7 @@ grep -n "^cryptography" python-backend/requirements-embed.txt
 
 Expected: não declarado no `requirements.txt`; presente no `-embed.txt`.
 
-- [ ] **Step 2: Declarar, depois da linha do `mcp`**
+- [x] **Step 2: Declarar, depois da linha do `mcp`**
 
 ```
 # Cifragem do mapa reverso (`mapa_reverso.py`, Fernet).
@@ -2126,7 +2126,7 @@ Expected: não declarado no `requirements.txt`; presente no `-embed.txt`.
 cryptography==48.0.1
 ```
 
-- [ ] **Step 3: Confirmar que a resolução não mudou**
+- [x] **Step 3: Confirmar que a resolução não mudou**
 
 ```bash
 cd /Users/leandroleitedacruz/tecjustica-sigilo && \
@@ -2136,7 +2136,7 @@ cd /Users/leandroleitedacruz/tecjustica-sigilo && \
 Expected: nada a instalar ou nenhuma mudança de versão — a declaração fixa o
 que já estava lá, não traz pacote novo.
 
-- [ ] **Step 4: Rodar a suíte**
+- [x] **Step 4: Rodar a suíte**
 
 ```bash
 cd /Users/leandroleitedacruz/tecjustica-sigilo/python-backend && \
@@ -2146,7 +2146,7 @@ cd /Users/leandroleitedacruz/tecjustica-sigilo/python-backend && \
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd /Users/leandroleitedacruz/tecjustica-sigilo
@@ -2170,7 +2170,7 @@ nuvem."
 - Modify: `/Users/leandroleitedacruz/tecjustica-sigilo/python-backend/cli.py` — `cmd_anonimizar` (`:281`), `_anonimizar_texto` (`:396`), `construir_parser` (`:519`), `comandos` em `main` (`:606`)
 - Test: `/Users/leandroleitedacruz/tecjustica-sigilo/python-backend/tests/test_reidratacao_cli.py`
 
-- [ ] **Step 1: Escrever os testes**
+- [x] **Step 1: Escrever os testes**
 
 Criar `tests/test_reidratacao_cli.py`:
 
@@ -2326,7 +2326,7 @@ def test_autos_com_mascara_sem_mapa_e_recusado(cofre, capsys):
     assert "placeholder" in capsys.readouterr().err
 ```
 
-- [ ] **Step 2: Rodar e ver falhar**
+- [x] **Step 2: Rodar e ver falhar**
 
 ```bash
 cd /Users/leandroleitedacruz/tecjustica-sigilo/python-backend && \
@@ -2335,7 +2335,7 @@ cd /Users/leandroleitedacruz/tecjustica-sigilo/python-backend && \
 
 Expected: FAIL — `unrecognized arguments: --autos`.
 
-- [ ] **Step 3: Implementar — quatro pontos**
+- [x] **Step 3: Implementar — quatro pontos**
 
 3a. No `construir_parser`, no grupo `anonimizacao`, depois de `--nlp-mode`:
 
@@ -2576,7 +2576,7 @@ Escreva isso no comentário da criação do `Mascarador` (passo 3c), em uma ou d
 frases: por que ele nasce e morre aqui, e o que aconteceria se fosse
 reaproveitado entre autos.
 
-- [ ] **Step 4: Rodar e ver passar**
+- [x] **Step 4: Rodar e ver passar**
 
 ```bash
 cd /Users/leandroleitedacruz/tecjustica-sigilo/python-backend && \
@@ -2586,7 +2586,7 @@ cd /Users/leandroleitedacruz/tecjustica-sigilo/python-backend && \
 
 Expected: PASS em tudo, inclusive `test_cli.py`, que cobre a forma antiga.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd /Users/leandroleitedacruz/tecjustica-sigilo
