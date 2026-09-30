@@ -1,0 +1,114 @@
+"""
+O mapa reverso é o de-para entre `[PESSOA_1]` e o valor real.
+
+Ele existe para uma coisa só: a resposta que voltou de um modelo na nuvem fala
+em `[PESSOA_1]`, e quem lê precisa do nome. Três propriedades sustentam isso, e
+nenhuma é óbvia.
+
+**Um rótulo designa um valor só.** `ROTULO_ENTIDADE` manda dois tipos
+(`PHONE_NUMBER_BR` e `PHONE_NUMBER`) para o mesmo `TELEFONE`, e o motor suporta
+os dois. Numerar por tipo dava `[TELEFONE_1]` a dois telefones diferentes: texto
+ambíguo antes de qualquer reidratação, e substituição do valor errado depois. A
+numeração é por RÓTULO porque o rótulo é a identidade que o leitor e o modelo
+enxergam — `entity_type` é detalhe interno de quem detectou.
+
+**A grafia tem de ser a original.** A chave de deduplicação é
+`_normalizar(texto)`, que tira acento e caixa de propósito — é o que faz
+`JOÃO DA SILVA` e `joao da silva` receberem o mesmo número, e é o que o OCR
+exige. Guardar a chave como valor devolveria `joao da silva` na reidratação:
+não é erro que quebre nada, é erro que entrega um documento com nome errado
+parecendo certo.
+
+**As políticas `parcial` e `total` não têm mapa, e não é omissão.** Elas não
+passam pelo `_placeholder`, então nada é numerado e `mapa()` devolve `{}`.
+Reidratar `J**** d* S****` é impossível — a informação não existe mais no texto.
+Quem pedir mapa com essas políticas tem de receber vazio, não uma aproximação.
+"""
+
+import pytest
+
+from mask_config import Mascarador
+
+
+def test_um_rotulo_designa_um_valor_so_entre_tipos_diferentes():
+    """
+    O defeito que esta tarefa conserta. Antes, os dois viravam `[TELEFONE_1]`.
+    """
+    m = Mascarador("placeholder")
+    a = m.mascarar("PHONE_NUMBER_BR", "(64) 99999-1111")
+    b = m.mascarar("PHONE_NUMBER", "+55 11 98888-2222")
+    assert a == "[TELEFONE_1]"
+    assert b == "[TELEFONE_2]", "dois telefones diferentes não podem colidir"
+    assert m.mapa() == {
+        "[TELEFONE_1]": "(64) 99999-1111",
+        "[TELEFONE_2]": "+55 11 98888-2222",
+    }
+
+
+def test_mesmo_valor_em_tipos_diferentes_recebe_um_numero_so():
+    """
+    O outro lado da mesma moeda: se dois detectores acham o MESMO telefone e o
+    classificam diferente, ele é um telefone, e merece um rótulo.
+    """
+    m = Mascarador("placeholder")
+    assert m.mascarar("PHONE_NUMBER_BR", "(64) 99999-1111") == "[TELEFONE_1]"
+    assert m.mascarar("PHONE_NUMBER", "(64) 99999-1111") == "[TELEFONE_1]"
+    assert m.mapa() == {"[TELEFONE_1]": "(64) 99999-1111"}
+
+
+def test_mapa_devolve_a_grafia_original_com_acento_e_caixa():
+    m = Mascarador("placeholder")
+    assert m.mascarar("PERSON", "JOÃO DA SILVA") == "[PESSOA_1]"
+    assert m.mapa() == {"[PESSOA_1]": "JOÃO DA SILVA"}
+
+
+def test_a_primeira_grafia_vista_e_a_que_fica():
+    """
+    O mesmo valor escrito de dois jeitos recebe um número só — e o mapa guarda a
+    PRIMEIRA aparição. É arbitrário, mas tem de ser determinístico: a alternativa
+    (a última) faria o mapa depender de quantas vezes o documento repetiu o nome.
+    """
+    m = Mascarador("placeholder")
+    assert m.mascarar("PERSON", "JOÃO DA SILVA") == "[PESSOA_1]"
+    assert m.mascarar("PERSON", "joao da silva") == "[PESSOA_1]"
+    assert m.mapa() == {"[PESSOA_1]": "JOÃO DA SILVA"}
+
+
+def test_numeracao_segue_a_ordem_de_chamada_e_separa_rotulos():
+    m = Mascarador("placeholder")
+    m.mascarar("PERSON", "Ana Souza")
+    m.mascarar("CPF_BR", "529.982.247-25")
+    m.mascarar("PERSON", "Bruno Lima")
+    assert m.mapa() == {
+        "[PESSOA_1]": "Ana Souza",
+        "[PESSOA_2]": "Bruno Lima",
+        "[CPF_1]": "529.982.247-25",
+    }
+
+
+def test_resumo_continua_contando_por_TIPO_e_nao_por_rotulo():
+    """
+    Contrato antigo que NÃO pode mudar de forma: `resumo()` vira
+    `valores_distintos` e atravessa `api_v1.py:152`, `server.py:331` e a
+    interface (`src/hooks/useLote.ts`). A numeração passou a ser por rótulo; a
+    contagem continua por tipo.
+    """
+    m = Mascarador("placeholder")
+    m.mascarar("PERSON", "Ana Souza")
+    m.mascarar("PERSON", "ana souza")
+    m.mascarar("PERSON", "Bruno Lima")
+    assert m.resumo() == {"PERSON": 2}
+
+
+def test_resumo_separa_os_dois_tipos_de_telefone_mesmo_com_rotulo_comum():
+    m = Mascarador("placeholder")
+    m.mascarar("PHONE_NUMBER_BR", "(64) 99999-1111")
+    m.mascarar("PHONE_NUMBER", "+55 11 98888-2222")
+    assert m.resumo() == {"PHONE_NUMBER_BR": 1, "PHONE_NUMBER": 1}
+
+
+@pytest.mark.parametrize("politica", ["parcial", "total"])
+def test_politicas_sem_placeholder_nao_tem_mapa(politica):
+    m = Mascarador(politica)
+    m.mascarar("PERSON", "João da Silva")
+    assert m.mapa() == {}

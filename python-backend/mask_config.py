@@ -252,7 +252,7 @@ class Mascarador:
     Aplica a política escolhida, mantendo a numeração dos placeholders estável
     dentro de um documento.
 
-    O estado é por documento e por tipo: o primeiro nome encontrado vira
+    O estado é por documento e por rótulo: o primeiro nome encontrado vira
     `[PESSOA_1]` e toda ocorrência daquele mesmo nome — inclusive escrita com
     outra caixa ou acentuação, que é o que o OCR produz — recebe o mesmo
     número. É isso que mantém o texto legível: dá para acompanhar que
@@ -266,7 +266,26 @@ class Mascarador:
                 f"(use uma de {', '.join(POLITICAS)})"
             )
         self.politica = politica
-        self._indices: dict[str, dict[str, int]] = {}
+        # Duas estruturas, porque são duas perguntas diferentes — e juntá-las
+        # numa só foi o defeito.
+        #
+        # `_numeros` decide o TEXTO, e numera por RÓTULO. O rótulo é a
+        # identidade que o leitor e o modelo enxergam; `entity_type` é detalhe
+        # de quem detectou. `ROTULO_ENTIDADE` manda `PHONE_NUMBER_BR` e
+        # `PHONE_NUMBER` ao mesmo `TELEFONE`, e o motor suporta os dois: numerar
+        # por tipo dava `[TELEFONE_1]` a dois telefones diferentes — texto
+        # ambíguo, e mapa reverso que substitui o valor errado.
+        #
+        # O valor é `(indice, primeira_grafia_vista)`, e não só o índice. A chave
+        # é `_normalizar(texto)` — sem acento, minúscula — porque é o que faz
+        # `JOÃO DA SILVA` e `joao da silva` receberem o mesmo número, o que o OCR
+        # torna obrigatório. Mas a chave normalizada não reidrata: devolveria
+        # `joao da silva`, um nome errado num documento que parece certo.
+        self._numeros: dict[str, dict[str, tuple[int, str]]] = {}
+        # `_tipos` conta por `entity_type`, porque é isso que `resumo()` promete
+        # e `valores_distintos` atravessa a API (`api_v1.py:152`,
+        # `server.py:331`) até a interface. Mudar a forma disso quebraria a tela.
+        self._tipos: dict[str, set[str]] = {}
 
     def mascarar(self, entity_type: str, texto: str) -> str:
         if self.politica == "parcial":
@@ -276,13 +295,39 @@ class Mascarador:
         return self._placeholder(entity_type, texto)
 
     def _placeholder(self, entity_type: str, texto: str) -> str:
-        por_tipo = self._indices.setdefault(entity_type, {})
-        chave = _normalizar(texto)
-        if chave not in por_tipo:
-            por_tipo[chave] = len(por_tipo) + 1
         rotulo = ROTULO_ENTIDADE.get(entity_type, entity_type)
-        return f"[{rotulo}_{por_tipo[chave]}]"
+        chave = _normalizar(texto)
+
+        por_rotulo = self._numeros.setdefault(rotulo, {})
+        if chave not in por_rotulo:
+            por_rotulo[chave] = (len(por_rotulo) + 1, texto)
+
+        self._tipos.setdefault(entity_type, set()).add(chave)
+
+        indice, _ = por_rotulo[chave]
+        return f"[{rotulo}_{indice}]"
 
     def resumo(self) -> dict[str, int]:
         """Quantos valores distintos foram encontrados por tipo."""
-        return {tipo: len(vals) for tipo, vals in self._indices.items()}
+        return {tipo: len(chaves) for tipo, chaves in self._tipos.items()}
+
+    def mapa(self) -> dict[str, str]:
+        """
+        O de-para `{"[PESSOA_1]": "João da Silva"}`.
+
+        Não há colisão possível aqui, e a garantia é ESTRUTURAL, não conferida:
+        `_numeros` é indexado pelo rótulo e numera dentro dele, então duas
+        entradas distintas nunca produzem a mesma etiqueta. Uma verificação em
+        tempo de execução seria mais fraca — pegaria o erro depois de existir,
+        em vez de torná-lo impossível de escrever.
+
+        Vazio nas políticas `parcial` e `total`: elas não passam por
+        `_placeholder`, e reidratar `J**** d* S****` é impossível porque a
+        informação não está mais no texto. Vazio é a resposta correta, não uma
+        lacuna a preencher por aproximação.
+        """
+        return {
+            f"[{rotulo}_{indice}]": original
+            for rotulo, valores in self._numeros.items()
+            for indice, original in valores.values()
+        }
