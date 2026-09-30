@@ -825,3 +825,145 @@ def test_a_caixa_do_nome_dos_autos_e_dobrada(cofre):
         "[PESSOA_1]": "Ana Souza",
         "[PESSOA_2]": "Bruno Lima",
     }
+
+
+# ---------------------------------------------------------------------------
+# Semeadura: a numeração continua entre invocações
+# ---------------------------------------------------------------------------
+
+
+def test_semear_continua_a_numeracao_em_vez_de_recomecar():
+    """
+    O caso que motiva o método. A segunda invocação sobre os mesmos autos tem de
+    dar `[PESSOA_2]` a quem chegou depois, não `[PESSOA_1]` de novo.
+    """
+    primeira = Mascarador("placeholder")
+    assert primeira.mascarar("PERSON", "Ana Souza") == "[PESSOA_1]"
+
+    segunda = Mascarador("placeholder")
+    segunda.semear(primeira.mapa())
+    assert segunda.mascarar("PERSON", "Bruno Lima") == "[PESSOA_2]"
+    assert segunda.mapa() == {"[PESSOA_1]": "Ana Souza", "[PESSOA_2]": "Bruno Lima"}
+
+
+def test_semear_reconhece_quem_ja_tinha_numero():
+    """
+    A mesma pessoa numa peça nova recebe o número que já era dela — é isso que
+    faz o modelo entender que a Ana da inicial é a Ana da procuração.
+    """
+    primeira = Mascarador("placeholder")
+    primeira.mascarar("PERSON", "Ana Souza")
+
+    segunda = Mascarador("placeholder")
+    segunda.semear(primeira.mapa())
+    assert segunda.mascarar("PERSON", "ANA SOUZA") == "[PESSOA_1]"
+
+
+def test_semear_com_buraco_na_sequencia_nao_reusa_numero():
+    """
+    `remascarar()` renumera do zero ao liberar um falso positivo, e um mapa
+    gravado antes disso pode chegar com buraco. Numerar por `len()+1` reusaria um
+    número já tomado e faria duas pessoas virarem a mesma. O próximo é
+    `max(...)+1`.
+    """
+    m = Mascarador("placeholder")
+    m.semear({"[PESSOA_1]": "Ana Souza", "[PESSOA_3]": "Carla Dias"})
+    assert m.mascarar("PERSON", "Bruno Lima") == "[PESSOA_4]"
+
+
+def test_semear_separa_rotulos():
+    m = Mascarador("placeholder")
+    m.semear({"[PESSOA_1]": "Ana Souza", "[CPF_1]": "529.982.247-25"})
+    assert m.mascarar("PERSON", "Bruno Lima") == "[PESSOA_2]"
+    assert m.mascarar("CPF_BR", "111.444.777-35") == "[CPF_2]"
+
+
+def test_semear_nao_conta_para_o_resumo():
+    """
+    `resumo()` vira `valores_distintos` e diz o que ESTA execução encontrou.
+    Semear não é encontrar: contar o que veio do disco inflaria o número que a
+    interface mostra sobre o documento que acabou de ser lido.
+    """
+    m = Mascarador("placeholder")
+    m.semear({"[PESSOA_1]": "Ana Souza"})
+    assert m.resumo() == {}
+    m.mascarar("PERSON", "Bruno Lima")
+    assert m.resumo() == {"PERSON": 1}
+
+
+def test_a_forma_da_etiqueta_nao_aceita_simbolo():
+    """
+    `×` (U+00D7) fica no meio do bloco Latin-1 maiúsculo e não é letra. A irmã em
+    TypeScript o exclui por usar `\\p{Lu}`; o intervalo partido `À-Ö`/`Ø-Þ` faz o
+    Python concordar. Nenhum rótulo real usaria símbolo — o teste existe para as
+    duas camadas não divergirem em rigor sem ninguém notar.
+    """
+    from mask_config import RE_ETIQUETA
+
+    assert RE_ETIQUETA.fullmatch("[ENDEREÇO_1]") is not None
+    assert RE_ETIQUETA.fullmatch("[PESSOA_12]") is not None
+    assert RE_ETIQUETA.fullmatch("[ORGANIZATION_1]") is not None
+    assert RE_ETIQUETA.fullmatch("[×_1]") is None
+    assert RE_ETIQUETA.fullmatch("[pessoa_1]") is None
+    assert RE_ETIQUETA.fullmatch("[PESSOA_]") is None
+    assert RE_ETIQUETA.fullmatch("[PESSOA_1") is None
+
+
+def test_semear_recusa_etiqueta_fora_de_forma():
+    m = Mascarador("placeholder")
+    with pytest.raises(ValueError, match="etiqueta"):
+        m.semear({"PESSOA_1": "Ana Souza"})
+
+
+def test_semear_recusa_dois_numeros_para_o_mesmo_valor():
+    """
+    Mapa em que a mesma pessoa aparece com dois números é mapa corrompido, e
+    seguir com ele escolheria um dos dois em silêncio.
+    """
+    m = Mascarador("placeholder")
+    with pytest.raises(ValueError, match="dois números"):
+        m.semear({"[PESSOA_1]": "Ana Souza", "[PESSOA_2]": "ana souza"})
+
+
+def test_semear_em_politica_sem_placeholder_e_recusado():
+    """Semear um Mascarador que não numera é pedido sem sentido — e silencioso."""
+    for politica in ("parcial", "total"):
+        m = Mascarador(politica)
+        with pytest.raises(ValueError, match="placeholder"):
+            m.semear({"[PESSOA_1]": "Ana Souza"})
+
+
+def test_a_forma_da_etiqueta_repete_a_estrutura_da_irma_em_typescript():
+    """
+    `electron/pseudonimos.ts` usa `/\\[(\\p{Lu}+(?:_\\p{Lu}+)*)_(\\d+)\\]/gu` — a
+    estrutura é `PALAVRA(_PALAVRA)*`, não um punhado de maiúsculas e sublinhados
+    em qualquer ordem. Um `[A-Z_]+` solto aceitaria os três casos abaixo, e as
+    duas camadas discordariam sobre um mesmo texto sem ninguém notar: o Electron
+    reidrataria um trecho que o Python deixaria mascarado, ou o contrário.
+    """
+    from mask_config import RE_ETIQUETA
+
+    assert RE_ETIQUETA.fullmatch("[DATE_TIME_1]") is not None, "sublinhado INTERNO é real"
+    assert RE_ETIQUETA.fullmatch("[_PESSOA_1]") is None
+    assert RE_ETIQUETA.fullmatch("[PESSOA__1]") is None
+    assert RE_ETIQUETA.fullmatch("[PESSOA_1]_") is None
+
+
+def test_todo_rotulo_que_o_produto_gera_casa_com_a_forma():
+    """
+    A varredura que sustenta o comentário do `RE_ETIQUETA`, sem carregar motor:
+    `ROTULO_ENTIDADE` é a fonte dos rótulos traduzidos, e o fallback
+    `rotulo == entity_type` responde pelo resto. Conferido uma vez contra o
+    motor de verdade (27 tipos, 25 rótulos, todos casam); daqui em diante quem
+    acrescentar rótulo que não case quebra aqui, e não em produção com um
+    documento meio reidratado na tela.
+    """
+    from mask_config import ROTULO_ENTIDADE, RE_ETIQUETA
+
+    fallbacks = ["ORGANIZATION", "DATE_TIME", "LAW", "IP_ADDRESS", "MEDICAL_LICENSE"]
+    for rotulo in list(ROTULO_ENTIDADE.values()) + fallbacks:
+        etiqueta = f"[{rotulo}_1]"
+        achado = RE_ETIQUETA.fullmatch(etiqueta)
+        assert achado is not None, f"{etiqueta} não casa com RE_ETIQUETA"
+        assert achado.group(1) == rotulo
+        assert achado.group(2) == "1"

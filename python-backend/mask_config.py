@@ -46,6 +46,38 @@ ROTULO_ENTIDADE: dict[str, str] = {
 }
 
 
+# A forma de uma etiqueta, num lugar só.
+#
+# Ela é ESCRITA aqui (`_placeholder`, `mapa()`), LIDA aqui (`Mascarador.semear`)
+# e LIDA em `mapa_reverso.reidratar`. Três descrições da mesma forma divergiriam
+# sem aviso, e o sintoma seria um rótulo que a reidratação não reconhece — texto
+# que sai "reidratado" com um pedaço ainda mascarado, sem erro nenhum.
+#
+# A classe cobre `Ç` (U+00C7) porque `ENDEREÇO` é um dos rótulos; com `[A-Z_]+`
+# ele ficaria de fora em silêncio. Conferido contra os 27 tipos que o motor
+# suporta, inclusive os que caem no fallback `rotulo == entity_type`
+# (`ORGANIZATION`, `DATE_TIME`, `LAW`).
+#
+# O intervalo é partido em `À-Ö` e `Ø-Þ` para PULAR `×` (U+00D7, sinal de
+# multiplicação), que fica no meio do bloco Latin-1 e não é letra. `À-Þ` inteiro
+# funcionaria na prática — nenhum rótulo real usa símbolo.
+#
+# Ver também `electron/pseudonimos.ts`, `RE_ROTULO`: mesmo contrato, motor de
+# regex diferente. Lá se usa `\p{Lu}`, que o `re` da biblioteca padrão não tem.
+# O grupo aqui repete a ESTRUTURA de lá — `PALAVRA(_PALAVRA)*` — em vez de um
+# `[A-Z_]+` solto, que aceitaria `[_PESSOA_1]` e `[PESSOA__1]` e faria as duas
+# camadas discordarem sobre um texto sem ninguém notar.
+#
+# Onde elas ainda divergem, dito com todas as letras: `\p{Lu}` cobre maiúscula
+# de QUALQUER alfabeto Unicode, e esta cobre só o Latin-1. Nenhum rótulo real
+# sai desse conjunto — conferido contra os 27 tipos que o motor declara em
+# `entidades_suportadas()`, que geram 25 rótulos distintos (`ENDEREÇO` com
+# cedilha, `DATE_TIME` e `IP_ADDRESS` com sublinhado interno, e os que caem no
+# fallback `rotulo == entity_type`): todos casam. Se uma mudar, a outra muda
+# junto.
+RE_ETIQUETA = re.compile(r"\[([A-ZÀ-ÖØ-Þ]+(?:_[A-ZÀ-ÖØ-Þ]+)*)_(\d+)\]")
+
+
 def mask_person(text: str) -> str:
     """Mostra 1ª letra de cada nome: 'João da Silva' → 'J**** d* S****'"""
     parts = text.split()
@@ -300,12 +332,56 @@ class Mascarador:
 
         por_rotulo = self._numeros.setdefault(rotulo, {})
         if chave not in por_rotulo:
-            por_rotulo[chave] = (len(por_rotulo) + 1, texto)
+            # `max(...)+1`, e não `len(...)+1`: com `semear` o índice pode vir
+            # com buraco (o `remascarar()` renumera do zero ao liberar um falso
+            # positivo, e um mapa gravado antes disso chega descontínuo), e
+            # reusar um número já tomado fundiria duas pessoas numa.
+            proximo = max((i for i, _ in por_rotulo.values()), default=0) + 1
+            por_rotulo[chave] = (proximo, texto)
 
         self._tipos.setdefault(entity_type, set()).add(chave)
 
         indice, _ = por_rotulo[chave]
         return f"[{rotulo}_{indice}]"
+
+    def semear(self, mapa: dict[str, str]) -> None:
+        """
+        Restaura a numeração de um mapa já gravado, para que esta execução
+        CONTINUE de onde a anterior parou.
+
+        Sem isto, `--autos` compartilha numeração dentro de UMA invocação e não
+        entre invocações — e acrescentar peça dias depois é o uso normal de um
+        processo. A segunda chamada começaria do `[PESSOA_1]` outra vez, e a
+        gravação recusaria por `EtiquetaConflitante` (ou, sem a recusa,
+        sobrescreveria e faria a peça de segunda reidratar com o nome de quem
+        apareceu na quarta).
+
+        Não conta para o `resumo()`: semear não é encontrar, e
+        `valores_distintos` diz o que ESTA execução achou no documento que
+        acabou de ser lido.
+        """
+        if self.politica != "placeholder":
+            raise ValueError(
+                f"semear não faz sentido na política {self.politica!r}: ela não "
+                f"numera nada, então não há numeração a continuar (use placeholder)"
+            )
+
+        for etiqueta, original in mapa.items():
+            achado = RE_ETIQUETA.fullmatch(etiqueta)
+            if achado is None:
+                raise ValueError(f"etiqueta fora de forma no mapa: {etiqueta!r}")
+            rotulo, indice = achado.group(1), int(achado.group(2))
+
+            por_rotulo = self._numeros.setdefault(rotulo, {})
+            chave = _normalizar(original)
+            anterior = por_rotulo.get(chave)
+            if anterior is not None and anterior[0] != indice:
+                raise ValueError(
+                    f"o mapa dá dois números ao mesmo valor {original!r}: "
+                    f"{anterior[0]} e {indice}. Mapa corrompido — seguir com ele "
+                    f"escolheria um dos dois em silêncio."
+                )
+            por_rotulo[chave] = (indice, original)
 
     def resumo(self) -> dict[str, int]:
         """Quantos valores distintos foram encontrados por tipo."""

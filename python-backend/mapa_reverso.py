@@ -51,19 +51,20 @@ import stat
 import subprocess
 from pathlib import Path
 
-# A classe de caracteres cobre `Ç` (U+00C7) e as vogais acentuadas porque
-# `ENDEREÇO` é um dos rótulos. Com `[A-Z_]+` ele ficaria de fora em silêncio:
-# o texto sairia reidratado, sem erro nenhum, e com o endereço ainda mascarado.
+# A forma da etiqueta vem de quem a CRIA. Repeti-la aqui daria duas descrições
+# da mesma coisa, e a desatualizada continuaria parecendo atual — o sintoma
+# seria texto "reidratado" com um pedaço ainda mascarado, sem erro nenhum. O
+# nome local fica como apelido, para não mexer em quem já o usa.
 #
-# Conferido contra os 27 tipos que o motor suporta: todos os rótulos derivados
-# deles casam, incluindo os que caem no fallback `rotulo == entity_type` por não
-# estarem em `ROTULO_ENTIDADE` (`ORGANIZATION`, `DATE_TIME`, `LAW`).
+# `mask_config` é regex e dicionário: importá-lo NÃO traz Presidio, spaCy nem
+# torch, e a promessa de que os testes deste módulo rodam em milissegundos
+# continua de pé (medido com `python -X importtime -c "import mapa_reverso"`).
 #
-# A varredura é de UMA passagem, com consulta ao dicionário. Substituir rótulo
-# por rótulo em laço é o defeito clássico: `[PESSOA_1]` é prefixo de
-# `[PESSOA_10]`, e trocar o primeiro antes produz `Ana Souza0` — que não parece
-# defeito de programa, parece erro de digitação do documento.
-RE_ROTULO = re.compile(r"\[[A-ZÀ-Þ_]+_\d+\]")
+# A varredura de `reidratar` é de UMA passagem, com consulta ao dicionário.
+# Substituir rótulo por rótulo em laço é o defeito clássico: `[PESSOA_1]` é
+# prefixo de `[PESSOA_10]`, e trocar o primeiro antes produz `Ana Souza0` — que
+# não parece defeito de programa, parece erro de digitação do documento.
+from mask_config import RE_ETIQUETA as RE_ROTULO
 
 
 def reidratar(texto: str, mapa: dict[str, str]) -> str:
@@ -279,7 +280,6 @@ def _chave() -> bytes:
 
 
 import json
-import re as _re
 import time
 
 DIR_PADRAO = Path("/Volumes/SSD do Leandro/tecjustica-sigilo/mapas")
@@ -287,7 +287,7 @@ PRAZO_DIAS_PADRAO = 7
 
 # O nome dos autos vem da linha de comando e vira nome de arquivo. Sem esta
 # régua, `--autos ../../algo` grava fora do diretório de mapas.
-RE_AUTOS = _re.compile(r"^[A-Za-z0-9._-]{1,120}$")
+RE_AUTOS = re.compile(r"^[A-Za-z0-9._-]{1,120}$")
 
 
 def _dir_mapas() -> Path:
