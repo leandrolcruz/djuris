@@ -419,3 +419,14 @@ def test_ponto_de_montagem_com_parentese_no_nome_e_lido_certo():
     """
     montagens = {"/": "apfs, local", "/Volumes/Backup (2024)": "apfs, noowners"}
     assert mapa_reverso._analisar_montagens(montagens, "/Volumes/Backup (2024)/k") is False
+
+
+def test_caminho_sem_montagem_correspondente_recusa():
+    """
+    Não saber em que volume o caminho está não é saber que ele é seguro. Numa
+    tabela real `/` prefixa tudo e este ramo não acontece — ele é a política da
+    função para tabela parcial, e o que impede uma falha ABERTA no meio de um
+    módulo que fecha em todo o resto.
+    """
+    montagens = {"/Volumes/X": "apfs, local"}
+    assert mapa_reverso._analisar_montagens(montagens, "/Users/x/.config/k") is False

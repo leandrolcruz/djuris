@@ -89,6 +89,16 @@ def _analisar_montagens(montagens: dict[str, str], caminho: str) -> bool:
     for ponto, valor in montagens.items():
         if (caminho == ponto or caminho.startswith(ponto.rstrip("/") + "/")) and len(ponto) > len(escolhido):
             escolhido, flags = ponto, valor
+    if not escolhido:
+        # Nenhum ponto prefixa o caminho: não se sabe em que volume ele está, e
+        # isso NÃO é o mesmo que saber que o volume é seguro. Esta função responde
+        # pergunta de segurança, então a ignorância recusa — a mesma direção do
+        # `_tabela_de_montagens` quando o `mount` falha.
+        #
+        # Numa tabela real `/` prefixa tudo e este ramo não acontece; ele existe
+        # para quem chamar a função com tabela parcial, e para não deixar aqui uma
+        # falha ABERTA no meio de um módulo cuja política é fechar.
+        return False
     return "noowners" not in flags
 
 
@@ -177,7 +187,23 @@ def _chave() -> bytes:
             )
         return caminho.read_bytes()
 
-    caminho.parent.mkdir(parents=True, exist_ok=True)
+    # `0700` porque o nome, a existência e o mtime da chave também dizem algo:
+    # quem lista o diretório sabe que o produto está em uso e quando o mapa foi
+    # cunhado — metadado de um índice de CPF e nome.
+    #
+    # Três coisas que o `mode` NÃO promete, e é melhor dizê-las que deixar a
+    # impressão de garantia mais forte:
+    #
+    # 1. Ele vale só para o diretório FINAL. Os intermediários que o `parents=True`
+    #    cria — `~/.config`, se ainda não existir — saem pelo `umask`, medido em
+    #    0755. Está certo assim: o que precisa fechar é a pasta que guarda a
+    #    chave, e `~/.config` é diretório de propósito geral do usuário.
+    # 2. Um `~/.config` preexistente fica com o modo que tem — não é nosso
+    #    diretório para reapertar.
+    # 3. Com `exist_ok=True`, um `tecjustica-sigilo/` preexistente e frouxo também
+    #    fica como está. Reapertá-lo em silêncio seria o mesmo erro que esta função
+    #    recusa cometer com a chave: consertar bit sem saber quem já leu.
+    caminho.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     nova = Fernet.generate_key()
     # Cria já fechado: gravar e depois chmod deixa uma janela em que o arquivo
     # existe legível. `0o600` no `os.open`, e não `write_bytes` seguido de
