@@ -8,7 +8,7 @@
 #   tecjustica-sigilo arquivo.txt -o saida.md
 #   cat arquivo.txt | tecjustica-sigilo
 #   tecjustica-sigilo ler autos.pdf          (extrai sem anonimizar)
-#   tecjustica-sigilo reidratar resposta.txt --autos 5626981
+#   tecjustica-sigilo ocr pagina.png         (reconhece o texto de uma imagem)
 #   tecjustica-sigilo mcp                    (servidor MCP em stdio)
 #
 # Este arquivo é instalado por symlink em ~/.local/bin, então ele resolve o
@@ -17,7 +17,21 @@
 set -euo pipefail
 
 ORIGEM="${BASH_SOURCE[0]}"
+ORIGEM_INICIAL="$ORIGEM"
+SALTOS=0
+TETO_SALTOS=40
 while [[ -L "$ORIGEM" ]]; do
+  SALTOS=$((SALTOS + 1))
+  # Teto para não pendurar o terminal num symlink circular (a -> b -> a):
+  # sem ele, este laço não teria como sair sozinho — travamento sem
+  # mensagem é o pior desfecho possível aqui, porque quem instalou a
+  # ferramenta fica olhando para um terminal parado sem indício do quê
+  # investigar. 40 é folga generosa sobre qualquer cadeia real (a
+  # instalação normal resolve em 1 salto) e ainda assim falha rápido.
+  if (( SALTOS > TETO_SALTOS )); then
+    echo "Cadeia de symlinks longa demais ou circular a partir de '$ORIGEM_INICIAL' (mais de $TETO_SALTOS saltos)." >&2
+    exit 1
+  fi
   DESTINO="$(readlink "$ORIGEM")"
   [[ "$DESTINO" == /* ]] && ORIGEM="$DESTINO" || ORIGEM="$(dirname "$ORIGEM")/$DESTINO"
 done
@@ -47,6 +61,9 @@ if [[ ! -x "$PYTHON" ]]; then
 fi
 
 export HF_HOME="${HF_HOME:-$PESO/hf-cache}"
+# Pasta do mapa de pseudônimos (rótulo <-> valor original) gravado pela
+# anonimização, para permitir desfazer a máscara depois — ainda sem
+# consumidor no código; o subcomando que vai lê-lo chega numa task futura.
 export PRESIDIO_MAPA_DIR="${PRESIDIO_MAPA_DIR:-$PESO/mapas}"
 
 exec "$PYTHON" "$BACKEND/cli.py" "$@"
