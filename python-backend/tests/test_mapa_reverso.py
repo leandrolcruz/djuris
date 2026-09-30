@@ -112,3 +112,62 @@ def test_politicas_sem_placeholder_nao_tem_mapa(politica):
     m = Mascarador(politica)
     m.mascarar("PERSON", "João da Silva")
     assert m.mapa() == {}
+
+
+# ---------------------------------------------------------------------------
+# Numeração compartilhada entre peças dos mesmos autos
+#
+# Estes testes não carregam modelo: chamam `_aplicar_mascaras`, que é estático e
+# recebe os spans prontos. O que se mede é o contrato do Mascarador
+# compartilhado, não a qualidade da detecção.
+# ---------------------------------------------------------------------------
+
+from engine import PresidioEngine
+
+
+def test_mascarador_compartilhado_da_o_mesmo_numero_em_duas_pecas():
+    """
+    Sem compartilhar, `[PESSOA_1]` designa Ana na inicial e Bruno na procuração.
+    Juntas num contexto, o modelo troca as pessoas — e a resposta sai bem
+    escrita, plausível e errada.
+    """
+    inicial = "Ana Souza propôs a ação."
+    procuracao = "Bruno Lima outorga poderes."
+
+    m = Mascarador("placeholder")
+    saida_inicial = PresidioEngine._aplicar_mascaras(
+        inicial, [(0, 9, "PERSON", 0.99)], m
+    )
+    saida_procuracao = PresidioEngine._aplicar_mascaras(
+        procuracao, [(0, 10, "PERSON", 0.99)], m
+    )
+
+    assert saida_inicial == "[PESSOA_1] propôs a ação."
+    assert saida_procuracao == "[PESSOA_2] outorga poderes."
+    assert m.mapa() == {"[PESSOA_1]": "Ana Souza", "[PESSOA_2]": "Bruno Lima"}
+
+
+def test_mesma_pessoa_em_duas_pecas_recebe_um_numero_so():
+    m = Mascarador("placeholder")
+    PresidioEngine._aplicar_mascaras("Ana Souza propôs.", [(0, 9, "PERSON", 0.99)], m)
+    saida = PresidioEngine._aplicar_mascaras(
+        "ANA SOUZA foi ouvida.", [(0, 9, "PERSON", 0.99)], m
+    )
+    assert saida == "[PESSOA_1] foi ouvida."
+    assert m.mapa() == {"[PESSOA_1]": "Ana Souza"}
+
+
+def test_anonymize_recusa_mascarador_de_outra_politica():
+    """
+    Injetar um Mascarador 'total' e pedir política 'placeholder' é ambiguidade:
+    um dos dois seria silenciosamente ignorado. Recusar é a única saída que não
+    mente sobre o que foi aplicado.
+    """
+    motor = PresidioEngine()
+    with pytest.raises(ValueError, match="política"):
+        motor.anonymize(
+            text="x",
+            entities=[],
+            politica_mascara="placeholder",
+            mascarador=Mascarador("total"),
+        )

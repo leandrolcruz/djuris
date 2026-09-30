@@ -535,6 +535,7 @@ class PresidioEngine:
         progresso: "Callable[[int, int], None] | None" = None,
         politica_mascara: str = POLITICA_PADRAO,
         cancelado: "Callable[[], bool] | None" = None,
+        mascarador: "Mascarador | None" = None,
     ) -> dict:
         """
         Analisa e anonimiza o texto em janelas com sobreposição.
@@ -550,11 +551,25 @@ class PresidioEngine:
         `politica_mascara` escolhe entre placeholder numerado, máscara parcial
         e cobertura total — ver `mask_config`.
 
+        `mascarador`, se informado, é reaproveitado em vez de um novo — é o que
+        dá a várias peças dos mesmos autos um espaço de numeração comum.
+        Anonimizadas em chamadas separadas, a inicial e a procuração produzem
+        dois `[PESSOA_1]` diferentes, e um modelo que leia as duas juntas
+        responde trocando as pessoas: um erro que não parece erro, porque a
+        resposta sai bem escrita.
+
         Retorna dict com:
           - anonymized_text: texto com PII mascarado
           - entities_found: lista de entidades detectadas, em offsets do
             texto original
         """
+        if mascarador is not None and mascarador.politica != politica_mascara:
+            raise ValueError(
+                f"mascarador com política {mascarador.politica!r} não combina "
+                f"com politica_mascara={politica_mascara!r} — um dos dois seria "
+                f"ignorado em silêncio"
+            )
+
         if not self._ready or self._analyzer is None:
             raise RuntimeError("Engine não inicializado. Chame initialize() primeiro.")
 
@@ -636,7 +651,7 @@ class PresidioEngine:
         # remontando um trecho institucional a partir de semente legítima.
         brutos.extend(_sem_instituicoes(vista, estendidos))
         spans = self._fundir_spans(text, brutos)
-        mascarador = Mascarador(politica_mascara)
+        mascarador = mascarador if mascarador is not None else Mascarador(politica_mascara)
 
         entidades = [
             {
@@ -654,6 +669,13 @@ class PresidioEngine:
             "entities_found": entidades,
             "politica_mascara": politica_mascara,
             "valores_distintos": mascarador.resumo(),
+            # O de-para para reidratar. Quem chama em processo é o servidor
+            # local e a CLI, que precisam dele para gravar a sessão de autos.
+            #
+            # A CLI e o MCP NUNCA o imprimem — nem em `-f json`. Um mapa reverso
+            # em stdout é um vazamento com outro nome: desfaz, numa linha de
+            # log ou num pipe, o que o resto do programa existe para fazer.
+            "mapa_reverso": mascarador.mapa(),
         }
 
     @staticmethod
