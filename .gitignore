@@ -6,7 +6,13 @@ release/
 *.log
 
 # Python
-.venv/
+#
+# Sem a barra: no macOS `.venv` é o SYMLINK que scripts/setup-macos.sh cria
+# (aponta pro venv de verdade no volume externo). `.venv/` com barra só casa
+# diretório de verdade — symlink não conta como diretório pro git — e por
+# isso ignorava o venv do Windows mas deixava o link do Mac como `??` no
+# status, um passo de distância de entrar num `git add -A` de rotina.
+.venv
 venv/
 __pycache__/
 *.pyc
