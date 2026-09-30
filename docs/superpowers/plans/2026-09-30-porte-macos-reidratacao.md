@@ -3111,6 +3111,27 @@ Conteúdo obrigatório, nesta ordem:
     a variável para um punhado de digitalizações fecha isso. Não é porte, é dado
     de teste; e teste pulado passa por teste aprovado em log corrido.
 
+- [ ] **Step 1c: Registrar no `CLAUDE.md` duas armadilhas de medição**
+
+As duas custaram diagnóstico errado durante a execução, e as duas são do tipo
+que o `CLAUDE.md` deste repositório coleciona — sintoma que aponta para o lugar
+errado. Duas ou três linhas cada, sem a explicação longa:
+
+**`monkeypatch.undo()` desativa o isolamento do teste em silêncio.** Ele reverte
+tudo o que aquele objeto `monkeypatch` fez, **inclusive o `setenv` de uma
+fixture que compartilha o objeto**. Num teste do mapa reverso isso fez a leitura
+seguinte ir ao diretório real do usuário; achou vazio, e o `assert {} == {...}`
+se leu como "a troca atômica perdeu o mapa anterior" — um defeito de dado onde
+havia um defeito de isolamento. Use uma bandeira que liga e desliga a falha, em
+vez de `undo()`.
+
+**Não meça o `umask` com ferramenta que também é mascarada por ele.**
+`tempfile.mkdtemp()` faz `mkdir(0o700)`, e `mkdir` passa pelo `umask` — sob
+`umask 0o200` o diretório nasce `0o500`, sem escrita, e o `PermissionError` que
+aparece vem dali, não do `os.open` que se queria medir. O erro sobreviveu a duas
+rodadas e a uma mensagem de commit afirmando a medição. Crie o diretório antes,
+fora do `umask` sob teste.
+
 - [ ] **Step 1b: Registrar no `CLAUDE.md` a decisão da chave**
 
 Levantado pelo implementador da Task 9, e ele está certo: a decisão "chave no
