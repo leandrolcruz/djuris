@@ -1451,6 +1451,25 @@ def test_gravar_de_novo_funde_em_vez_de_substituir(cofre):
     }
 
 
+def test_gravar_nao_sobrescreve_mapa_que_nao_decifra(cofre):
+    """
+    Gravar em cima apagaria o de-para de tudo que já foi anonimizado nestes
+    autos, e a causa da ilegibilidade pode ser benigna e reversível (a chave
+    errada na variável de ambiente, o arquivo vindo de outra máquina).
+    """
+    from cryptography.fernet import Fernet
+
+    mapa_reverso.gravar("5626981", {"[PESSOA_1]": "Ana Souza"})
+    antes = (cofre / "mapas" / "5626981.mapa").read_bytes()
+    Path(os.environ["PRESIDIO_MAPA_CHAVE"]).write_bytes(Fernet.generate_key())
+
+    with pytest.raises(mapa_reverso.MapaIlegivel):
+        mapa_reverso.gravar("5626981", {"[PESSOA_2]": "Bruno Lima"})
+    assert (cofre / "mapas" / "5626981.mapa").read_bytes() == antes, (
+        "recusou, então o arquivo anterior tem de estar byte a byte intacto"
+    )
+
+
 def test_ler_autos_inexistente_devolve_vazio(cofre):
     assert mapa_reverso.ler("nao-existe") == {}
 
@@ -1634,6 +1653,16 @@ def gravar(autos: str, mapa: dict[str, str]) -> Path:
     `[PESSOA_1]` já vale "Ana Souza" no disco e chega valendo "Bruno Lima", não
     há fusão possível que preserve as duas — e escolher uma em silêncio produz
     reidratação errada na outra. Levanta `EtiquetaConflitante`.
+
+    **Propaga `MapaIlegivel`** — vindo do `ler()` desta mesma função —, e isso é
+    de propósito: um mapa que existe e não decifra não pode ser sobrescrito por
+    um novo. Gravar em cima apagaria o de-para de tudo que já foi anonimizado
+    nestes autos, e o que motiva a ilegibilidade pode ser benigno e reversível
+    (a chave errada em `PRESIDIO_MAPA_CHAVE`, o volume de outra máquina). Quem
+    decide apagar é a pessoa, com o arquivo na mão.
+
+    E `CifragemIndisponivel`, de `_chave()`, pela mesma razão do módulo inteiro:
+    sem poder cifrar, não grava.
     """
     from cryptography.fernet import Fernet
 
