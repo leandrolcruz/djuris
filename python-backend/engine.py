@@ -111,6 +111,19 @@ _PRIORIDADE = {nome: i + 1 for i, nome in enumerate(PRIORIDADE_ENTIDADE)}
 # A deny list pode ser aplicada por contenção neles sem risco de apagar um nome.
 _TIPOS_INSTITUCIONAIS = {"ORGANIZATION", "LAW", "CASE_LAW", "LOCATION", "DATE_TIME"}
 
+# Tipos que o motor DETECTA mas que não são dado pessoal, e por isso não entram
+# no mascaramento padrão.
+#
+# Referência legal não esconde ninguém: mascarar `art. 48 da Lei nº 9.099/1995`
+# não protege parte alguma e cega o leitor do outro lado, que deixa de saber que
+# norma foi invocada. Numa peça real de embargos, `art.` virou `[LAW_1]` oito
+# vezes — o documento anonimizado ficou juridicamente ilegível, que é o oposto
+# do que esta ferramenta existe para entregar.
+#
+# Continuam DETECTADOS e saem em `entities_found`: quem quiser mascará-los passa
+# o tipo em `entities` explicitamente.
+NAO_E_DADO_PESSOAL = {"LAW", "CASE_LAW"}
+
 # Partículas que não contam como palavra significativa de um nome.
 _PREPOSICOES = {"de", "da", "do", "das", "dos", "e", "di", "del", "von", "san"}
 
@@ -645,6 +658,26 @@ class PresidioEngine:
 
             if entities:
                 resultados = [r for r in resultados if r.entity_type in entities]
+            else:
+                # Sem pedido explícito, o que não é dado pessoal não é mascarado.
+                resultados = [
+                    r for r in resultados if r.entity_type not in NAO_E_DADO_PESSOAL
+                ]
+
+            # Telefone brasileiro NÃO tem barra. `9.099/1995` virava
+            # `9.[TELEFONE_1]` porque o recognizer genérico casa `099/1995` com
+            # score 0.40 — e o que ele pegou é o número de uma lei. A regra é
+            # estrutural, não uma lista de exceções: nenhum formato de telefone
+            # do país usa `/`, então um candidato que a contém está pegando
+            # outra coisa (norma, data, fração).
+            resultados = [
+                r
+                for r in resultados
+                if not (
+                    r.entity_type.startswith("PHONE_NUMBER")
+                    and "/" in trecho[r.start : r.end]
+                )
+            ]
 
             for r in resultados:
                 r.start += inicio

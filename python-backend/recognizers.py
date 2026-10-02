@@ -340,14 +340,36 @@ def criar_recognizers_brasil() -> list[PatternRecognizer]:
     endereco = PatternRecognizer(
         supported_entity="ENDERECO_BR",
         patterns=[
+            # Logradouro por EXTENSO: a palavra inteira não é ambígua, então
+            # a insensibilidade a caixa que o Presidio aplica por padrão não
+            # faz mal — e ajuda, porque o OCR entrega tanto "RUA" quanto "rua".
             Pattern(
                 "logradouro",
-                r"\b(?:Rua|RUA|R\.|Avenida|AVENIDA|Av\.|AV\.|Travessa|TRAVESSA|"
-                r"Trav\.|Alameda|Al\.|Estrada|ESTRADA|Rodovia|Rod\.|Sítio|SÍTIO|"
-                r"Sitio|SITIO|Distrito|DISTRITO|Localidade|LOCALIDADE|Conjunto|"
-                r"Conj\.|Praça|PRAÇA|Praca|Vila|VILA|Loteamento|Assentamento|"
-                r"Povoado|Fazenda|Quadra)\s+"
+                r"\b(?:Rua|Avenida|Travessa|Alameda|Estrada|Rodovia|Sítio|Sitio|"
+                r"Distrito|Localidade|Conjunto|Praça|Praca|Vila|Loteamento|"
+                r"Assentamento|Povoado|Fazenda|Quadra)\s+"
                 r"[A-ZÁÀÂÃÉÊÍÓÔÕÚÇ0-9][^\n;]{2,80}?"
+                r"(?=\s*(?:;|CEP|[Ff]one|[Tt]el|[Ee]-?mail|$|\.\s+[A-ZÁÉÍÓÚ]))",
+                0.5,
+            ),
+            # Logradouro ABREVIADO, com a caixa travada por `(?-i:…)`.
+            #
+            # `R.` é a abreviação mais útil e a mais perigosa: em peça judicial
+            # brasileira, "r." é "respeitável" — "a r. decisão", "o r. despacho"
+            # — e aparece muito mais vezes que "Rua" abreviada. O Presidio liga
+            # `re.IGNORECASE` por padrão, e com ela o `R\.` casava o "r."
+            # minúsculo E o `[A-ZÁÀ…]` seguinte passava a aceitar a minúscula de
+            # "decisão". O match então corria até o fim da linha: 58 caracteres
+            # de texto jurídico mascarados como endereço, numa peça em que
+            # endereço nenhum havia.
+            #
+            # `(?-i:…)` desliga a flag só aqui dentro, então a abreviação exige
+            # maiúscula e o que vem depois exige nome próprio — "R. Vinte e
+            # Cinco de Março" passa, "r. decisão" não.
+            Pattern(
+                "logradouro_abreviado",
+                r"\b(?-i:(?:R|Av|Trav|Al|Rod|Conj)\.)\s+"
+                r"(?-i:[A-ZÁÀÂÃÉÊÍÓÔÕÚÇ0-9])[^\n;]{2,80}?"
                 r"(?=\s*(?:;|CEP|[Ff]one|[Tt]el|[Ee]-?mail|$|\.\s+[A-ZÁÉÍÓÚ]))",
                 0.5,
             ),
