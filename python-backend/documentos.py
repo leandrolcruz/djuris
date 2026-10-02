@@ -183,6 +183,104 @@ def ocr_offline() -> bool:
 _FORMATOS_COM_TEXTO = {".docx", ".xlsx", ".pptx"}
 
 
+# --- `.docx` sem LibreOffice ------------------------------------------------
+#
+# O `liteparse` converte documento de escritório chamando LibreOffice headless
+# (ele procura `/Applications/LibreOffice.app/…` no macOS). Onde não houver,
+# a leitura morre com "LibreOffice is not installed" — e peça judicial em Word
+# é o caso mais comum do escritório.
+#
+# Este extrator não acrescenta dependência nenhuma: `.docx` é um zip com
+# `word/document.xml`, e o esquema do WordprocessingML é estável desde 2007.
+# Ele cobre o que importa para anonimizar — parágrafos e tabelas, na ordem do
+# documento — e NÃO cobre campos, notas de rodapé nem caixas de texto. Por isso
+# só entra em ação quando o LibreOffice falta: onde ele existe, o caminho
+# antigo converte mais coisa e continua sendo o certo.
+
+_W = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
+
+_CAMINHOS_LIBREOFFICE = (
+    "/Applications/LibreOffice.app/Contents/MacOS/soffice",
+    "/usr/bin/soffice",
+    "/usr/bin/libreoffice",
+)
+
+
+def _libreoffice_disponivel() -> bool:
+    """Se o conversor de escritório do `liteparse` tem com o que trabalhar."""
+    import shutil
+
+    if any(Path(c).exists() for c in _CAMINHOS_LIBREOFFICE):
+        return True
+    return shutil.which("soffice") is not None or shutil.which("libreoffice") is not None
+
+
+def docx_legivel_sem_libreoffice() -> bool:
+    """Se vale usar o extrator próprio em vez do `liteparse` para `.docx`."""
+    return not _libreoffice_disponivel()
+
+
+def _texto_de_paragrafo(paragrafo) -> str:
+    """
+    O texto de um `<w:p>`, com os pedaços juntos.
+
+    O Word quebra o parágrafo em vários `<w:r>` a cada troca de formatação —
+    negritar o nome da parte basta para partir "O autor JOÃO DA SILVA" em três.
+    Lendo `<w:t>` solto, cada pedaço viraria uma linha, e o detector perderia o
+    nome por falta do contexto à volta, que é justamente o que o NER usa.
+    """
+    return "".join(no.text or "" for no in paragrafo.iter(f"{_W}t"))
+
+
+def _texto_de_docx(caminho: str) -> str:
+    """
+    O texto de um `.docx`, em markdown simples, sem LibreOffice.
+
+    Levanta `ValueError` quando o arquivo não é um `.docx` legível — e não um
+    `BadZipFile` ou `KeyError` crus, que mandariam quem lê o erro investigar
+    compressão em vez de formato.
+    """
+    import xml.etree.ElementTree as ET
+    import zipfile
+
+    try:
+        with zipfile.ZipFile(caminho) as z:
+            bruto = z.read("word/document.xml")
+    except (zipfile.BadZipFile, KeyError) as erro:
+        raise ValueError(
+            f"{Path(caminho).name} não é um .docx legível "
+            f"(esperava um zip com word/document.xml): {erro}"
+        ) from erro
+
+    corpo = ET.fromstring(bruto)
+    linhas: list[str] = []
+
+    # `iter()` em vez de varrer `body` nível a nível: o conteúdo real pode estar
+    # dentro de `<w:sdt>` (controles de conteúdo), e um laço raso o perderia.
+    # A contrapartida é não visitar parágrafo que já saiu dentro de tabela —
+    # daí o conjunto `dentro_de_tabela`.
+    dentro_de_tabela = {
+        id(p) for tabela in corpo.iter(f"{_W}tbl") for p in tabela.iter(f"{_W}p")
+    }
+
+    for no in corpo.iter():
+        if no.tag == f"{_W}tbl":
+            for linha in no.iter(f"{_W}tr"):
+                celulas = [
+                    " ".join(_texto_de_paragrafo(p) for p in c.iter(f"{_W}p")).strip()
+                    for c in linha.iter(f"{_W}tc")
+                ]
+                if any(celulas):
+                    linhas.append("| " + " | ".join(celulas) + " |")
+            linhas.append("")
+        elif no.tag == f"{_W}p" and id(no) not in dentro_de_tabela:
+            texto = _texto_de_paragrafo(no).strip()
+            if texto:
+                linhas.append(texto)
+
+    return "\n\n".join(l for l in linhas if l is not None).strip()
+
+
 # Uma página de texto de verdade tem centenas de caracteres. Abaixo disso o que
 # há é carimbo: a tarja "Assinado eletronicamente por…" que o PJe estampa por
 # cima de anexo digitalizado é texto nativo, e passaria por camada de texto num
@@ -231,6 +329,13 @@ def _extrair_paginas(
     header para ele contar quantas páginas realmente reconheceu. Ver
     `_paginas_reconhecidas`.
     """
+    # `.docx` sem LibreOffice: o `liteparse` morreria em "LibreOffice is not
+    # installed", e aqui o arquivo inteiro é uma página só — não há paginação
+    # no formato, a quebra é decidida na hora de imprimir.
+    if Path(caminho).suffix.lower() == ".docx" and docx_legivel_sem_libreoffice():
+        texto = _texto_de_docx(caminho)
+        return [PaginaExtraida(numero=1, texto=_limpar(texto))], 1, ()
+
     import liteparse
 
     parser = liteparse.LiteParse(
