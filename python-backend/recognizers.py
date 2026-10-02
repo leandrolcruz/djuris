@@ -227,6 +227,39 @@ def _normalizar_token(token: str) -> str:
     return sem_acento.strip(".,;:()[]").lower()
 
 
+def _dv_rastreamento_valido(codigo: str) -> bool:
+    """
+    Confere o dígito verificador de um objeto dos Correios.
+
+    Formato: duas letras de serviço, nove dígitos (dos quais o último é o DV) e
+    duas letras de país. O DV é módulo 11 sobre os oito primeiros dígitos, com
+    pesos 8-6-4-2-3-5-9-7; resto 0 vira 5 e resto 1 vira 0, que são as duas
+    exceções da regra e o motivo de isto não ser um módulo 11 genérico.
+
+    Existe pelo mesmo motivo que o DV do CPF existe neste produto: candidato que
+    não fecha é DESCARTADO em vez de mascarado. Sem isso, qualquer sequência com
+    a forma de rastreamento viraria tarja, e o documento sairia salpicado de
+    máscara onde não há dado.
+    """
+    limpo = codigo.replace(" ", "").replace("-", "").upper()
+    if len(limpo) != 13 or not limpo[:2].isalpha() or not limpo[11:].isalpha():
+        return False
+    digitos = limpo[2:11]
+    if not digitos.isdigit():
+        return False
+
+    pesos = (8, 6, 4, 2, 3, 5, 9, 7)
+    soma = sum(int(d) * peso for d, peso in zip(digitos[:8], pesos))
+    resto = soma % 11
+    if resto == 0:
+        esperado = 5
+    elif resto == 1:
+        esperado = 0
+    else:
+        esperado = 11 - resto
+    return int(digitos[8]) == esperado
+
+
 def criar_recognizers_brasil() -> list[PatternRecognizer]:
     """Retorna lista de recognizers para entidades brasileiras."""
 
@@ -555,8 +588,61 @@ def criar_recognizers_brasil() -> list[PatternRecognizer]:
         context=ctx["PERSON"],
     )
 
+    # --- Placa de veículo ---
+    #
+    # Identificador INDIRETO: não é nome nem documento, e é por isso que passa
+    # despercebido. Num processo que gira em torno de um carro — e o acervo
+    # tem muitos —, a placa identifica a parte com a mesma eficácia que o nome.
+    #
+    # Dois formatos convivem desde 2018: o antigo `ABC1234` e o Mercosul
+    # `ABC1D23`. Nenhum tem dígito verificador, então o score sozinho é baixo
+    # de propósito: `CNJ1234` numa referência qualquer tem a mesma forma. O
+    # mecanismo de contexto do Presidio eleva o score quando "placa" ou
+    # "veículo" aparecem por perto, que é o caso real.
+    #
+    # `(?<![A-Z0-9])`/`(?![A-Z0-9])` em vez de `\b`: sem isso o padrão casaria
+    # o miolo de um código maior, como as sete primeiras posições de um
+    # rastreamento.
+    placa = PatternRecognizer(
+        supported_entity="PLACA_VEICULO",
+        patterns=[
+            Pattern(
+                "placa_mercosul",
+                r"(?<![A-Za-z0-9])(?-i:[A-Z]{3})\s?\d(?-i:[A-Z])\d{2}(?![A-Za-z0-9])",
+                0.5,
+            ),
+            Pattern(
+                "placa_antiga",
+                r"(?<![A-Za-z0-9])(?-i:[A-Z]{3})\s?-?\s?\d{4}(?![A-Za-z0-9])",
+                0.45,
+            ),
+        ],
+        supported_language="pt",
+        context=ctx["PLACA_VEICULO"],
+    )
+
+    # --- Rastreamento dos Correios ---
+    #
+    # Liga a pessoa a um endereço de entrega, e aparece em peça toda vez que se
+    # discute intimação pelo correio — foi assim que escapou de uma peça real.
+    # Aqui HÁ dígito verificador, então vale a régua do CPF: inválido é
+    # descartado, não mascarado.
+    rastreamento = ValidatingPatternRecognizer(
+        supported_entity="RASTREAMENTO_CORREIOS",
+        patterns=[
+            Pattern(
+                "rastreamento_br",
+                r"(?<![A-Za-z0-9])(?-i:[A-Z]{2})\d{9}(?-i:[A-Z]{2})(?![A-Za-z0-9])",
+                0.6,
+            ),
+        ],
+        context=ctx["RASTREAMENTO_CORREIOS"],
+        validator=_dv_rastreamento_valido,
+        dv_required_patterns={"rastreamento_br"},
+    )
+
     return [
         cpf, cnpj, rg, cep, endereco, telefone, oab,
         data_nascimento, nit, processo_cnj, conta_bancaria,
-        nome_rotulado, email_ocr,
+        nome_rotulado, email_ocr, placa, rastreamento,
     ]

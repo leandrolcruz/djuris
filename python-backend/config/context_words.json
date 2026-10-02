@@ -176,5 +176,26 @@
     "com endereço na",
     "rua",
     "avenida"
+  ],
+  "PLACA_VEICULO": [
+    "placa",
+    "veículo",
+    "veiculo",
+    "automóvel",
+    "automovel",
+    "carro",
+    "moto",
+    "motocicleta",
+    "emplacado",
+    "licenciamento"
+  ],
+  "RASTREAMENTO_CORREIOS": [
+    "rastreamento",
+    "rastreio",
+    "correios",
+    "objeto",
+    "postagem",
+    "AR",
+    "aviso de recebimento"
   ]
 }

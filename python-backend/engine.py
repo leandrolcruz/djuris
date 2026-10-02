@@ -124,6 +124,10 @@ _TIPOS_INSTITUCIONAIS = {"ORGANIZATION", "LAW", "CASE_LAW", "LOCATION", "DATE_TI
 # o tipo em `entities` explicitamente.
 NAO_E_DADO_PESSOAL = {"LAW", "CASE_LAW"}
 
+# Recognizers que o Presidio registra para "pt" mas que descrevem documento de
+# outro país. Ver o bloco que os remove em `initialize`.
+_RECOGNIZERS_DE_OUTRO_PAIS = ("MEDICAL_LICENSE",)
+
 # Partículas que não contam como palavra significativa de um nome.
 _PREPOSICOES = {"de", "da", "do", "das", "dos", "e", "di", "del", "von", "san"}
 
@@ -533,6 +537,20 @@ class PresidioEngine:
         registry.load_predefined_recognizers(
             nlp_engine=nlp_engine, languages=["pt"]
         )
+
+        # O Presidio carrega como "pt" alguns recognizers que são de outro
+        # país, e eles só produzem ruído em documento brasileiro.
+        #
+        # `MEDICAL_LICENSE` é o número DEA dos Estados Unidos: duas letras e
+        # sete dígitos. Em peça judicial brasileira isso casa qualquer coisa —
+        # foi flagrado mascarando um código de rastreamento dos Correios como
+        # licença médica, que é tarja errada sobre dado que já tem recognizer
+        # próprio. Não há licença médica brasileira com essa forma: o CRM é
+        # numérico com UF.
+        for entidade in _RECOGNIZERS_DE_OUTRO_PAIS:
+            for r in list(registry.get_recognizers(language="pt", entities=[entidade])):
+                registry.remove_recognizer(r.name)
+
         for recognizer in criar_recognizers_brasil():
             registry.add_recognizer(recognizer)
 
