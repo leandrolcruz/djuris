@@ -468,8 +468,12 @@ def criar_recognizers_brasil() -> list[PatternRecognizer]:
         patterns=[
             Pattern(
                 "data_nasc_ancorada",
-                r"(?:nascid[oa]\s+em|nascimento|nasc\.?|dt\.?\s*nasc\.?|"
-                r"data\s+de\s+nascimento)[\s.:nºo°-]{0,8}"
+                # `nascid[oa]` aceita as preposições que a qualificação usa de
+                # verdade: "nascido EM", "nascida AOS", "nascido NO DIA", "nascido
+                # A". Só `em` deixava "nascida aos 12/03/1985" passar em claro —
+                # e a forma com "aos" é corriqueira em petição.
+                r"(?:nascid[oa]\s+(?:em|aos?|no\s+dia)|nascimento|nasc\.?|"
+                r"dt\.?\s*nasc\.?|data\s+de\s+nascimento)[\s.:nºo°-]{0,8}"
                 r"(?P<valor>\d{2}/\d{2}/\d{4})",
                 0.85,
             ),

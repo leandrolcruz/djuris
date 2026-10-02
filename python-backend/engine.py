@@ -120,9 +120,21 @@ _TIPOS_INSTITUCIONAIS = {"ORGANIZATION", "LAW", "CASE_LAW", "LOCATION", "DATE_TI
 # vezes — o documento anonimizado ficou juridicamente ilegível, que é o oposto
 # do que esta ferramenta existe para entregar.
 #
+# `DATE_TIME` entrou pelo mesmo motivo: a cronologia é o esqueleto do processo,
+# a data de distribuição é pública, e mascarar "ajuizada em 08/05/2026" tira do
+# modelo justamente a capacidade de contar prazo. Data de NASCIMENTO não vem por
+# aqui — tem recognizer próprio (`DATE_OF_BIRTH`), com as palavras de
+# qualificação como contexto, e segue mascarada.
+#
+# O limite que isso aceita está travado em
+# `test_LIMITE_CONHECIDO_data_de_nascimento_sem_rotulo_escapa`: na qualificação
+# sem a palavra "nascido", a data sai em claro. Vale porque o nome ao lado já
+# está mascarado, e data sozinha — sem nome, CPF, RG ou endereço — reidentifica
+# pouco.
+#
 # Continuam DETECTADOS e saem em `entities_found`: quem quiser mascará-los passa
 # o tipo em `entities` explicitamente.
-NAO_E_DADO_PESSOAL = {"LAW", "CASE_LAW"}
+NAO_E_DADO_PESSOAL = {"LAW", "CASE_LAW", "DATE_TIME"}
 
 # Recognizers que o Presidio registra para "pt" mas que descrevem documento de
 # outro país. Ver o bloco que os remove em `initialize`.

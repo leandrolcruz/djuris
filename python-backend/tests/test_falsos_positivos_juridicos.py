@@ -142,3 +142,67 @@ def test_o_endereco_nao_engole_a_frase_inteira(engine):
     saida = anonimizar(engine, texto)
     assert "contra a r. decisão" in saida
     assert "[ENDEREÇO_1]" in saida
+
+
+# --- 4. Data processual não é dado pessoal ---------------------------------
+
+
+def test_datas_processuais_sobrevivem(engine):
+    """
+    A cronologia é o esqueleto do processo. Mascarar "ajuizada em 08/05/2026"
+    não protege ninguém — a data de distribuição é pública — e tira do modelo
+    do outro lado a capacidade de contar prazo, que costuma ser exatamente o
+    que se quer perguntar a ele.
+    """
+    texto = "A ação foi ajuizada em 08/05/2026 e a intimação expedida em 10/07/2026."
+    saida = anonimizar(engine, texto)
+    assert "08/05/2026" in saida
+    assert "10/07/2026" in saida
+
+
+@pytest.mark.parametrize(
+    "texto",
+    [
+        "nascido em 12/03/1985, portador do RG 1234567",
+        "data de nascimento: 12/03/1985",
+        "nascida aos 12/03/1985",
+    ],
+)
+def test_data_de_nascimento_ROTULADA_continua_mascarada(engine, texto):
+    """
+    O contrapeso. `DATE_OF_BIRTH` tem recognizer próprio, com as palavras de
+    qualificação como contexto, e ele não depende do `DATE_TIME` genérico.
+    """
+    assert "12/03/1985" not in anonimizar(engine, texto)
+
+
+def test_LIMITE_CONHECIDO_data_de_nascimento_sem_rotulo_escapa(engine):
+    """
+    O limite que esta decisão aceita, escrito para quem vier depois não
+    descobri-lo num documento enviado.
+
+    Na qualificação típica de petição — "FULANO, brasileiro, solteiro,
+    12/03/1985, CPF…" — a data vem SEM a palavra "nascido". Sem ela o
+    recognizer de nascimento não dispara, e com `DATE_TIME` fora do padrão a
+    data sai em claro.
+
+    Por que a decisão ainda assim é essa: o nome ao lado JÁ está mascarado, e
+    uma data sozinha, sem nome, sem CPF, sem RG e sem endereço — todos
+    mascarados — tem pouco poder de reidentificar. Quem precisar do rigor
+    antigo pede `-e` com DATE_TIME junto.
+
+    Se um dia o recognizer de nascimento passar a cobrir este caso, este teste
+    falha — e é para falhar: aí o limite deixou de existir e o texto acima
+    precisa sair daqui.
+    """
+    texto = "JOÃO DA SILVA, brasileiro, solteiro, 12/03/1985, residente nesta comarca"
+    saida = anonimizar(engine, texto)
+    assert "[PESSOA_1]" in saida, "o nome continua mascarado, que é o que importa"
+    assert "12/03/1985" in saida, (
+        "limite conhecido: data de nascimento sem rótulo sai em claro"
+    )
+
+
+def test_quem_quiser_as_datas_mascaradas_pede(engine):
+    texto = "A ação foi ajuizada em 08/05/2026."
+    assert "[DATA" in anonimizar(engine, texto, entities=["DATE_TIME"])
