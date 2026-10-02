@@ -7,9 +7,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Rodar o `tecjustica-sigilo` no macOS Apple Silicon pela CLI e pelo MCP, e acrescentar reidratação — desfazer localmente a máscara na resposta que voltou de um modelo na nuvem.
+**Goal:** Rodar o `djuris` no macOS Apple Silicon pela CLI e pelo MCP, e acrescentar reidratação — desfazer localmente a máscara na resposta que voltou de um modelo na nuvem.
 
-**Architecture:** O backend Python não muda para rodar no Mac (as 103 dependências resolvem em arm64 nos pins exatos). O venv e os modelos moram no SSD externo, e `~/tecjustica-sigilo/.venv` é um **symlink** para lá — assim todo script que já procura `.venv/bin/python` funciona sem diff. A reidratação nasce no `Mascarador`, que já mantém o mapa reverso e o descarta; expõe-se esse mapa, permite-se compartilhá-lo entre peças dos mesmos autos, e grava-se cifrado com a chave no disco interno.
+**Architecture:** O backend Python não muda para rodar no Mac (as 103 dependências resolvem em arm64 nos pins exatos). O venv e os modelos moram no SSD externo, e `~/djuris/.venv` é um **symlink** para lá — assim todo script que já procura `.venv/bin/python` funciona sem diff. A reidratação nasce no `Mascarador`, que já mantém o mapa reverso e o descarta; expõe-se esse mapa, permite-se compartilhá-lo entre peças dos mesmos autos, e grava-se cifrado com a chave no disco interno.
 
 **Tech Stack:** Python 3.12, `uv`, Presidio 2.2.364, spaCy 3.8.15, `cryptography` (Fernet), pytest 9.1.1, bash.
 
@@ -21,19 +21,19 @@ Dois nomes, usados no plano inteiro. Defina-os antes de copiar qualquer comando
 daqui:
 
 ```bash
-export REPO=~/tecjustica-sigilo
-export PESO="${TECJUSTICA_PESO:-/Volumes/<seu volume externo>/tecjustica-sigilo}"
+export REPO=~/djuris
+export PESO="${DJURIS_PESO:-/Volumes/<seu volume externo>/djuris}"
 ```
 
 | Nome | O que é |
 |---|---|
 | `$REPO` | a raiz deste repositório |
-| `$PESO` | o volume onde o peso mora — veja `TECJUSTICA_PESO` em `docs/macos.md` |
+| `$PESO` | o volume onde o peso mora — veja `DJURIS_PESO` em `docs/macos.md` |
 | venv | `$PESO/venv` (e `$REPO/.venv` → symlink para ele) |
 | modelos HF | `$PESO/hf-cache` |
 | mapas cifrados | `$PESO/mapas` |
-| chave | `~/.config/tecjustica-sigilo/mapa.key` (disco **interno**, `0600`) |
-| shim da CLI | `~/.local/bin/tecjustica-sigilo` |
+| chave | `~/.config/djuris/mapa.key` (disco **interno**, `0600`) |
+| shim da CLI | `~/.local/bin/djuris` |
 
 Branch: `macos`. Um commit por tarefa.
 
@@ -51,7 +51,7 @@ segue isso — um comentário em inglês aqui é um corpo estranho.
 |---|---|
 | `scripts/setup-macos.sh` | **criar** — monta o venv no SSD, symlink `.venv`, baixa `pt_core_news_lg` e os modelos de OCR, instala o shim |
 | `scripts/smoke-backend.sh` | **modificar** — hoje só conhece `python-embed/python.exe`; passa a aceitar o venv quando o embarcado não existe |
-| `python-backend/tecjustica-sigilo.sh` | **criar** — par POSIX do `.cmd`, com `HF_HOME` apontado |
+| `python-backend/djuris.sh` | **criar** — par POSIX do `.cmd`, com `HF_HOME` apontado |
 
 **Fase 1b — reidratação**
 
@@ -100,13 +100,13 @@ caminho remoto ganha `autos` na Fase 2, junto da GUI.
 set -euo pipefail
 
 RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PESO="${TECJUSTICA_PESO:-$PESO}"
+PESO="${DJURIS_PESO:-$PESO}"
 VENV="$PESO/venv"
 VOLUME="$(dirname "$PESO")"
 
 if [[ ! -d "$VOLUME" ]]; then
   echo "O volume '$VOLUME' não está montado." >&2
-  echo "Monte-o e rode de novo, ou aponte TECJUSTICA_PESO para outro lugar." >&2
+  echo "Monte-o e rode de novo, ou aponte DJURIS_PESO para outro lugar." >&2
   exit 1
 fi
 
@@ -292,23 +292,23 @@ achar. Sem nenhum dos dois, falha com 1."
 ## Task 3: Shim POSIX da CLI
 
 **Files:**
-- Create: `$REPO/python-backend/tecjustica-sigilo.sh`
+- Create: `$REPO/python-backend/djuris.sh`
 
 - [ ] **Step 1: Escrever o shim**
 
 ```bash
 #!/usr/bin/env bash
 #
-# Par POSIX do `tecjustica-sigilo.cmd`: chama o `cli.py` com o interpretador do
+# Par POSIX do `djuris.cmd`: chama o `cli.py` com o interpretador do
 # projeto. O `"$@"` repassa a linha inteira, então os subcomandos funcionam sem
 # que este arquivo os conheça:
 #
-#   tecjustica-sigilo autos.pdf              (PDF, DOCX, imagem — com OCR)
-#   tecjustica-sigilo arquivo.txt -o saida.md
-#   cat arquivo.txt | tecjustica-sigilo
-#   tecjustica-sigilo ler autos.pdf          (extrai sem anonimizar)
-#   tecjustica-sigilo reidratar resposta.txt --autos 5626981
-#   tecjustica-sigilo mcp                    (servidor MCP em stdio)
+#   djuris autos.pdf              (PDF, DOCX, imagem — com OCR)
+#   djuris arquivo.txt -o saida.md
+#   cat arquivo.txt | djuris
+#   djuris ler autos.pdf          (extrai sem anonimizar)
+#   djuris reidratar resposta.txt --autos 5626981
+#   djuris mcp                    (servidor MCP em stdio)
 #
 # Este arquivo é instalado por symlink em ~/.local/bin, então ele resolve o
 # próprio caminho real antes de subir dois níveis: sem isso, `dirname $0` daria
@@ -323,7 +323,7 @@ done
 BACKEND="$(cd "$(dirname "$ORIGEM")" && pwd)"
 RAIZ="$(cd "$BACKEND/.." && pwd)"
 
-PESO="${TECJUSTICA_PESO:-$PESO}"
+PESO="${DJURIS_PESO:-$PESO}"
 PYTHON="$RAIZ/.venv/bin/python"
 
 # A mensagem importa: o modo de falha mais provável desta instalação é o volume
@@ -348,10 +348,10 @@ exec "$PYTHON" "$BACKEND/cli.py" "$@"
 - [ ] **Step 2: Instalar por symlink e testar**
 
 ```bash
-chmod +x $REPO/python-backend/tecjustica-sigilo.sh
-ln -sfn $REPO/python-backend/tecjustica-sigilo.sh \
-        ~/.local/bin/tecjustica-sigilo
-tecjustica-sigilo --help
+chmod +x $REPO/python-backend/djuris.sh
+ln -sfn $REPO/python-backend/djuris.sh \
+        ~/.local/bin/djuris
+djuris --help
 ```
 
 Expected: o texto de ajuda com os subcomandos `anonimizar, ler, ocr, status, conectar, mcp`.
@@ -360,7 +360,7 @@ Expected: o texto de ajuda com os subcomandos `anonimizar, ler, ocr, status, con
 
 ```bash
 printf 'O autor JOÃO DA SILVA, CPF 529.982.247-25, ajuizou a ação.\n' \
-  | PRESIDIO_NLP_MODE=spacy tecjustica-sigilo
+  | PRESIDIO_NLP_MODE=spacy djuris
 ```
 
 Expected: saída com `[PESSOA_1]` e `[CPF_1]` no lugar do nome e do CPF.
@@ -370,8 +370,8 @@ pelo próprio motor e o teste passaria por engano.)
 - [ ] **Step 4: Testar a guarda do volume**
 
 ```bash
-TECJUSTICA_PESO=/Volumes/Inexistente/x \
-  bash -c 'unset HF_HOME; $REPO/python-backend/tecjustica-sigilo.sh --help' \
+DJURIS_PESO=/Volumes/Inexistente/x \
+  bash -c 'unset HF_HOME; $REPO/python-backend/djuris.sh --help' \
   ; echo "saída: $?"
 ```
 
@@ -380,7 +380,7 @@ dispara quando o `.venv` some junto. Para exercer a mensagem de volume:
 
 ```bash
 cd $REPO && mv .venv .venv-guardado
-TECJUSTICA_PESO=/Volumes/Inexistente/x ./python-backend/tecjustica-sigilo.sh --help; echo "saída: $?"
+DJURIS_PESO=/Volumes/Inexistente/x ./python-backend/djuris.sh --help; echo "saída: $?"
 mv .venv-guardado .venv
 ```
 
@@ -390,7 +390,7 @@ Expected: `O volume '/Volumes/Inexistente' não está montado` e `saída: 1`.
 
 ```bash
 cd $REPO
-git add python-backend/tecjustica-sigilo.sh
+git add python-backend/djuris.sh
 git commit -m "Dá à CLI um shim POSIX, par do .cmd do Windows
 
 Resolve o próprio caminho antes de subir dois níveis, porque é instalado
@@ -466,13 +466,13 @@ Se nada reprovou, não há commit — e é o melhor resultado possível.
 - [ ] **Step 1: Registrar**
 
 ```bash
-claude mcp add tecjustica-sigilo -- ~/.local/bin/tecjustica-sigilo mcp
+claude mcp add djuris -- ~/.local/bin/djuris mcp
 ```
 
 - [ ] **Step 2: Conferir que subiu com as 4 ferramentas**
 
 ```bash
-claude mcp list 2>&1 | grep -i tecjustica
+claude mcp list 2>&1 | grep -i djuris
 ```
 
 Expected: a linha do servidor, conectado.
@@ -1244,7 +1244,7 @@ import stat
 import subprocess
 from pathlib import Path
 
-CHAVE_PADRAO = Path.home() / ".config" / "tecjustica-sigilo" / "mapa.key"
+CHAVE_PADRAO = Path.home() / ".config" / "djuris" / "mapa.key"
 
 
 class CifragemIndisponivel(RuntimeError):
@@ -1818,8 +1818,8 @@ A Task 10 pôs uma rede (`EtiquetaConflitante`). Esta é a cura.
 processo novo, com `Mascarador` novo, numerando do 1:
 
 ```
-segunda:  tecjustica-sigilo anonimizar inicial.pdf    --autos 5626981  ->  [PESSOA_1] = Ana
-quarta:   tecjustica-sigilo anonimizar procuracao.pdf --autos 5626981  ->  [PESSOA_1] = Bruno
+segunda:  djuris anonimizar inicial.pdf    --autos 5626981  ->  [PESSOA_1] = Ana
+quarta:   djuris anonimizar procuracao.pdf --autos 5626981  ->  [PESSOA_1] = Bruno
 ```
 
 O `--autos` desenhado até aqui compartilha numeração **dentro de** uma invocação
@@ -2837,24 +2837,24 @@ def cmd_reidratar(args) -> int:
 
 3d. **Documentar o subcomando nos DOIS shims** — dívida deixada pela Task 3.
 
-O cabeçalho do `tecjustica-sigilo.sh` chegou a listar `reidratar` como exemplo
+O cabeçalho do `djuris.sh` chegou a listar `reidratar` como exemplo
 antes de o comando existir, e a linha foi retirada: documentação de comando
 inexistente engana quem copia o exemplo. Agora que ele existe, a linha volta —
 e vai também para o par do Windows, porque dois arquivos que documentam
 conjuntos diferentes de comandos começam a contar histórias diferentes. É o
 problema que o `AGENTS.md` deste repositório foi escrito para descrever.
 
-Em `python-backend/tecjustica-sigilo.sh`, na lista de exemplos do cabeçalho:
+Em `python-backend/djuris.sh`, na lista de exemplos do cabeçalho:
 
 ```
-#   tecjustica-sigilo reidratar resposta.txt --autos 5626981
+#   djuris reidratar resposta.txt --autos 5626981
 ```
 
-Em `python-backend/tecjustica-sigilo.cmd`, na lista equivalente, com a forma do
+Em `python-backend/djuris.cmd`, na lista equivalente, com a forma do
 batch:
 
 ```
-REM   tecjustica-sigilo.cmd reidratar resposta.txt --autos 5626981
+REM   djuris.cmd reidratar resposta.txt --autos 5626981
 ```
 
 Confira ao fim que os dois arquivos listam o mesmo conjunto de subcomandos,
@@ -2876,15 +2876,15 @@ Expected: PASS em tudo.
 
 ```bash
 cd /tmp && printf 'O autor JOÃO DA SILVA, CPF 529.982.247-25, pede a rescisão.\n' > peca.txt
-PRESIDIO_NLP_MODE=spacy tecjustica-sigilo anonimizar /tmp/peca.txt --offline --autos teste-ciclo -o /tmp/mascarada.txt
+PRESIDIO_NLP_MODE=spacy djuris anonimizar /tmp/peca.txt --offline --autos teste-ciclo -o /tmp/mascarada.txt
 cat /tmp/mascarada.txt
 # simula a resposta que voltaria de um modelo, falando em rótulos
 printf 'Conforme a peça, [PESSOA_1] (CPF [CPF_1]) pede a rescisão contratual.\n' > /tmp/resposta.txt
-tecjustica-sigilo reidratar /tmp/resposta.txt --autos teste-ciclo
+djuris reidratar /tmp/resposta.txt --autos teste-ciclo
 ```
 
 Expected: a última linha traz `JOÃO DA SILVA` e `529.982.247-25` de volta.
-Limpar depois: `tecjustica-sigilo reidratar --help` não apaga nada, então rode
+Limpar depois: `djuris reidratar --help` não apaga nada, então rode
 `rm -f /tmp/peca.txt /tmp/mascarada.txt /tmp/resposta.txt` e apague o mapa de
 teste com `python -c "import mapa_reverso; mapa_reverso.esquecer('teste-ciclo')"`.
 
@@ -3049,9 +3049,9 @@ Conteúdo obrigatório, nesta ordem:
 1. **Pré-requisitos** — macOS 14+ arm64 (o wheel do `onnxruntime` é
    `macosx_14_0_arm64`), Python 3.12, Node 20+, `uv`, e um volume com ~5 GB.
 2. **Instalação** — `scripts/setup-macos.sh`, o que ele faz, e o symlink `.venv`.
-3. **Por que o peso sai do disco interno** e como mudar (`TECJUSTICA_PESO`).
+3. **Por que o peso sai do disco interno** e como mudar (`DJURIS_PESO`).
 4. **A CLI** — o shim, o symlink em `~/.local/bin`, e o registro do MCP
-   (`claude mcp add tecjustica-sigilo -- ~/.local/bin/tecjustica-sigilo mcp`).
+   (`claude mcp add djuris -- ~/.local/bin/djuris mcp`).
 5. **O ciclo de reidratação**, com o exemplo de três comandos do Task 13 Step 5.
 6. **Onde ficam a chave e os mapas**, e por que em volumes diferentes
    (`noowners`), com a tabela de variáveis: `PRESIDIO_MAPA_CHAVE`,
@@ -3065,7 +3065,7 @@ Conteúdo obrigatório, nesta ordem:
      falha, mas deixa `lib/python3.11/` órfão ao lado do novo. Não acontece hoje
      (o `setup-macos.sh` pina 3.12 e é o único criador do caminho); passa a
      importar no dia em que a versão pinada subir — aí, apague o venv antes.
-   - O teto de 40 saltos do `tecjustica-sigilo.sh` é **inalcançável pelo caminho
+   - O teto de 40 saltos do `djuris.sh` é **inalcançável pelo caminho
      normal de invocação neste sistema**: o macOS tem `SYMLOOP_MAX=32` e o
      kernel recusa abrir o arquivo antes de qualquer linha do script rodar,
      com mensagem própria (`Too many levels of symbolic links`, código 126).
@@ -3172,7 +3172,7 @@ veja [`docs/macos.md`](docs/macos.md). A interface gráfica roda em modo dev;
 
 ```bash
 cd $REPO && \
-  grep -oE '^\s*(tecjustica-sigilo|scripts/|claude mcp)[^`]*' docs/macos.md | head -20
+  grep -oE '^\s*(djuris|scripts/|claude mcp)[^`]*' docs/macos.md | head -20
 ```
 
 Rodar cada um à mão. Comando em documentação que não foi executado é comando
@@ -3243,7 +3243,7 @@ não como passo fingido.
 `mapa_reverso.RE_ROTULO`, `mapa_reverso._chave()`, `mapa_reverso._caminho()`,
 `mapa_reverso._volume_honra_dono()`, `mapa_reverso._analisar_montagens()`,
 `cmd_reidratar`, `--autos`, `PRESIDIO_MAPA_CHAVE`, `PRESIDIO_MAPA_DIR`,
-`PRESIDIO_MAPA_PRAZO_DIAS`, `TECJUSTICA_PESO`.
+`PRESIDIO_MAPA_PRAZO_DIAS`, `DJURIS_PESO`.
 
 **`--autos`, e não `--sessao`:** `cli.py:96` já usa `sessao` para a sessão HTTP
 com o aplicativo (`modo, sessao = _resolver(args)`). Duas coisas diferentes com

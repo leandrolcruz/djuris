@@ -195,7 +195,7 @@ durante um carregamento que chega a 180 s na primeira execução com BERT.
 **Preferências** — hoje **nenhuma** sobrevive ao fechamento: entidades resetam
 para "todas" (`App.tsx:46`), política para `"placeholder"` (`App.tsx:49`),
 formato para `"md"` (`App.tsx:206`). Persistir em `localStorage` (chave
-`tecjustica-sigilo-prefs`) — são preferências, não PII, e podem ficar em claro.
+`djuris-prefs`) — são preferências, não PII, e podem ficar em claro.
 
 O estado do motor no rodapé importa por segurança: quando o BERT não carrega e o
 motor cai para spaCy, menos nomes e locais são encontrados. Hoje isso é um badge
@@ -310,7 +310,7 @@ usuário.
 **Layout em disco** — `app.getPath('userData')`:
 
 ```
-%APPDATA%\TecJustiça Sigilo\
+%APPDATA%\Direito&Juris\
   cofre\
     indice.bin          ← cifrado: id, nome, data, pasta, CNJ, contagens
     <id>.bin            ← cifrado: texto original, ocorrências, texto anonimizado
@@ -503,7 +503,7 @@ cortar o token no meio. Não mexer nessa ordem.
 │ Conexões                            API local   [ ligada  ]  │
 │                                     127.0.0.1:8123           │
 │ ──────────────────────────────────────────────────────────── │
-│ ● Linha de comando          tecjustica-sigilo                │
+│ ● Linha de comando          djuris                │
 │   no PATH do Windows        anonimizar · ocr · documento     │
 │                                                    [ testar ]│
 │ ──────────────────────────────────────────────────────────── │
@@ -536,19 +536,19 @@ processo.
 - [x] Implementar `status` e `conectar`
 - [x] Criar `python-backend/mcp_server.py` com as quatro ferramentas
 - [x] Acrescentar `mcp` ao `requirements.txt` e regerar `requirements-embed.txt` [complexo]
-- [x] Atualizar `python-backend/tecjustica-sigilo.cmd` e o shim WSL para os subcomandos
+- [x] Atualizar `python-backend/djuris.cmd` e o shim WSL para os subcomandos
 
 ### Detalhes Técnicos
 
 ```
-tecjustica-sigilo <arquivo>...                     # forma atual, preservada
-tecjustica-sigilo anonimizar <arquivo>... [-o|--output-dir|--in-place]
+djuris <arquivo>...                     # forma atual, preservada
+djuris anonimizar <arquivo>... [-o|--output-dir|--in-place]
                                           [-e ENTIDADES] [-m POLÍTICA] [-f text|json]
-tecjustica-sigilo ler <arquivo>...                 # extrai + OCR → markdown
-tecjustica-sigilo ocr <imagem>
-tecjustica-sigilo status                           # app no ar? porta, motor, OCR
-tecjustica-sigilo conectar                         # pareia esta CLI
-tecjustica-sigilo mcp                              # servidor MCP em stdio
+djuris ler <arquivo>...                 # extrai + OCR → markdown
+djuris ocr <imagem>
+djuris status                           # app no ar? porta, motor, OCR
+djuris conectar                         # pareia esta CLI
+djuris mcp                              # servidor MCP em stdio
 ```
 
 **A decisão de arquitetura: a CLI é cliente fino, não uma segunda cópia do
@@ -586,9 +586,9 @@ ocr_engine.reconhecer(conteudo: bytes, idioma=None, perfil=None)
 
 **A limitação que a fase corrige:** `cli.py:37` faz
 `Path(path).read_text(encoding="utf-8")`. Nunca importa `documentos.py`. Hoje
-`tecjustica-sigilo autos.pdf` termina em `UnicodeDecodeError`.
+`djuris autos.pdf` termina em `UnicodeDecodeError`.
 
-**MCP** — `tecjustica-sigilo mcp`, stdio. Ferramentas `anonimizar_texto`,
+**MCP** — `djuris mcp`, stdio. Ferramentas `anonimizar_texto`,
 `ler_documento`, `ocr_imagem`, `status`. Mesma resolução de backend da CLI.
 
 ⚠ **Dependência nova de runtime entra nos dois lugares.** Uma dependência que só
@@ -632,8 +632,8 @@ enxergar sem reboot.
 `electron-builder.yml` atual:
 
 ```yaml
-appId: com.tecjustica.sigilo
-productName: TecJustiça Sigilo
+appId: com.direitojuris.app
+productName: Direito&Juris
 extraResources:
   - from: resources/python-backend/
     to: python-backend/
@@ -645,7 +645,7 @@ nsis:
 
 Acrescentar `nsis.include: build/installer.nsh`.
 
-O diretório a entrar no PATH é onde vive o `tecjustica-sigilo.cmd`:
+O diretório a entrar no PATH é onde vive o `djuris.cmd`:
 `<install>\resources\python-backend`. Em dev, `./resources/python-backend`
 (`backendResourcePath()` em `electron/main.ts`).
 
@@ -725,9 +725,9 @@ suíte não é a mesma coisa que abrir o app.
   passa. **Sem navegador não existe CORS**: os 110 testes falam HTTP direto e
   não cobrem isso — foi exatamente assim que a tela travou em "Carregando motor
   de anonimização" com o backend perfeitamente no ar.
-- **CLI** — `tecjustica-sigilo autos.pdf` com o app aberto (rápido) e fechado
+- **CLI** — `djuris autos.pdf` com o app aberto (rápido) e fechado
   (`--offline`, lento). Confirmar PP-OCRv6 e **não** Tesseract: a degradação é
   silenciosa.
 - **MCP** — registrar num cliente MCP real e chamar as quatro ferramentas.
 - **Instalador** — `npm run build:dist`, instalar, abrir `cmd` novo e rodar
-  `tecjustica-sigilo status` **sem** ter aberto a GUI.
+  `djuris status` **sem** ter aberto a GUI.

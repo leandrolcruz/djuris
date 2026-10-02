@@ -1,4 +1,4 @@
-# TecJustiça Sigilo — o que não está óbvio no código
+# Direito&Juris — o que não está óbvio no código
 
 Anonimizador de dados pessoais em processos judiciais brasileiros. Electron +
 React + FastAPI + [Presidio](https://presidio.dataprivacystack.org/). Tudo roda
@@ -192,8 +192,8 @@ com uma extensão instalada de verdade.
 
 Aqui o `productName` está só no `electron-builder.yml`, e o `package.json` só tem
 `name`. Resultado medido no instalador 1.3.0, rodando o app empacotado:
-a pasta é **`tecjustica-sigilo`**, a mesma do desenvolvimento — **não**
-`TecJustiça Sigilo`, como este arquivo afirmou até 30/08/2026.
+a pasta é **`djuris`**, a mesma do desenvolvimento — **não**
+`Direito&Juris`, como este arquivo afirmou até 30/08/2026.
 
 O erro estava aqui como lição aprendida, com o motivo invertido, e sobreviveu
 porque ninguém tinha rodado o app empacotado e olhado a pasta.
@@ -264,7 +264,7 @@ os acentos dos comentários em português com `Bad text encoding`. Gravar em
 `utf-8-sig`.
 
 **Verificado com o instalador REAL em 31/08/2026.** Instalar acrescenta a
-entrada no PATH, o shim responde, e `tecjustica-sigilo status` roda num `cmd`
+entrada no PATH, o shim responde, e `djuris status` roda num `cmd`
 novo **sem a GUI aberta** — a cadeia inteira. Desinstalar devolve o PATH byte a
 byte idêntico ao original.
 

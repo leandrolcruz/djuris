@@ -7,7 +7,7 @@ import type { PedidoDePareamento } from "../hooks/usePythonBackend";
  *
  * ## Por que mora na casca, e não na tela de Conexões
  *
- * Quem roda `tecjustica-sigilo conectar` no terminal olha para a janela do
+ * Quem roda `djuris conectar` no terminal olha para a janela do
  * aplicativo — que pode estar em qualquer destino. Com o polling dentro de
  * Conexões, o pedido só apareceria para quem já estivesse naquela tela, e o
  * comando expiraria em 180 s sem explicar nada. Um pedido de autorização não

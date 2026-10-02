@@ -1,5 +1,5 @@
-appId: com.tecjustica.sigilo
-productName: TecJustiça Sigilo
+appId: com.direitojuris.app
+productName: Direito&Juris
 directories:
   output: release
   buildResources: build
@@ -32,7 +32,7 @@ nsis:
   allowToChangeInstallationDirectory: true
   installerIcon: build/icon.ico
   uninstallerIcon: build/icon.ico
-  # Põe `tecjustica-sigilo` no PATH do usuário na instalação e tira na
+  # Põe `djuris` no PATH do usuário na instalação e tira na
   # desinstalação. Antes isso só acontecia se a pessoa achasse a tela "Linha de
   # Comando" e clicasse no botão — quem instalava e ia usar o programa nunca
   # descobria que a CLI existia.

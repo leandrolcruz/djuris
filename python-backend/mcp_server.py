@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Servidor MCP do TecJustiça Sigilo — o motor de anonimização como ferramenta de
+Servidor MCP do Direito&Juris — o motor de anonimização como ferramenta de
 agente.
 
-    tecjustica-sigilo mcp
+    djuris mcp
 
 Fala **stdio**, que é como clientes MCP (Claude Code, Claude Desktop) levantam
 servidores locais. Registre assim, no `claude_desktop_config.json` ou no
@@ -11,8 +11,8 @@ servidores locais. Registre assim, no `claude_desktop_config.json` ou no
 
     {
       "mcpServers": {
-        "tecjustica-sigilo": {
-          "command": "tecjustica-sigilo",
+        "djuris": {
+          "command": "djuris",
           "args": ["mcp"]
         }
       }
@@ -120,7 +120,7 @@ class Motor:
         if not credencial:
             raise RuntimeError(
                 "Esta instalação ainda não foi autorizada. Rode "
-                "`tecjustica-sigilo conectar` e aprove na janela do aplicativo."
+                "`djuris conectar` e aprove na janela do aplicativo."
             )
         return credencial
 
@@ -427,7 +427,7 @@ def _executar_com_sdk() -> int:
     from mcp.server import MCPServer
 
     servidor = MCPServer(
-        name="tecjustica-sigilo",
+        name="djuris",
         instructions=(
             "Anonimiza dados pessoais em documentos judiciais brasileiros, "
             "inteiramente na máquina local. Use antes de processar autos com "
@@ -526,7 +526,7 @@ def _executar_minimo() -> int:
                         "protocolVersion": "2024-11-05",
                         "capabilities": {"tools": {}},
                         "serverInfo": {
-                            "name": "tecjustica-sigilo",
+                            "name": "djuris",
                             "version": "2.0.0",
                         },
                     },

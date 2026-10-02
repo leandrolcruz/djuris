@@ -62,7 +62,7 @@ def info():
     """
     engine = get_engine()
     return {
-        "produto": "TecJustiça Sigilo",
+        "produto": "Direito&Juris",
         "api": 1,
         "motor": {
             "pronto": engine.is_ready(),
@@ -100,7 +100,7 @@ def parear(req: PedidoDePareamento, request: Request):
         "codigo": pedido.codigo,
         "escopos_concedidos": pedido.escopos,
         "expira_em": clientes.VALIDADE_DO_PEDIDO_S,
-        "instrucao": "Confira o código na janela do TecJustiça Sigilo e aprove.",
+        "instrucao": "Confira o código na janela do Direito&Juris e aprove.",
     }
 
 

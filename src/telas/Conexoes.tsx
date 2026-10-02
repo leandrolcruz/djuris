@@ -127,7 +127,7 @@ export function Conexoes({
           <p className="mt-gutter-md font-body text-body-sm text-on-surface-variant">
             Para a linha de comando, o comando é{" "}
             <code className="rounded bg-surface-container-low px-1 py-0.5 font-mono text-mono-tag text-on-surface">
-              tecjustica-sigilo conectar
+              djuris conectar
             </code>
             . O contrato completo para quem escreve um cliente está em{" "}
             <code className="font-mono text-mono-tag">docs/api-local.md</code>.

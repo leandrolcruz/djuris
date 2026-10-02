@@ -135,7 +135,7 @@ def test_o_ciclo_que_todo_cliente_mcp_faz():
 
     inicio = _por_id(respostas, 0)
     assert "error" not in inicio, inicio
-    assert inicio["result"]["serverInfo"]["name"] == "tecjustica-sigilo"
+    assert inicio["result"]["serverInfo"]["name"] == "djuris"
 
     lista = _por_id(respostas, 2)
     assert "error" not in lista, lista

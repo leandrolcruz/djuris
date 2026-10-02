@@ -39,7 +39,7 @@ const RAIZ = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const ENTRADA = resolve(RAIZ, "docs/faq-institucional.md");
 const SAIDA = process.argv[2]
   ? resolve(process.argv[2])
-  : resolve(RAIZ, "FAQ-TecJustica-Sigilo.docx");
+  : resolve(RAIZ, "FAQ-Direito&Juris.docx");
 
 const SEPARADOR_TABELA = /^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$/;
 const CINZA = "F2F0EB";
@@ -290,7 +290,7 @@ function capa() {
       alignment: AlignmentType.CENTER,
       spacing: { after: 120 },
       children: [
-        new TextRun({ text: "TecJustiça Sigilo", bold: true, size: 56 }),
+        new TextRun({ text: "Direito&Juris", bold: true, size: 56 }),
       ],
     }),
     new Paragraph({
@@ -346,8 +346,8 @@ function capa() {
 
 const markdown = readFileSync(ENTRADA, "utf8");
 const documento = new Document({
-  creator: "TecJustiça Sigilo",
-  title: "FAQ institucional — TecJustiça Sigilo",
+  creator: "Direito&Juris",
+  title: "FAQ institucional — Direito&Juris",
   description:
     "Perguntas e respostas sobre segurança, conformidade, acurácia e implantação",
   styles: {

@@ -17,7 +17,7 @@ do git, de tempo de CPU ou de julgamento sobre a promessa do produto.
   aprovado em log corrido.
 
 - [x] **Decidir o destino do histórico existente** — o `localStorage`
-  (`tecjustica-sigilo-history`, até 50 entradas de metadados) morre quando a
+  (`djuris-history`, até 50 entradas de metadados) morre quando a
   biblioteca entra. O plano assume que **não** há migração: o cofre nasce vazio
   e desligado, e o usuário de v1 consente antes da primeira gravação. Confirmar
   que é isso mesmo.
@@ -63,11 +63,11 @@ do git, de tempo de CPU ou de julgamento sobre a promessa do produto.
   JSON e que o corpus foi lido.
 
 - [ ] **Instalar numa máquina limpa e validar a CLI sem abrir a GUI** — abrir um
-  `cmd` novo e rodar `tecjustica-sigilo status`. É o critério que prova que o
+  `cmd` novo e rodar `djuris status`. É o critério que prova que o
   hook NSIS funcionou.
 
 - [x] **Conferir o cofre com editor hexadecimal** — abrir
-  `%APPDATA%\TecJustiça Sigilo\cofre\*.bin` e confirmar que não há CPF legível.
+  `%APPDATA%\Direito&Juris\cofre\*.bin` e confirmar que não há CPF legível.
   Depois forçar `safeStorage.isEncryptionAvailable()` a `false` e confirmar que
   o app **recusa gravar** em vez de gravar em claro.
 
@@ -98,7 +98,7 @@ Entregue na **v1.3.0**. O que continua aberto, e por quê:
   confirmando que nenhuma das nove correções do dia tocou a detecção.
 
 - [x] **Instalar e validar a CLI sem abrir a GUI** — FEITO em 31/08/2026 com o
-  instalador REAL (`TecJustiça Sigilo Setup 1.3.0.exe`), não com réplica. A
+  instalador REAL (`Direito&Juris Setup 1.3.0.exe`), não com réplica. A
   cadeia inteira executada: instalador → gancho NSIS → PATH → shim → CLI.
 
   ```

@@ -44,7 +44,7 @@ export interface Preferencias {
   modeloDaNuvem: string | null;
 }
 
-const CHAVE = "tecjustica-sigilo-prefs";
+const CHAVE = "djuris-prefs";
 
 export const PREFERENCIAS_PADRAO: Preferencias = {
   entidades: ALL_ENTITIES.map((e) => e.id),

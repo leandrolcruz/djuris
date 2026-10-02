@@ -42,15 +42,15 @@ import urllib.request
 # Os dois nomes que a pasta de dados pode ter, e por que são dois.
 #
 # `app.getPath("userData")` deriva de `app.getName()`. Em **desenvolvimento**
-# isso vem do campo `name` do `package.json` (`tecjustica-sigilo`); no app
+# isso vem do campo `name` do `package.json` (`djuris`); no app
 # **empacotado**, o electron-builder aplica o `productName` e a pasta vira
-# `TecJustiça Sigilo`. O caminho, portanto, muda conforme o app foi iniciado.
+# `Direito&Juris`. O caminho, portanto, muda conforme o app foi iniciado.
 #
 # Cravar só o nome de produção fazia a CLI funcionar depois de instalada e
 # falhar em desenvolvimento — o pior tipo de bug para diagnosticar, porque o
 # sintoma é "funciona na máquina do usuário e não na minha". Procurar nos dois
 # custa um `exists()` e cobre os dois mundos.
-NOMES_DA_PASTA = ("TecJustiça Sigilo", "tecjustica-sigilo")
+NOMES_DA_PASTA = ("Direito&Juris", "djuris")
 
 # Quanto esperar por uma resposta do app já quente. Anonimizar um processo
 # inteiro leva minutos, então o limite é generoso; o que ele evita é a espera
@@ -195,7 +195,7 @@ def pedir(
 
 # A assinatura que `/v1/info` devolve. Confirma que quem atendeu é este produto,
 # e não outro programa qualquer que ficou com a porta.
-PRODUTO = "TecJustiça Sigilo"
+PRODUTO = "Direito&Juris"
 API = 1
 
 
@@ -253,7 +253,7 @@ def enviar_documento(sessao: Sessao, caminho: Path, token: str) -> dict:
     import mimetypes
     import uuid
 
-    limite = f"----tecjustica{uuid.uuid4().hex}"
+    limite = f"----djuris{uuid.uuid4().hex}"
     tipo = mimetypes.guess_type(caminho.name)[0] or "application/octet-stream"
 
     corpo = bytearray()

@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="assets/logo.jpg" alt="TecJustiça Sigilo" width="180" />
+  <img src="assets/logo.jpg" alt="Direito&Juris" width="180" />
 </p>
 
-<h1 align="center">TecJustiça Sigilo</h1>
+<h1 align="center">Direito&Juris</h1>
 
 <p align="center">
   <strong>Anonimizador desktop de PII para textos jurídicos brasileiros.</strong><br/>
@@ -55,7 +55,7 @@ nomes escritos em CAIXA ALTA, marcam "Ministério Público" como pessoa, não
 entendem número CNJ, não validam CPF. O resultado é vazamento de dados ou
 mascaramento excessivo que inutiliza o documento.
 
-O TecJustiça Sigilo foi montado com o **contexto certo para o tribunal brasileiro**:
+O Direito&Juris foi montado com o **contexto certo para o tribunal brasileiro**:
 modelo NER treinado em jurisprudência, regex dos documentos oficiais com
 **validação de dígito verificador**, e deny list de expressões jurídicas que
 nenhum servidor, advogado ou magistrado quer ver mascarada.
@@ -147,15 +147,15 @@ Três políticas, com o resultado à vista na hora de escolher:
   (veja abaixo).
 
 ### ⌨️ CLI nativa (Windows + WSL)
-O instalador põe `tecjustica-sigilo` no PATH do `cmd` / `PowerShell` e no
+O instalador põe `djuris` no PATH do `cmd` / `PowerShell` e no
 **WSL bash** (shim em `~/.local/bin`). Uma instalação, dois ambientes.
 
 ```bash
-tecjustica-sigilo autos.pdf                    # PDF, DOCX, XLSX, imagem — com OCR
-tecjustica-sigilo processo.txt -o saida.md
-cat peticao.txt | tecjustica-sigilo -e PERSON,CPF_BR
-tecjustica-sigilo autos/*.pdf --output-dir ./anonimizados
-tecjustica-sigilo termo.txt -f json            # para agentes e pipelines
+djuris autos.pdf                    # PDF, DOCX, XLSX, imagem — com OCR
+djuris processo.txt -o saida.md
+cat peticao.txt | djuris -e PERSON,CPF_BR
+djuris autos/*.pdf --output-dir ./anonimizados
+djuris termo.txt -f json            # para agentes e pipelines
 ```
 
 **Subcomandos:**
@@ -177,7 +177,7 @@ local; `--remoto` falha em vez de esperar.
 Para usar o motor do aplicativo, autorize uma vez:
 
 ```bash
-tecjustica-sigilo conectar     # mostra um código; confira e aprove na janela
+djuris conectar     # mostra um código; confira e aprove na janela
 ```
 
 ### 🤖 Servidor MCP
@@ -187,7 +187,7 @@ O mesmo comando expõe o motor como ferramenta de agente:
 ```json
 {
   "mcpServers": {
-    "tecjustica-sigilo": { "command": "tecjustica-sigilo", "args": ["mcp"] }
+    "djuris": { "command": "djuris", "args": ["mcp"] }
   }
 }
 ```
@@ -305,7 +305,7 @@ nenhum número deste repositório precisa ser aceito por confiança.
 ## 📥 Baixar
 
 **Windows (10/11 x64):**
-👉 **[Baixar `TecJustiça Sigilo Setup.exe` (último release)](https://github.com/marcosmarf27/tecjustica-sigilo/releases/latest)**
+👉 **[Baixar `Direito&Juris Setup.exe` (último release)](https://github.com/marcosmarf27/tecjustica-sigilo/releases/latest)**
 
 O instalador tem ~880 MB porque já traz Python embutido + `transformers` +
 `torch` CPU + os modelos de OCR. Na primeira execução baixa o modelo BERT

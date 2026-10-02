@@ -1,11 +1,11 @@
-﻿; Hook de instalação do TecJustiça Sigilo.
+﻿; Hook de instalação do Direito&Juris.
 ;
 ; ## O problema que isto resolve
 ;
 ; A CLI existe desde a v1, mas só era instalada se o usuário encontrasse a tela
 ; "Conexões" e clicasse no botão. Quem instalava e ia direto usar o programa
-; nunca descobria que `tecjustica-sigilo` existia — e o critério de aceitação
-; desta versão é justamente: depois de instalar, `tecjustica-sigilo status` roda
+; nunca descobria que `djuris` existia — e o critério de aceitação
+; desta versão é justamente: depois de instalar, `djuris status` roda
 ; num `cmd` novo **sem** o usuário ter aberto a interface.
 ;
 ; ## As bibliotecas precisam ser incluídas, e o desinstalador quer as `un.`
@@ -46,7 +46,7 @@
 !insertmacro un.WordReplace
 
 !macro customInstall
-  ; O diretório onde vive o `tecjustica-sigilo.cmd`, dentro da instalação.
+  ; O diretório onde vive o `djuris.cmd`, dentro da instalação.
   StrCpy $0 "$INSTDIR\resources\python-backend"
 
   ; Lê o PATH do usuário direto do registro, sem expandir variáveis.

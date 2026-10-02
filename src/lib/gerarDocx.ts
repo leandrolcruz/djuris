@@ -169,7 +169,7 @@ export async function gerarDocx(
   info: CabecalhoDocx
 ): Promise<Blob> {
   const documento = new Document({
-    creator: "TecJustiça Sigilo",
+    creator: "Direito&Juris",
     title: `${info.nomeOriginal} (anonimizado)`,
     description: "Documento com dados pessoais mascarados",
     sections: [

@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 #
-# Par POSIX do `tecjustica-sigilo.cmd`: chama o `cli.py` com o interpretador do
+# Par POSIX do `djuris.cmd`: chama o `cli.py` com o interpretador do
 # projeto. O `"$@"` repassa a linha inteira, então os subcomandos funcionam sem
 # que este arquivo os conheça:
 #
-#   tecjustica-sigilo autos.pdf              (PDF, DOCX, imagem — com OCR)
-#   tecjustica-sigilo arquivo.txt -o saida.md
-#   cat arquivo.txt | tecjustica-sigilo
-#   tecjustica-sigilo ler autos.pdf          (extrai sem anonimizar)
-#   tecjustica-sigilo ocr pagina.png         (reconhece o texto de uma imagem)
-#   tecjustica-sigilo reidratar resposta.txt --autos 5626981
-#   tecjustica-sigilo mcp                    (servidor MCP em stdio)
+#   djuris autos.pdf              (PDF, DOCX, imagem — com OCR)
+#   djuris arquivo.txt -o saida.md
+#   cat arquivo.txt | djuris
+#   djuris ler autos.pdf          (extrai sem anonimizar)
+#   djuris ocr pagina.png         (reconhece o texto de uma imagem)
+#   djuris reidratar resposta.txt --autos 5626981
+#   djuris mcp                    (servidor MCP em stdio)
 #
 # Este arquivo é instalado por symlink em ~/.local/bin, então ele resolve o
 # próprio caminho real antes de subir dois níveis: sem isso, `dirname $0` daria
@@ -39,13 +39,13 @@ done
 BACKEND="$(cd "$(dirname "$ORIGEM")" && pwd)"
 RAIZ="$(cd "$BACKEND/.." && pwd)"
 
-PESO="${TECJUSTICA_PESO:-/Volumes/SSD do Leandro/tecjustica-sigilo}"
+PESO="${DJURIS_PESO:-/Volumes/SSD do Leandro/djuris}"
 PYTHON="$RAIZ/.venv/bin/python"
 
 # A mensagem importa: o modo de falha mais provável desta instalação é o volume
 # externo desmontado, e o sintoma cru seria um ModuleNotFoundError de torch —
 # que manda a pessoa depurar dependência quando o problema é um cabo. Mas
-# TECJUSTICA_PESO é override do usuário: só teria a forma "dois níveis sob
+# DJURIS_PESO é override do usuário: só teria a forma "dois níveis sob
 # /Volumes" no caso padrão desta máquina, e para qualquer outra forma
 # (`dirname "$PESO"`) apontar como "o volume" seria afirmar algo que não se
 # sabe — dirname de `$HOME/peso-sigilo` dá `$HOME`, que não é volume nenhum.

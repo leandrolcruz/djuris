@@ -77,7 +77,7 @@ export function CabecalhoDoApp({
     <header className="arrasto z-40 flex h-cabecalho shrink-0 items-center justify-between gap-gutter-md bg-surface-container-lowest/85 px-gutter-lg shadow-sm backdrop-blur-xl">
       <div className="flex min-w-0 items-center gap-gutter-sm">
         <span className="hidden font-mono text-mono-code text-outline sm:inline">
-          TecJustiça Sigilo
+          Direito&Juris
         </span>
         <span className="hidden font-mono text-mono-code text-outline-variant sm:inline">/</span>
         <h1 className="truncate font-display text-headline-sm text-on-surface">{titulo}</h1>

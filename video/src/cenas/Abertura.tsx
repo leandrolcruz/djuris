@@ -25,7 +25,7 @@ export const Abertura: React.FC = () => {
 
       <Surge atraso={8}>
         <div style={{ fontFamily: fonte.mono, fontSize: 82, letterSpacing: -2 }}>
-          <span style={{ color: cor.toner }}>TecJustiça </span>
+          <span style={{ color: cor.toner }}>Direito&Juris </span>
           <span style={{ color: cor.esferografica }}>Sigilo</span>
         </div>
       </Surge>

@@ -49,7 +49,7 @@ No **Git Bash** (não no PowerShell — os scripts precisam dele):
 
 ```bash
 git clone https://github.com/marcosmarf27/tecjustica-sigilo.git
-cd tecjustica-sigilo
+cd djuris
 
 npm install
 
@@ -108,7 +108,7 @@ bash scripts/setup-python-embed.sh
 npm run build:dist
 ```
 
-O instalador sai em `release/TecJustiça Sigilo Setup <versão>.exe`.
+O instalador sai em `release/Direito&Juris Setup <versão>.exe`.
 
 O `build:dist` roda, nesta ordem: baixa e confere os modelos, sincroniza o
 backend para `resources/`, **importa o backend empacotado para ver se ele
@@ -200,7 +200,7 @@ próprios (ver a seção acima). O app empacotado aceita `--remote-debugging-por
 e com isso dá para inspecionar e acionar o renderer de fora:
 
 ```powershell
-Start-Process "release\win-unpacked\TecJustiça Sigilo.exe" `
+Start-Process "release\win-unpacked\Direito&Juris.exe" `
   -ArgumentList "--remote-debugging-port=9222"
 ```
 

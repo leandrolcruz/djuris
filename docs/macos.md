@@ -36,10 +36,10 @@ Apontar um link faz esses caminhos continuarem certos sem um único `if` novo.
 ### Por que o peso sai do disco interno
 
 O venv com torch, o BERT e os pesos de OCR passam de 2 GB, e nem toda máquina
-tem isso sobrando no disco interno. O destino é `TECJUSTICA_PESO`:
+tem isso sobrando no disco interno. O destino é `DJURIS_PESO`:
 
 ```bash
-TECJUSTICA_PESO=/Volumes/<seu volume>/tecjustica-sigilo scripts/setup-macos.sh
+DJURIS_PESO=/Volumes/<seu volume>/djuris scripts/setup-macos.sh
 ```
 
 O default está escrito no `scripts/setup-macos.sh` e aponta para o volume
@@ -52,24 +52,24 @@ quando o problema é um cabo.
 
 ## A CLI
 
-O shim é `python-backend/tecjustica-sigilo.sh`, instalado por symlink:
+O shim é `python-backend/djuris.sh`, instalado por symlink:
 
 ```bash
-ln -sf "$PWD/python-backend/tecjustica-sigilo.sh" ~/.local/bin/tecjustica-sigilo
+ln -sf "$PWD/python-backend/djuris.sh" ~/.local/bin/djuris
 ```
 
 ```bash
-tecjustica-sigilo autos.pdf                    # PDF, DOCX, XLSX, imagem — com OCR
-tecjustica-sigilo peticao.txt -o saida.md
-cat peticao.txt | tecjustica-sigilo
-tecjustica-sigilo ler autos.pdf                # extrai o texto SEM anonimizar
-tecjustica-sigilo ocr pagina.png
+djuris autos.pdf                    # PDF, DOCX, XLSX, imagem — com OCR
+djuris peticao.txt -o saida.md
+cat peticao.txt | djuris
+djuris ler autos.pdf                # extrai o texto SEM anonimizar
+djuris ocr pagina.png
 ```
 
 ### O servidor MCP
 
 ```bash
-claude mcp add tecjustica-sigilo -- ~/.local/bin/tecjustica-sigilo mcp
+claude mcp add djuris -- ~/.local/bin/djuris mcp
 ```
 
 Registrado em escopo de usuário, vale em todos os projetos. São **quatro**
@@ -84,10 +84,10 @@ ferramenta que um agente na nuvem chama.
 ## O ciclo de reidratação
 
 ```bash
-tecjustica-sigilo anonimizar peca.txt --offline --autos 5626981 -o mascarada.txt
+djuris anonimizar peca.txt --offline --autos 5626981 -o mascarada.txt
 # manda mascarada.txt pro Claude e pergunta o que quiser;
 # a resposta volta falando em [PESSOA_1], [CPF_1]…
-tecjustica-sigilo reidratar resposta.txt --autos 5626981
+djuris reidratar resposta.txt --autos 5626981
 ```
 
 O `--autos` dá às peças de um mesmo processo um espaço de pseudônimos comum:
@@ -125,8 +125,8 @@ o começo do caminho.
 
 | Variável | Padrão | O que é |
 |---|---|---|
-| `PRESIDIO_MAPA_CHAVE` | `~/.config/tecjustica-sigilo/mapa.key` | a chave Fernet, `0600`, em diretório `0700` |
-| `PRESIDIO_MAPA_DIR` | `<TECJUSTICA_PESO>/mapas` | os mapas cifrados, um `.mapa` por autos |
+| `PRESIDIO_MAPA_CHAVE` | `~/.config/djuris/mapa.key` | a chave Fernet, `0600`, em diretório `0700` |
+| `PRESIDIO_MAPA_DIR` | `<DJURIS_PESO>/mapas` | os mapas cifrados, um `.mapa` por autos |
 | `PRESIDIO_MAPA_PRAZO_DIAS` | `7` | prazo de guarda; vencido, o mapa é apagado |
 
 **Os dois ficam em volumes diferentes de propósito.** Medido: o SSD externo é
@@ -195,10 +195,10 @@ você**. Para o sistema, ele é você, e recebe o dado decifrado se pedir.
 ## Testes
 
 ```bash
-export TECJUSTICA_PESO=/Volumes/<seu volume>/tecjustica-sigilo   # o mesmo do setup
+export DJURIS_PESO=/Volumes/<seu volume>/djuris   # o mesmo do setup
 
 cd python-backend && \
-  HF_HOME="$TECJUSTICA_PESO/hf-cache" \
+  HF_HOME="$DJURIS_PESO/hf-cache" \
   ../.venv/bin/python -m pytest tests -q
 
 npm run test:electron    # suíte Node
@@ -228,7 +228,7 @@ corpus com gabarito. Fica como item aberto, não como passo fingido.
 `setup-macos.sh` pina 3.12 e é o único criador do caminho. Passa a importar no
 dia em que a versão pinada subir; aí, apague o venv antes.
 
-**O teto de 40 saltos do `tecjustica-sigilo.sh` é inalcançável pelo caminho
+**O teto de 40 saltos do `djuris.sh` é inalcançável pelo caminho
 normal de invocação neste sistema.** O macOS tem `SYMLOOP_MAX=32`, e o kernel
 recusa abrir o arquivo antes de qualquer linha do script rodar, com mensagem
 própria (`Too many levels of symbolic links`, código 126). O teto segue como

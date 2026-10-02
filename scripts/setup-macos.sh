@@ -15,13 +15,13 @@
 set -euo pipefail
 
 RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PESO="${TECJUSTICA_PESO:-/Volumes/SSD do Leandro/tecjustica-sigilo}"
+PESO="${DJURIS_PESO:-/Volumes/SSD do Leandro/djuris}"
 VENV="$PESO/venv"
 VOLUME="$(dirname "$PESO")"
 
 if [[ ! -d "$VOLUME" ]]; then
   echo "O volume '$VOLUME' não está montado." >&2
-  echo "Monte-o e rode de novo, ou aponte TECJUSTICA_PESO para outro lugar." >&2
+  echo "Monte-o e rode de novo, ou aponte DJURIS_PESO para outro lugar." >&2
   exit 1
 fi
 

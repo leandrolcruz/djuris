@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Botao, Cartao, LinhaDeAjuste, Selo } from "../ui";
 
 /**
- * A linha de comando: `tecjustica-sigilo` no terminal.
+ * A linha de comando: `djuris` no terminal.
  *
  * Era a única tela escrita fora do sistema — títulos em serifa, cantos e
  * botões próprios, e um "Fechar" que não fechava nada. Agora é um cartão com
@@ -70,7 +70,7 @@ export function InstaladorCli({ avisar }: Props) {
   return (
     <Cartao
       titulo="Linha de comando"
-      descricao="O comando tecjustica-sigilo, para anonimizar pelo terminal ou por um agente."
+      descricao="O comando djuris, para anonimizar pelo terminal ou por um agente."
       semPreenchimento
     >
       <div className="divide-y divide-surface-container px-4">
@@ -148,9 +148,9 @@ export function InstaladorCli({ avisar }: Props) {
           empilhado
         >
           <pre className="overflow-x-auto rounded-md bg-surface-container-low px-3 py-2.5 font-mono text-mono-tag leading-relaxed text-on-surface-variant">
-            {"tecjustica-sigilo autos.pdf -o autos-anonimizado.md\n"}
-            {"tecjustica-sigilo entrada.txt -q --format json\n"}
-            {"tecjustica-sigilo conectar   # pareia com o aplicativo aberto"}
+            {"djuris autos.pdf -o autos-anonimizado.md\n"}
+            {"djuris entrada.txt -q --format json\n"}
+            {"djuris conectar   # pareia com o aplicativo aberto"}
           </pre>
           {status && (
             <p className="mt-2 truncate font-mono text-mono-tag text-outline" title={status.backendDir}>

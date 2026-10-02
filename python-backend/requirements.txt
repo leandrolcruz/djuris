@@ -77,7 +77,7 @@ torch==2.13.0
 # lista não entra, e o pip ainda diz "pronto".
 huggingface_hub==0.36.2
 
-# Servidor MCP: expõe o motor como ferramenta de agente (`tecjustica-sigilo mcp`).
+# Servidor MCP: expõe o motor como ferramenta de agente (`djuris mcp`).
 #
 # Dependência de RUNTIME, não de desenvolvimento — e por isso precisa entrar
 # TAMBÉM no requirements-embed.txt. Uma dependência que só existe no venv mata o

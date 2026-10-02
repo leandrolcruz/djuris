@@ -1,4 +1,4 @@
-# FAQ institucional — TecJustiça Sigilo
+# FAQ institucional — Direito&Juris
 
 Perguntas que um órgão do Judiciário faz antes de adotar este aplicativo, com as
 respostas que o projeto consegue sustentar — com medição ou com código.
@@ -669,7 +669,7 @@ passe a ser feita internamente, sem depender de ninguém.
 
 | componente | licença |
 |---|---|
-| TecJustiça Sigilo | MIT |
+| Direito&Juris | MIT |
 | Presidio (Data Privacy Stack) | MIT |
 | PP-OCRv6 (PaddlePaddle) | Apache 2.0 |
 | liteparse | Apache 2.0 |

@@ -3,7 +3,7 @@
 Este documento é o contrato para quem for escrever um cliente: uma extensão de
 navegador para o PJe, um script, um agente MCP, um plugin de editor.
 
-O TecJustiça Sigilo roda um servidor HTTP em `127.0.0.1` enquanto o aplicativo
+O Direito&Juris roda um servidor HTTP em `127.0.0.1` enquanto o aplicativo
 está aberto. Ele existe para que **o documento não precise sair da máquina**:
 em vez de mandar autos para um serviço na nuvem, o cliente manda para a porta
 local e recebe o texto já mascarado.
@@ -31,17 +31,17 @@ Leia `sessao.json` no diretório de dados do aplicativo:
 
 | Sistema | Caminho |
 |---|---|
-| Windows | `%APPDATA%\tecjustica-sigilo\sessao.json` |
-| Windows (alternativa) | `%APPDATA%\TecJustiça Sigilo\sessao.json` |
-| macOS | `~/Library/Application Support/tecjustica-sigilo/sessao.json` |
-| macOS (alternativa) | `~/Library/Application Support/TecJustiça Sigilo/sessao.json` |
-| Linux | `~/.config/tecjustica-sigilo/sessao.json` |
-| Linux (alternativa) | `~/.config/TecJustiça Sigilo/sessao.json` |
+| Windows | `%APPDATA%\djuris\sessao.json` |
+| Windows (alternativa) | `%APPDATA%\Direito&Juris\sessao.json` |
+| macOS | `~/Library/Application Support/djuris/sessao.json` |
+| macOS (alternativa) | `~/Library/Application Support/Direito&Juris/sessao.json` |
+| Linux | `~/.config/djuris/sessao.json` |
+| Linux (alternativa) | `~/.config/Direito&Juris/sessao.json` |
 
 > **Procure nos dois nomes, sempre.** A pasta vem de `app.getName()`, que lê o
 > `package.json` **embarcado**: `productName` se existir lá, senão `name`. Hoje
 > o `productName` mora só na configuração do empacotador, então **a versão
-> instalada usa `tecjustica-sigilo`** — a mesma do desenvolvimento. Isso foi
+> instalada usa `djuris`** — a mesma do desenvolvimento. Isso foi
 > medido rodando o app do instalador 1.3.0, e esta tabela afirmava o contrário
 > até 30/08/2026. Mover uma linha de configuração inverte a resposta sem que
 > você fique sabendo; um cliente que crava um nome quebra num dia qualquer.
@@ -60,7 +60,7 @@ nem quando o processo é morto pelo gerenciador de tarefas. Então o arquivo pod
 existir apontando para uma porta que outro programa tomou.
 
 > **Confira a identidade antes de mandar qualquer conteúdo.** Chame
-> `GET /v1/info` e só siga se a resposta trouxer `"produto": "TecJustiça Sigilo"`
+> `GET /v1/info` e só siga se a resposta trouxer `"produto": "Direito&Juris"`
 > e `"api": 1`. **Status 200 não basta:** qualquer servidor que tenha ficado com
 > a porta responde 200, e o passo seguinte de um cliente é um POST com o texto
 > dos autos. Um cliente que confia no código de status manda documento judicial
@@ -88,7 +88,7 @@ antes de pedir pareamento.
 
 ```json
 {
-  "produto": "TecJustiça Sigilo",
+  "produto": "Direito&Juris",
   "api": 1,
   "motor": {
     "pronto": true,
@@ -130,7 +130,7 @@ Content-Type: application/json
   "codigo": "D8J92C",
   "escopos_concedidos": ["anonimizar", "documento"],
   "expira_em": 180,
-  "instrucao": "Confira o código na janela do TecJustiça Sigilo e aprove."
+  "instrucao": "Confira o código na janela do Direito&Juris e aprove."
 }
 ```
 
@@ -276,7 +276,7 @@ consegue ler o `sessao.json` sozinha. Duas saídas:
 
 1. **Varredura curta** de 8123 a 8133, chamando `GET /v1/info` em cada uma —
    é público e barato. Aceite só a porta cuja resposta traga
-   `"produto": "TecJustiça Sigilo"`: numa varredura você vai bater em servidores
+   `"produto": "Direito&Juris"`: numa varredura você vai bater em servidores
    alheios, e o primeiro 200 não é necessariamente este aplicativo;
 2. **Peça a porta ao usuário** uma vez, mostrando o valor que aparece na tela
    de Conexões, e guarde.
@@ -293,7 +293,7 @@ O aplicativo traz um servidor MCP embutido, para agentes:
 ```json
 {
   "mcpServers": {
-    "tecjustica-sigilo": { "command": "tecjustica-sigilo", "args": ["mcp"] }
+    "djuris": { "command": "djuris", "args": ["mcp"] }
   }
 }
 ```

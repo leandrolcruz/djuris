@@ -2,7 +2,7 @@
 
 ## Descrição
 
-O TecJustiça Sigilo acerta (99,94% por ocorrência na v1.2.0), mas três coisas o
+O Direito&Juris acerta (99,94% por ocorrência na v1.2.0), mas três coisas o
 prendem:
 
 1. **A interface é um formulário longo, não uma mesa de trabalho.** Para
@@ -16,7 +16,7 @@ prendem:
 
 2. **A CLI é meia CLI.** `python-backend/cli.py` existe e é instalada no PATH,
    mas `_read_input` faz `Path(path).read_text(encoding="utf-8")` (linha 37) —
-   só texto puro. `tecjustica-sigilo autos.pdf` quebra com `UnicodeDecodeError`.
+   só texto puro. `djuris autos.pdf` quebra com `UnicodeDecodeError`.
    O recurso mais caro do produto (ler PDF/imagem com OCR) é inalcançável fora
    da GUI. E a instalação só acontece se o usuário achar a tela "Linha de
    Comando": não há hook de pós-instalação NSIS.
@@ -92,16 +92,16 @@ corrigida.
 
 ### CLI e MCP
 
-- [ ] `tecjustica-sigilo autos.pdf` funciona, com OCR
+- [ ] `djuris autos.pdf` funciona, com OCR
 - [ ] Com o app aberto a CLI delega por HTTP (motor quente); fechado, sobe em processo avisando o custo
 - [ ] `--offline` e `--remoto` forçam cada modo
 - [ ] O modo offline usa PP-OCRv6, **não** o Tesseract embutido no wheel
-- [ ] A forma atual `tecjustica-sigilo arquivo.txt -o saida.txt` continua válida
-- [ ] `tecjustica-sigilo mcp` responde às ferramentas `anonimizar_texto`, `ler_documento`, `ocr_imagem` e `status` num cliente MCP real
+- [ ] A forma atual `djuris arquivo.txt -o saida.txt` continua válida
+- [ ] `djuris mcp` responde às ferramentas `anonimizar_texto`, `ler_documento`, `ocr_imagem` e `status` num cliente MCP real
 
 ### Instalação
 
-- [ ] Depois de instalar, `tecjustica-sigilo status` roda num `cmd` novo **sem** o usuário ter aberto a GUI
+- [ ] Depois de instalar, `djuris status` roda num `cmd` novo **sem** o usuário ter aberto a GUI
 - [ ] Desinstalar remove a entrada do PATH
 - [ ] `scripts/smoke-backend.sh` exige as rotas `/v1` e continua rodando dentro do `build:dist`
 

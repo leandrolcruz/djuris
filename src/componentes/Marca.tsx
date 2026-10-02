@@ -51,7 +51,13 @@ export function Marca({ versao, compacta = false }: MarcaProps) {
       <Simbolo tamanho={compacta ? 28 : 32} />
       {!compacta && (
         <div className="flex min-w-0 flex-col">
-          <span className="font-display text-headline-sm text-primary">Sigilo</span>
+          {/* `truncate` porque o nome encolheu o espaço disponível: a faixa
+              tem 240px, e no macOS 78 deles vão para os botões da janela.
+              "Direito&Juris" cabe justo — e cortar com reticências é melhor
+              que empurrar a versão para fora da barra. */}
+          <span className="truncate font-display text-headline-sm text-primary">
+            Direito&amp;Juris
+          </span>
           <span className="font-mono text-mono-tag text-on-surface-variant uppercase">
             v{versao} local
           </span>

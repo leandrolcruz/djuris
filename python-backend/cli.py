@@ -2,18 +2,18 @@
 """
 CLI de anonimização de dados pessoais em documentos judiciais brasileiros.
 
-    tecjustica-sigilo <arquivo>...                 # forma clássica, preservada
-    tecjustica-sigilo anonimizar <arquivo>...      # idem, explícito
-    tecjustica-sigilo ler <arquivo>...             # extrai texto + OCR
-    tecjustica-sigilo ocr <imagem>
-    tecjustica-sigilo status                       # app no ar? porta, motor, OCR
-    tecjustica-sigilo conectar                     # pareia esta CLI com o app
-    tecjustica-sigilo mcp                          # servidor MCP em stdio
+    djuris <arquivo>...                 # forma clássica, preservada
+    djuris anonimizar <arquivo>...      # idem, explícito
+    djuris ler <arquivo>...             # extrai texto + OCR
+    djuris ocr <imagem>
+    djuris status                       # app no ar? porta, motor, OCR
+    djuris conectar                     # pareia esta CLI com o app
+    djuris mcp                          # servidor MCP em stdio
 
 ## O que mudou, e por quê
 
 A versão anterior lia a entrada com `Path(path).read_text(encoding="utf-8")` e
-nunca importava `documentos`. Consequência: `tecjustica-sigilo autos.pdf`
+nunca importava `documentos`. Consequência: `djuris autos.pdf`
 terminava em `UnicodeDecodeError`. O recurso mais caro do produto — ler PDF e
 imagem com OCR — era inalcançável fora da interface gráfica.
 
@@ -25,7 +25,7 @@ Códigos de saída:
     0 = sucesso
     1 = erro de entrada/saída
     2 = motor falhou
-    3 = precisa parear (rode `tecjustica-sigilo conectar`)
+    3 = precisa parear (rode `djuris conectar`)
 """
 
 from __future__ import annotations
@@ -111,7 +111,7 @@ def _resolver(args) -> tuple[str, object]:
     if args.remoto:
         print(
             "erro: o aplicativo não está aberto e --remoto foi pedido.\n"
-            "Abra o TecJustiça Sigilo, ou rode sem --remoto para carregar o\n"
+            "Abra o Direito&Juris, ou rode sem --remoto para carregar o\n"
             "motor neste processo (mais lento).",
             file=sys.stderr,
         )
@@ -129,7 +129,7 @@ def _exigir_credencial() -> str:
     if not token:
         print(
             "erro: esta CLI ainda não foi autorizada pelo aplicativo.\n"
-            "Rode `tecjustica-sigilo conectar` e aprove na janela do programa.",
+            "Rode `djuris conectar` e aprove na janela do programa.",
             file=sys.stderr,
         )
         raise SystemExit(3)
@@ -195,7 +195,7 @@ def cmd_conectar(args) -> int:
         return 1
 
     print()
-    print("  Confira este código na janela do TecJustiça Sigilo:")
+    print("  Confira este código na janela do Direito&Juris:")
     print()
     print(f"        {resposta['codigo']}")
     print()
@@ -419,7 +419,7 @@ def cmd_anonimizar(args) -> int:
                 file=sys.stderr,
             )
 
-    # stdin quando não há arquivo: mantém `cat x.txt | tecjustica-sigilo`.
+    # stdin quando não há arquivo: mantém `cat x.txt | djuris`.
     if not args.files:
         texto = sys.stdin.read()
         resultado = _anonimizar_texto(
@@ -732,7 +732,7 @@ def cmd_ocr(args) -> int:
         import urllib.request
         import uuid
 
-        limite = f"----tecjustica{uuid.uuid4().hex}"
+        limite = f"----djuris{uuid.uuid4().hex}"
         tipo = mimetypes.guess_type(caminho.name)[0] or "image/png"
         corpo = bytearray()
         corpo += f"--{limite}\r\n".encode()
@@ -837,7 +837,7 @@ def construir_parser() -> argparse.ArgumentParser:
     )
 
     parser = argparse.ArgumentParser(
-        prog="tecjustica-sigilo",
+        prog="djuris",
         description=(
             "Anonimiza dados pessoais (CPF, CNPJ, RG, nomes, processos CNJ) "
             "em documentos judiciais brasileiros. Roda inteiramente nesta máquina."
@@ -890,7 +890,7 @@ def construir_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
 
-    # Forma clássica preservada: `tecjustica-sigilo arquivo.txt -o saida.txt`
+    # Forma clássica preservada: `djuris arquivo.txt -o saida.txt`
     # continua valendo. Sem isto, quem já usa a CLI em script veria o comando
     # quebrar da noite para o dia — e o custo de manter é uma linha.
     comandos = {"anonimizar", "ler", "ocr", "status", "conectar", "mcp", "reidratar"}

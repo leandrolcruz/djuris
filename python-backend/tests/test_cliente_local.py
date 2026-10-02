@@ -25,7 +25,7 @@ class _Resposta:
     """O que o servidor falso devolve em `/v1/info`. Trocado por teste."""
 
     status = 200
-    corpo: object = {"produto": "TecJustiça Sigilo", "api": 1}
+    corpo: object = {"produto": "Direito&Juris", "api": 1}
 
 
 class _Handler(BaseHTTPRequestHandler):
@@ -67,7 +67,7 @@ def sessao_apontando(tmp_path, servidor, monkeypatch):
     monkeypatch.setattr(cliente_local, "_raizes_de_dados", lambda: [tmp_path])
     # Cada teste começa com o servidor se identificando corretamente.
     _Resposta.status = 200
-    _Resposta.corpo = {"produto": "TecJustiça Sigilo", "api": 1}
+    _Resposta.corpo = {"produto": "Direito&Juris", "api": 1}
     return porta
 
 
@@ -95,7 +95,7 @@ def test_recusa_produto_parecido(sessao_apontando):
 
 def test_recusa_versao_de_api_diferente(sessao_apontando):
     """Contrato incompatível é tão inútil quanto porta errada — e mais enganoso."""
-    _Resposta.corpo = {"produto": "TecJustiça Sigilo", "api": 2}
+    _Resposta.corpo = {"produto": "Direito&Juris", "api": 2}
     assert cliente_local.app_no_ar() is None
 
 
@@ -107,7 +107,7 @@ def test_recusa_resposta_que_nao_e_json(sessao_apontando):
 
 def test_recusa_json_que_nao_e_objeto(sessao_apontando):
     """`corpo.get` num `list` estouraria; a checagem de tipo vem antes."""
-    _Resposta.corpo = ["TecJustiça Sigilo"]
+    _Resposta.corpo = ["Direito&Juris"]
     assert cliente_local.app_no_ar() is None
 
 

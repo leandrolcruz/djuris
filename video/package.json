@@ -1,11 +1,11 @@
 {
-  "name": "tecjustica-sigilo-video",
+  "name": "djuris-video",
   "version": "1.0.0",
   "private": true,
-  "description": "Vídeo explicativo do TecJustiça Sigilo (Remotion)",
+  "description": "Vídeo explicativo do Direito&Juris (Remotion)",
   "scripts": {
     "dev": "remotion studio src/index.ts",
-    "render": "remotion render src/index.ts Explicativo ../release/tecjustica-sigilo.mp4"
+    "render": "remotion render src/index.ts Explicativo ../release/djuris.mp4"
   },
   "dependencies": {
     "@remotion/cli": "4.0.400",

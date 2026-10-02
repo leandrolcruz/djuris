@@ -628,7 +628,7 @@ function Casca() {
         </main>
       </div>
 
-      {/* Na casca, não na tela de Conexões: quem roda `tecjustica-sigilo
+      {/* Na casca, não na tela de Conexões: quem roda `djuris
           conectar` olha para a janela, que pode estar em qualquer destino. */}
       <AprovacaoDePareamento
         ativo={estadoMotor === "pronto"}

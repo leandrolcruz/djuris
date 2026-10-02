@@ -78,7 +78,7 @@ def reidratar(texto: str, mapa: dict[str, str]) -> str:
     return RE_ROTULO.sub(lambda m: mapa.get(m.group(0), m.group(0)), texto)
 
 
-CHAVE_PADRAO = Path.home() / ".config" / "tecjustica-sigilo" / "mapa.key"
+CHAVE_PADRAO = Path.home() / ".config" / "djuris" / "mapa.key"
 
 
 class CifragemIndisponivel(RuntimeError):
@@ -236,7 +236,7 @@ def _chave() -> bytes:
     #    chave, e `~/.config` é diretório de propósito geral do usuário.
     # 2. Um `~/.config` preexistente fica com o modo que tem — não é nosso
     #    diretório para reapertar.
-    # 3. Com `exist_ok=True`, um `tecjustica-sigilo/` preexistente e frouxo também
+    # 3. Com `exist_ok=True`, um `djuris/` preexistente e frouxo também
     #    fica como está. Reapertá-lo em silêncio seria o mesmo erro que esta função
     #    recusa cometer com a chave: consertar bit sem saber quem já leu.
     caminho.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -283,10 +283,10 @@ import json
 import time
 
 # O volume onde o peso deste projeto mora — o mesmo que o `setup-macos.sh` e o
-# `tecjustica-sigilo.sh` já leem de `TECJUSTICA_PESO`, com o mesmo default.
+# `djuris.sh` já leem de `DJURIS_PESO`, com o mesmo default.
 # Repetido aqui porque este módulo não pode importar shell; se o default mudar
 # lá, muda aqui junto.
-PESO_PADRAO = "/Volumes/SSD do Leandro/tecjustica-sigilo"
+PESO_PADRAO = "/Volumes/SSD do Leandro/djuris"
 PRAZO_DIAS_PADRAO = 7
 
 # O nome dos autos vem da linha de comando e vira nome de arquivo. Sem esta
@@ -299,9 +299,9 @@ def _dir_mapas() -> Path:
     Onde os mapas moram, na ordem do mais explícito para o menos.
 
     `PRESIDIO_MAPA_DIR` manda; na falta dela, os mapas seguem o volume de peso,
-    porque é o `setup-macos.sh` quem cria `$TECJUSTICA_PESO/mapas` e seria
+    porque é o `setup-macos.sh` quem cria `$DJURIS_PESO/mapas` e seria
     estranho criar o diretório num volume e gravar noutro. Antes disto o
-    caminho era literal e ignorava `TECJUSTICA_PESO`: quem apontasse a variável
+    caminho era literal e ignorava `DJURIS_PESO`: quem apontasse a variável
     para outro volume teria o diretório criado num lugar e a gravação tentando
     outro — e descobriria DEPOIS de anonimizar, que é quando o mapa é a única
     coisa que falta para o ciclo fechar.
@@ -312,7 +312,7 @@ def _dir_mapas() -> Path:
     explicito = os.environ.get("PRESIDIO_MAPA_DIR")
     if explicito:
         return Path(explicito)
-    return Path(os.environ.get("TECJUSTICA_PESO") or PESO_PADRAO) / "mapas"
+    return Path(os.environ.get("DJURIS_PESO") or PESO_PADRAO) / "mapas"
 
 
 def _prazo_dias() -> int:
