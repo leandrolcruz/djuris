@@ -288,3 +288,106 @@ def test_o_gate_de_acuracia_nao_e_afetado_por_nada_disto(engine):
     assert "JATAÍ" in anonimizar(engine, texto), "sem pedir: sai limpo"
     pedindo = anonimizar(engine, texto, entities=["LOCATION"])
     assert "JATAÍ" not in pedindo, "pedindo: o gate continua medindo"
+
+
+# --- 6. O que a tarja em PDF revelou (06/10/2026) --------------------------
+#
+# Ver o documento tarjado mostra o que a lista de ocorrências esconde: numa
+# petição real, o endereço completo do autor e o RG saíram EM CLARO, no meio de
+# dados que o resto da anonimização tinha coberto. Nenhum dos dois aparecia como
+# falha em lugar nenhum — a lista mostra o que foi achado, nunca o que faltou.
+
+
+def test_endereco_em_prosa_corrida_e_mascarado(engine):
+    """
+    O caso real: "residente e domiciliado na Rua Capitão Serafim de Barros,
+    2101, Santa Maria, em Jataí – GO, vem diante deste juízo".
+
+    O padrão exigia que o endereço terminasse em `;`, CEP, "Fone", e-mail, fim
+    de linha ou ponto final — e endereço em petição não termina em nada disso:
+    ele continua na frase. Com `;` no fim era detectado; sem, passava inteiro.
+    A terminação por UF é a que a prosa jurídica de fato tem.
+    """
+    texto = (
+        "residente e domiciliado na Rua Capitão Serafim de Barros, 2101, "
+        "Santa Maria, em Jataí – GO, vem diante deste juízo propor"
+    )
+    saida = anonimizar(engine, texto)
+    assert "Capitão Serafim de Barros" not in saida
+    assert "2101" not in saida
+    assert "vem diante deste juízo" in saida, "a tarja não pode comer a frase inteira"
+
+
+@pytest.mark.parametrize(
+    "texto",
+    [
+        "residente na Avenida Paulista, 1500, São Paulo - SP, onde recebe",
+        "domiciliada na Rua XV de Novembro, 30, Centro, Jataí/GO, vem",
+    ],
+)
+def test_outras_formas_de_endereco_com_UF(engine, texto):
+    assert "[ENDEREÇO_1]" in anonimizar(engine, texto)
+
+
+def test_rg_com_palavra_entre_a_ancora_e_o_numero(engine):
+    """
+    "portador do RG de nº 139003 SSP-GO" saía em claro: entre a âncora `RG` e o
+    número, o padrão só aceitava pontuação e espaço — e ali há a palavra "de".
+    """
+    saida = anonimizar(engine, "portador do RG de nº 139003 SSP-GO, residente")
+    assert "139003" not in saida
+
+
+@pytest.mark.parametrize(
+    "texto",
+    [
+        "portador do RG nº 1.390.034 SSP-GO",
+        "RG: 139003 SSP-GO",
+        "cédula de identidade de nº 1390034 SSP/GO",
+    ],
+)
+def test_as_formas_de_RG_que_ja_funcionavam_continuam(engine, texto):
+    saida = anonimizar(engine, texto)
+    assert "139003" not in saida.replace("[RG_1]", "")
+
+
+def test_nome_na_assinatura_digital_ICP_e_mascarado(engine):
+    """
+    O formato do certificado ICP-Brasil: `NOME:CPF`, sem espaço.
+
+    Aparece no rodapé de TODA peça assinada digitalmente no PJe e no Projudi —
+    "Assinado por ANA CLARA ALVES DE BARROS:05142104196" — e o nome saía em
+    claro. O CPF ao lado era mascarado (é regex), o que deixava a linha com cara
+    de tratada.
+
+    O NER não pega porque `BARROS:05142104196` não é um token de nome: os dois
+    pontos colam o número na última palavra e o modelo vê outra coisa. Quem
+    resolve é padrão ancorado no formato, não o modelo.
+    """
+    texto = "Assinado por ANA CLARA ALVES DE BARROS:05142104196\nLocalizar pelo código"
+    saida = anonimizar(engine, texto)
+    assert "ANA CLARA ALVES DE BARROS" not in saida
+    assert "05142104196" not in saida
+    assert "Localizar pelo código" in saida
+
+
+@pytest.mark.parametrize(
+    "texto",
+    [
+        "JOAO DA SILVA JUNIOR:12345678901",
+        "Assinado eletronicamente por MARIA DE FATIMA SOUZA:98765432100",
+    ],
+)
+def test_outras_assinaturas_ICP(engine, texto):
+    saida = anonimizar(engine, texto)
+    assert "SILVA" not in saida and "FATIMA" not in saida
+
+
+def test_dois_pontos_com_numero_curto_nao_e_assinatura(engine):
+    """
+    O contrapeso: a âncora é o CPF de 11 dígitos. Sem ele, dois-pontos seguido
+    de número é hora, item de lista, artigo — e mascarar isso encheria o
+    documento de tarja.
+    """
+    saida = anonimizar(engine, "PRAZO: 15 dias. HORARIO: 14:30. ITEM: 1234")
+    assert "15 dias" in saida and "14:30" in saida and "1234" in saida

@@ -325,6 +325,12 @@ def criar_recognizers_brasil() -> list[PatternRecognizer]:
                 "rg_ancorado",
                 r"(?:RG|R\.\s?G\.?|[Rr]egistro\s+[Gg]eral|[Ii]dentidade|"
                 r"[Cc][ée]dula\s+de\s+[Ii]dentidade|[Cc]arteira\s+de\s+[Ii]dentidade)"
+                # "RG DE nº 139003" saía em claro: entre a âncora e o número só
+                # passava pontuação e espaço, e ali há uma palavra. As duas
+                # ligações que a qualificação usa — "de" e "sob o" — entram
+                # explicitamente, em vez de abrir a classe para letra qualquer,
+                # o que faria a âncora alcançar o número da linha seguinte.
+                r"(?:\s+(?:de|sob\s+o|n[uú]mero))?"
                 r"[\s.:n°ºo/-]{0,24}"
                 r"(?P<valor>\d[\d.\s-]{4,16}[\dXx])"
                 r"(?=\s*(?:SSP|SESP|DETRAN|PC|IFP|SDS|[^\d]|$))",
@@ -383,6 +389,26 @@ def criar_recognizers_brasil() -> list[PatternRecognizer]:
                 r"Assentamento|Povoado|Fazenda|Quadra)\s+"
                 r"[A-ZÁÀÂÃÉÊÍÓÔÕÚÇ0-9][^\n;]{2,80}?"
                 r"(?=\s*(?:;|CEP|[Ff]one|[Tt]el|[Ee]-?mail|$|\.\s+[A-ZÁÉÍÓÚ]))",
+                0.5,
+            ),
+            # Logradouro em PROSA, terminando na UF.
+            #
+            # O padrão acima exige que o endereço acabe em `;`, CEP, "Fone",
+            # e-mail, fim de linha ou ponto final — e endereço em petição não
+            # acaba em nada disso: ele continua na frase. "residente na Rua
+            # Capitão Serafim de Barros, 2101, Santa Maria, em Jataí – GO, vem
+            # diante deste juízo" saía INTEIRO em claro, num documento em que o
+            # resto estava mascarado. Achado ao olhar o PDF tarjado: a lista de
+            # ocorrências mostra o que foi achado, nunca o que faltou.
+            #
+            # A UF é o fecho natural — `– GO`, `/GO`, `- SP` — e ela entra no
+            # match, senão a sigla do estado ficaria de fora da tarja.
+            Pattern(
+                "logradouro_ate_uf",
+                r"\b(?:Rua|Avenida|Travessa|Alameda|Estrada|Rodovia|Praça|Praca|"
+                r"Vila|Quadra|Conjunto|Loteamento|Setor)\s+"
+                r"[A-ZÁÀÂÃÉÊÍÓÔÕÚÇ0-9][^\n;]{2,80}?"
+                r"\s*[-–—/]\s*(?-i:[A-Z]{2})(?![A-Za-z])",
                 0.5,
             ),
             # Logradouro ABREVIADO, com a caixa travada por `(?-i:…)`.
@@ -592,6 +618,35 @@ def criar_recognizers_brasil() -> list[PatternRecognizer]:
         context=ctx["PERSON"],
     )
 
+    # --- Nome na assinatura digital ICP-Brasil ---
+    #
+    # O certificado traz o titular como `NOME:CPF`, sem espaço, e isso aparece
+    # no rodapé de TODA peça assinada no PJe e no Projudi: "Assinado por ANA
+    # CLARA ALVES DE BARROS:05142104196". O nome saía em claro — o CPF ao lado
+    # era mascarado por ser regex, o que deixava a linha com cara de tratada.
+    #
+    # O NER não pega porque `BARROS:05142104196` não é token de nome: os dois
+    # pontos colam o número na última palavra e o modelo vê outra coisa. Aqui
+    # quem resolve é o formato, não o modelo.
+    #
+    # A âncora é o CPF de 11 dígitos colado. Sem ela, dois-pontos seguido de
+    # número é hora, item e artigo — e a caixa alta sozinha não distingue nome
+    # de cabeçalho. `(?-i:…)` porque o Presidio liga IGNORECASE por padrão, e
+    # sem travar a caixa isto casaria qualquer palavra antes de `:`.
+    assinatura_icp = GroupAwarePatternRecognizer(
+        supported_entity="PERSON",
+        patterns=[
+            Pattern(
+                "assinatura_icp",
+                r"(?P<valor>(?-i:[A-ZÀ-ÖØ-Þ][A-ZÀ-ÖØ-Þ]+"
+                r"(?:\s+(?-i:[A-ZÀ-ÖØ-Þ]{1,}))+))\s*:\s*\d{11}(?!\d)",
+                0.85,
+            ),
+        ],
+        supported_language="pt",
+        context=ctx["PERSON"],
+    )
+
     # --- Placa de veículo ---
     #
     # Identificador INDIRETO: não é nome nem documento, e é por isso que passa
@@ -648,5 +703,5 @@ def criar_recognizers_brasil() -> list[PatternRecognizer]:
     return [
         cpf, cnpj, rg, cep, endereco, telefone, oab,
         data_nascimento, nit, processo_cnj, conta_bancaria,
-        nome_rotulado, email_ocr, placa, rastreamento,
+        nome_rotulado, email_ocr, placa, rastreamento, assinatura_icp,
     ]
