@@ -109,6 +109,30 @@ O nome dos autos é **dobrado para minúsculas**: `--autos Caso-Ana` e
 insensíveis a maiúsculas e ext4 não é — sem dobrar, a mesma sequência de
 comandos produziria um mapa no Mac e dois no Linux.
 
+## Tarja de redação em PDF
+
+```bash
+djuris tarjar autos.pdf --offline -o autos_tarjado.pdf
+```
+
+Devolve o PDF com o dado **coberto** — não o texto substituído. É o que serve
+para juntar aos autos ou mandar a um cliente.
+
+**A página é rasterizada antes do desenho**, e isso não é detalhe: retângulo
+preto sobre texto preservado se desfaz com um seleciona-e-copia, e documento
+público já vazou exatamente assim. O preço é o PDF sair não-pesquisável — é o
+preço certo, porque a alternativa que preserva a busca preserva junto o dado.
+
+`--dpi` controla a resolução (padrão 150). Os metadados não atravessam: a saída
+é documento novo, e o título vai vazio de propósito, senão o nome do arquivo —
+que carrega CNJ e nome de parte — viraria `/Title` do PDF.
+
+⚠️ **A tarja aplica a detecção, não a repete.** Dado que o detector não viu
+continua visível, e por isso o comando pede conferência toda vez. Foi olhando um
+PDF tarjado que apareceram três vazamentos que nenhuma lista de ocorrências
+mostrava — endereço em prosa, RG com "de" no meio, e o nome dentro da assinatura
+digital ICP-Brasil.
+
 ### A regra de ouro: `reidratar` não é ferramenta de MCP
 
 E nunca vai ser. Chamada por um modelo, ela devolve os nomes reais ao contexto
@@ -187,8 +211,6 @@ você**. Para o sistema, ele é você, e recebe o dado decifrado se pedir.
 - **`.dmg` / `.app`** — o `build:dist` só gera instalador Windows.
 - **interface gráfica empacotada** — roda em modo dev (`npm run dev:electron`).
 - **`--autos` no modo remoto** — só com `--offline`.
-- **tarja real em PDF** — a saída da anonimização é sempre texto. É limitação do
-  projeto original, não do porte.
 - **`status` e `conectar`** — dependem do aplicativo aberto, que aqui só existe
   em modo dev. Por isso os dois ficam de fora dos exemplos do shim POSIX.
 

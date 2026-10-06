@@ -1239,10 +1239,15 @@ Tailwind para dentro do vídeo.
   `uvicorn.run` sobe um processo só.
 - Segundo passe do OCR para página ruim. Medido: subir a resolução do `small`
   rende mais que trocar para o `medium`, pela metade do tempo.
-- Tarja de redação em PDF (queimar pixels, sanear metadados, verificar resíduo).
-  O `presidio-image-redactor` **não** serve de atalho: roda sobre Tesseract, o
-  motor descartado por recuperar 17,7% em datilografado, e não aceita OCR
-  injetado.
+- ~~Tarja de redação em PDF~~ — **feita em 06/10/2026** (`tarja_pdf.py`,
+  `djuris tarjar`). O `presidio-image-redactor` não serviu de atalho mesmo: roda
+  sobre Tesseract e não aceita OCR injetado. A saída rasteriza a página antes de
+  desenhar, porque retângulo sobre texto preservado se desfaz com um
+  seleciona-e-copia. Olhar o PDF tarjado achou três vazamentos que a lista de
+  ocorrências não mostrava — endereço em prosa sem terminador, RG com "de" entre
+  a âncora e o número, e o nome dentro da assinatura ICP-Brasil (`NOME:CPF`),
+  que aparece em toda peça do PJe. **Ver o documento pega o que a lista não
+  pega.**
 - Extensão de navegador para o PJe — o **contrato existe** (`docs/api-local.md`)
   e a escolha foi HTTP local com pareamento; falta escrever a extensão.
 - O vazamento residual da auditoria de 14/08 **continua**: o CPF
