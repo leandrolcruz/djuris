@@ -50,6 +50,32 @@ Com o volume desmontado, os comandos avisam com essas palavras em vez de soltar
 um `ModuleNotFoundError` de torch — que mandaria a pessoa depurar dependência
 quando o problema é um cabo.
 
+## Abrir sem terminal
+
+```bash
+scripts/instalar-atalho-macos.sh
+```
+
+Põe um **Direito&Juris.app** em `~/Applications`, com ícone, que abre a
+interface com um duplo-clique. Arraste para o Dock se quiser.
+
+O `.app` é uma casca de uma linha; a lógica mora em `scripts/abrir-djuris.sh`, e
+é lá que se mexe. Três coisas que ele resolve e um `npm run dev:electron` solto
+não:
+
+- **o PATH.** Aplicativo lançado pelo Finder recebe
+  `/usr/gnu/bin:/usr/local/bin:/bin:/usr/bin:.` e nada mais — o `node` do nvm
+  fica de fora, e o duplo-clique morreria com "command not found" sem nada na
+  tela. O script resolve o caminho por glob, não por versão cravada.
+- **o erro visível.** Sem terminal, `echo` não chega a ninguém: volume
+  desmontado, Node ausente ou interface que não sobe saem em diálogo do sistema,
+  com o caminho do log.
+- **o fechamento.** O `dev:electron` roda Vite e Electron sob `concurrently` sem
+  `--kill-others`, e o Vite ficaria para trás a cada abertura. Aqui ele morre
+  junto, por `trap`.
+
+Abrir com o aplicativo já aberto avisa e não sobe uma segunda cópia.
+
 ## A CLI
 
 O shim é `python-backend/djuris.sh`, instalado por symlink:
