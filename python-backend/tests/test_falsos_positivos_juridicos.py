@@ -391,3 +391,31 @@ def test_dois_pontos_com_numero_curto_nao_e_assinatura(engine):
     """
     saida = anonimizar(engine, "PRAZO: 15 dias. HORARIO: 14:30. ITEM: 1234")
     assert "15 dias" in saida and "14:30" in saida and "1234" in saida
+
+
+def test_o_endereco_para_na_UF_e_nao_engole_o_resto_da_linha(engine):
+    """
+    Defeito pré-existente, achado pela certidão: ela contava 4 ocorrências e a
+    placa não estava em nenhuma — porque o ENDEREÇO tinha engolido "placa
+    ELZ6I74" junto.
+
+    A causa é o lookahead do padrão antigo aceitar `$`: num texto em que o
+    endereço é seguido de mais coisa na mesma linha e nada a termina antes, o
+    menor match que satisfaz o lookahead vai até o fim da linha. Medido:
+    `[13:60]` cobrindo 'Rua das Flores, 120, Jataí – GO, placa ELZ6I74.'
+
+    Mascarar demais parece o lado seguro do erro, e não é: o texto perde
+    informação que não é dado pessoal, e a CERTIDÃO passa a subnotificar — ela
+    diz que não encontrou placa num documento onde a placa está coberta.
+    """
+    texto = "residente na Rua das Flores, 120, Jataí – GO, placa ELZ6I74."
+    r = engine.anonymize(
+        text=texto, entities=[], language="pt", politica_mascara="placeholder"
+    )
+    enderecos = [e for e in r["entities_found"] if e["type"] == "ENDERECO_BR"]
+    assert enderecos, "o endereço continua sendo detectado"
+    assert "placa" not in texto[enderecos[0]["start"]:enderecos[0]["end"]]
+
+    saida = r["anonymized_text"]
+    assert "placa" in saida, "a palavra 'placa' não é dado pessoal"
+    assert "ELZ6I74" not in saida, "e a placa em si continua mascarada, pelo tipo dela"

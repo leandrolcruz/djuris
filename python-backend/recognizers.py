@@ -388,7 +388,14 @@ def criar_recognizers_brasil() -> list[PatternRecognizer]:
                 r"Distrito|Localidade|Conjunto|Praça|Praca|Vila|Loteamento|"
                 r"Assentamento|Povoado|Fazenda|Quadra)\s+"
                 r"[A-ZÁÀÂÃÉÊÍÓÔÕÚÇ0-9][^\n;]{2,80}?"
-                r"(?=\s*(?:;|CEP|[Ff]one|[Tt]el|[Ee]-?mail|$|\.\s+[A-ZÁÉÍÓÚ]))",
+                # A UF entra como terminador para o non-greedy PARAR nela.
+                # Sem isso, num texto em que o endereço é seguido de mais coisa
+                # na mesma linha e nada a termina antes, o menor match que
+                # satisfaz este lookahead ia até o fim da linha — medido
+                # engolindo "placa ELZ6I74" junto do endereço. Quem CONSOME a
+                # UF é o padrão seguinte; aqui ela só serve de freio.
+                r"(?=\s*(?:;|CEP|[Ff]one|[Tt]el|[Ee]-?mail|$|\.\s+[A-ZÁÉÍÓÚ]|"
+                r"[-–—/]\s*(?-i:[A-Z]{2})(?![A-Za-z])))",
                 0.5,
             ),
             # Logradouro em PROSA, terminando na UF.

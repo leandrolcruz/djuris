@@ -473,6 +473,16 @@ def cmd_anonimizar(args) -> int:
             _escrever(destino, saida)
             if destino and destino != "-":
                 print(f"{caminho} -> {destino}", file=sys.stderr)
+                # Certidão só com destino em arquivo: ela existe para acompanhar
+                # o documento gerado, e com a saída em stdout não há o que
+                # acompanhar nem o que resumir por hash.
+                _escrever_certidao(
+                    args,
+                    str(caminho),
+                    destino,
+                    resultado.get("valores_distintos", {}),
+                    motor if motor is not None else ctx.engine,
+                )
 
     return _gravar_mapa(args, mascarador)
 
@@ -719,6 +729,44 @@ def cmd_reidratar(args) -> int:
     return 0
 
 
+def _escrever_certidao(args, origem: str, destino: str, por_tipo: dict, motor) -> None:
+    """
+    Grava a certidão ao lado do arquivo gerado, quando pedida.
+
+    Fica aqui, e não dentro de cada comando, porque `anonimizar` e `tarjar`
+    produzem documentos diferentes e a certidão é a mesma — duas cópias
+    divergiriam, e a que ficasse para trás continuaria parecendo atual.
+
+    Falha aqui NÃO derruba o comando: o documento anonimizado já está no disco e
+    é o que importa. Mas o aviso sai, porque silenciar faria quem pediu a
+    certidão acreditar que ela existe.
+    """
+    if not getattr(args, "certidao", False):
+        return
+
+    import certidao as mod
+
+    caminho = str(Path(destino).with_suffix(Path(destino).suffix + ".certidao.md"))
+    try:
+        import engine as _eng
+
+        doc = mod.gerar(
+            origem=origem,
+            destino=destino,
+            por_tipo=por_tipo,
+            politica=args.mascara,
+            motor=motor.nlp_mode,
+            modelo=_eng.MODELO_BERT if motor.nlp_mode == "transformer" else "pt_core_news_lg",
+            entidades_pedidas=_entidades(args.entities),
+        )
+        Path(caminho).write_text(doc.markdown(), encoding="utf-8")
+    except OSError as erro:
+        print(f"aviso: a certidão não foi gravada ({erro}).", file=sys.stderr)
+        return
+
+    print(f"certidão -> {caminho}", file=sys.stderr)
+
+
 def cmd_tarjar(args) -> int:
     """
     Escreve um PDF com os dados pessoais COBERTOS, não substituídos.
@@ -764,6 +812,7 @@ def cmd_tarjar(args) -> int:
             return [(e["start"], e["end"], e["type"]) for e in achados]
 
         relatorio = tarja_pdf.tarjar(str(caminho), destino, detectar, dpi=args.dpi)
+        _escrever_certidao(args, str(caminho), destino, relatorio.por_tipo, ctx.engine)
 
     print(f"{caminho} -> {destino}", file=sys.stderr)
     print(
@@ -887,6 +936,14 @@ def construir_parser() -> argparse.ArgumentParser:
     anonimizacao.add_argument(
         "--nlp-mode", choices=["transformer", "spacy"],
         help="Sobrescreve PRESIDIO_NLP_MODE nesta execução (só no modo offline).",
+    )
+    anonimizacao.add_argument(
+        "--certidao", action="store_true",
+        help=(
+            "Grava, ao lado do arquivo gerado, uma certidão do que foi feito: "
+            "hashes, contagem por tipo, motor e base normativa. Sem nenhum "
+            "valor mascarado dentro."
+        ),
     )
     anonimizacao.add_argument(
         "--autos", metavar="ID",
