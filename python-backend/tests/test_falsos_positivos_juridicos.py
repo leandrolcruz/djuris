@@ -206,3 +206,85 @@ def test_LIMITE_CONHECIDO_data_de_nascimento_sem_rotulo_escapa(engine):
 def test_quem_quiser_as_datas_mascaradas_pede(engine):
     texto = "A ação foi ajuizada em 08/05/2026."
     assert "[DATA" in anonimizar(engine, texto, entities=["DATE_TIME"])
+
+
+# --- 5. Ruído institucional: medido em quatro processos reais --------------
+#
+# Auditoria sobre o acervo do gabinete, 06/10/2026: nenhum dado pessoal vazou
+# nos quatro documentos, mas três tipos enchiam o texto de tarja sem proteger
+# ninguém — e os números vêm da contagem, não de impressão:
+#
+#   LOCATION      125 ocorrências, 107 delas a palavra "JATAÍ" (a comarca)
+#   URL           119 ocorrências,  82 delas https://projudi.tjgo.jus.br/…
+#   ORGANIZATION   37 ocorrências,  CNJ (18×), STJ, União
+#
+# Comarca, tribunal e endereço do sistema estão no cabeçalho de toda peça e são
+# públicos. Mascará-los tira do modelo a competência territorial e o próprio
+# nome do juízo, sem esconder parte alguma.
+
+
+def test_a_comarca_nao_e_mascarada(engine):
+    texto = "AO JUÍZO DA 2ª VARA CÍVEL DA COMARCA DE JATAÍ, ESTADO DE GOIÁS"
+    saida = anonimizar(engine, texto)
+    assert "JATAÍ" in saida
+    assert "GOIÁS" in saida
+
+
+def test_endereco_completo_continua_mascarado_mesmo_com_cidade(engine):
+    """
+    O contrapeso de LOCATION: a cidade sozinha é pública, mas o endereço da
+    parte não — e ele continua saindo inteiro pelo `ENDERECO_BR`, que casa do
+    logradouro em diante.
+    """
+    saida = anonimizar(engine, "residente na Rua das Flores, 120, Jataí, Goiás")
+    assert "[ENDEREÇO_1]" in saida
+    assert "Rua das Flores" not in saida
+
+
+def test_orgao_publico_nao_e_mascarado(engine):
+    texto = "conforme o Tema 1066 do STJ e a Resolução do CNJ, ouvida a União"
+    saida = anonimizar(engine, texto)
+    for orgao in ("STJ", "CNJ", "União"):
+        assert orgao in saida, f"{orgao} é órgão público, não dado pessoal"
+
+
+def test_url_do_sistema_do_tribunal_nao_e_mascarada(engine):
+    texto = "disponível em https://projudi.tjgo.jus.br/BuscaProcesso e em www.gov.br/inss"
+    saida = anonimizar(engine, texto)
+    assert "projudi.tjgo.jus.br" in saida
+    assert "gov.br" in saida
+
+
+def test_url_de_fora_continua_mascarada(engine):
+    """
+    O contrapeso de URL: o que se libera é o domínio PÚBLICO do Judiciário e do
+    governo. Link de terceiro pode carregar identificador na própria rota.
+    """
+    saida = anonimizar(engine, "o anúncio está em https://olx.com.br/anuncio/joao-silva-9912")
+    assert "olx.com.br" not in saida
+
+
+def test_o_gate_de_acuracia_nao_e_afetado_por_nada_disto(engine):
+    """
+    A trava que protege a baseline de 99,97%.
+
+    O `eval/run_eval.py` mede com a lista EXPLÍCITA das 14 entidades da
+    interface (`ENTIDADES_DA_INTERFACE`), que inclui LOCATION, DATE_TIME e
+    ORGANIZATION — os três que saíram do padrão nesta rodada. O filtro
+    `NAO_E_DADO_PESSOAL` só age quando o chamador NÃO pede entidade nenhuma, e
+    é por isso que o gate continua medindo o que sempre mediu.
+
+    Se alguém mover o filtro para fora desse `else`, a baseline passa a
+    reprovar três tipos de uma vez, e o diagnóstico seria "o motor piorou" —
+    quando o que mudou foi quem decide a lista. Este teste falha primeiro.
+    """
+    from engine import NAO_E_DADO_PESSOAL
+    from eval.run_eval import ENTIDADES_DA_INTERFACE
+
+    fora_do_padrao = NAO_E_DADO_PESSOAL & set(ENTIDADES_DA_INTERFACE)
+    assert fora_do_padrao, "o teste só tem sentido se houver interseção"
+
+    texto = "o imóvel fica em JATAÍ, Goiás"
+    assert "JATAÍ" in anonimizar(engine, texto), "sem pedir: sai limpo"
+    pedindo = anonimizar(engine, texto, entities=["LOCATION"])
+    assert "JATAÍ" not in pedindo, "pedindo: o gate continua medindo"

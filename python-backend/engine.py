@@ -126,6 +126,18 @@ _TIPOS_INSTITUCIONAIS = {"ORGANIZATION", "LAW", "CASE_LAW", "LOCATION", "DATE_TI
 # aqui — tem recognizer próprio (`DATE_OF_BIRTH`), com as palavras de
 # qualificação como contexto, e segue mascarada.
 #
+# `LOCATION` e `ORGANIZATION` entraram por medição, não por impressão. Auditoria
+# sobre quatro processos reais do acervo, 06/10/2026:
+#
+#     LOCATION      125 ocorrências, 107 delas a palavra "JATAÍ" — a comarca
+#     ORGANIZATION   37 ocorrências, CNJ (18×), STJ, União
+#
+# Comarca e tribunal estão no cabeçalho de toda peça e são públicos; mascará-los
+# tira do modelo a competência territorial e o nome do próprio juízo. Endereço
+# de parte NÃO vem por aqui: `ENDERECO_BR` casa do logradouro em diante e segue
+# mascarando a rua, o número e o que vier depois — inclusive a cidade dentro do
+# endereço.
+#
 # O limite que isso aceita está travado em
 # `test_LIMITE_CONHECIDO_data_de_nascimento_sem_rotulo_escapa`: na qualificação
 # sem a palavra "nascido", a data sai em claro. Vale porque o nome ao lado já
@@ -134,11 +146,15 @@ _TIPOS_INSTITUCIONAIS = {"ORGANIZATION", "LAW", "CASE_LAW", "LOCATION", "DATE_TI
 #
 # Continuam DETECTADOS e saem em `entities_found`: quem quiser mascará-los passa
 # o tipo em `entities` explicitamente.
-NAO_E_DADO_PESSOAL = {"LAW", "CASE_LAW", "DATE_TIME"}
+NAO_E_DADO_PESSOAL = {"LAW", "CASE_LAW", "DATE_TIME", "LOCATION", "ORGANIZATION"}
 
 # Recognizers que o Presidio registra para "pt" mas que descrevem documento de
 # outro país. Ver o bloco que os remove em `initialize`.
 _RECOGNIZERS_DE_OUTRO_PAIS = ("MEDICAL_LICENSE",)
+
+# Domínios públicos cujo endereço não identifica ninguém: Judiciário (`jus.br`),
+# Executivo e Legislativo (`gov.br`, `leg.br`) e Ministério Público (`mp.br`).
+_DOMINIO_PUBLICO = re.compile(r"\b[\w.-]+\.(?:jus|gov|leg|mp)\.br\b", re.I)
 
 # Partículas que não contam como palavra significativa de um nome.
 _PREPOSICOES = {"de", "da", "do", "das", "dos", "e", "di", "del", "von", "san"}
@@ -693,6 +709,20 @@ class PresidioEngine:
                 resultados = [
                     r for r in resultados if r.entity_type not in NAO_E_DADO_PESSOAL
                 ]
+
+            # URL de domínio público do Judiciário e do governo não é dado
+            # pessoal: `https://projudi.tjgo.jus.br/…` apareceu 82 vezes em dois
+            # processos, sempre o endereço do próprio sistema. URL de fora fica
+            # mascarada — link de terceiro carrega identificador na rota
+            # (`/anuncio/joao-silva-9912`), e esse é o caso que importa.
+            resultados = [
+                r
+                for r in resultados
+                if not (
+                    r.entity_type == "URL"
+                    and _DOMINIO_PUBLICO.search(trecho[r.start : r.end])
+                )
+            ]
 
             # Telefone brasileiro NÃO tem barra. `9.099/1995` virava
             # `9.[TELEFONE_1]` porque o recognizer genérico casa `099/1995` com
