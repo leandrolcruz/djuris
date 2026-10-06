@@ -210,13 +210,29 @@ baixa os ~415 MB de novo, no disco que justamente não tem espaço.
 
 ### Uma lacuna de cobertura, declarada
 
-Dois testes ficam **`skipped`** por dependerem de `PRESIDIO_CORPUS_OCR`, uma
-pasta de PDFs escaneados reais que não está no repositório. São justamente os de
-PDF escaneado de verdade — o caso que mais importa para uso judicial. Apontar a
-variável para um punhado de digitalizações fecha isso.
+Dois testes dependem de `PRESIDIO_CORPUS_OCR` apontando para uma pasta com PDF
+**sem camada de texto**. Sem ela eles são pulados — e teste pulado passa por
+teste aprovado em log corrido, que é o motivo de isto estar escrito aqui.
 
-Não é porte, é dado de teste. E teste pulado passa por teste aprovado em log
-corrido, que é o motivo de estar escrito aqui.
+O corpus original (22 PDFs reais) nunca saiu da máquina de origem, e no acervo
+desta máquina não há substituto: 40 PDFs testados, todos já OCRizados. Para
+fechar a lacuna:
+
+```bash
+cd python-backend
+python -m eval.fabricar_corpus_ocr <um-pdf-nativo> "$TECJUSTICA_PESO/corpus-ocr"
+export PRESIDIO_CORPUS_OCR="$TECJUSTICA_PESO/corpus-ocr"
+```
+
+Ele rasteriza um PDF nativo — a imagem resultante não tem camada de texto — e
+gera dois arquivos, um limpo e um degradado (papel torto, foco mole, sujeira,
+contraste baixo). A suíte passa de **317 com 2 pulados** para **319 com zero**.
+
+**O limite, porque ele importa:** palavras recuperadas contra o original são
+**94,7%** no limpo e **77,0%** no degradado. Isso é um PISO. Rasterização não
+reproduz fotocópia de fotocópia nem datilografado, que é onde o OCR sofre de
+verdade. E o que o OCR não lê não vaza — sai um documento mutilado parecendo
+completo.
 
 O **gate de acurácia sobre acervo próprio** também não existe: medir exige
 corpus com gabarito. Fica como item aberto, não como passo fingido.

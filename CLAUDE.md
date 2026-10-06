@@ -61,7 +61,20 @@ preferido quando existe, por ser a pior página do corpus.
 
 Efeito prático nesta máquina: apontando `PRESIDIO_CORPUS_OCR` para um processo
 real do PJe, a suíte vai de "155 passando, 2 pulados" para **157 passando, zero
-pulos**. Antes era pior — havia um caminho padrão absoluto da máquina de
+pulos**.
+
+**No Mac não havia material, e agora há um substituto declarado (06/10/2026).**
+Varri 40 PDFs do acervo — gabinete, Drive e Downloads, incluindo os processos
+FÍSICOS digitalizados — e **nenhum** vem sem camada de texto: o Projudi gera PDF
+nativo e o fluxo do escritório reconhece o resto. `eval/fabricar_corpus_ocr.py`
+rasteriza um PDF nativo e produz dois arquivos sem camada de texto, um limpo e
+um degradado (papel torto, foco mole, sujeira, contraste baixo). Com eles a
+suíte vai de **317 passando, 2 pulados** para **319 passando, zero pulos**.
+
+Palavras recuperadas contra o texto do original: **94,7%** no limpo, **77,0%**
+no degradado. É **piso, não prova de robustez** — rasterização não reproduz
+fotocópia de fotocópia nem datilografado, que é onde o Tesseract fazia 17,7%. O
+número que vale para o produto continua sendo o do corpus real. Antes era pior — havia um caminho padrão absoluto da máquina de
 origem, em formato WSL (`/mnt/c/...`), que no Windows não resolve para lugar
 nenhum: o gate era pulado até onde o corpus existia, só que noutro diretório.
 Agora não há padrão. Antes de confiar num "passou", confira que o corpus foi
