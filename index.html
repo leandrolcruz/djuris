@@ -24,7 +24,12 @@
       http-equiv="Content-Security-Policy"
       content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' http://127.0.0.1:* http://localhost:* ws://localhost:*; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'"
     />
-    <title>Direito&Juris</title>
+    <!-- `&amp;`, não `&` cru: em HTML o `&` abre entidade, e um `&J` solto é
+         erro de sintaxe que o navegador perdoa mas o validador não — e
+         ferramenta que lê o título (CDP, automação) pode entregá-lo
+         escapado. O nome do produto tem `&` no meio; aqui ele se escreve
+         assim. -->
+    <title>Direito&amp;Juris</title>
   </head>
   <body>
     <div id="root"></div>

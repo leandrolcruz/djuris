@@ -7,7 +7,7 @@
     "dev": "vite",
     "build:electron-ts": "tsc -p tsconfig.electron.json",
     "typecheck": "tsc -p tsconfig.app.json",
-    "dev:electron": "npm run build:electron-ts && concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "dev:electron": "npm run build:electron-ts && concurrently \"vite\" \"wait-on http://localhost:5173 && DJURIS_DEVTOOLS=1 electron .\"",
     "test:electron": "npm run build:electron-ts && node --test electron/*.test.mjs",
     "build": "npm run typecheck && npm test && tsc -p tsconfig.electron.json && vite build",
     "build:dist": "npm run fetch:ocr-models && npm run sync:backend && npm run check:backend && npm run build && electron-builder --win",

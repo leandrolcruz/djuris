@@ -224,7 +224,17 @@ function createWindow(): void {
 
   if (isDev) {
     mainWindow.loadURL(URL_DEV);
-    mainWindow.webContents.openDevTools({ mode: "bottom" });
+    /* O DevTools abria SEMPRE em modo dev, e isso deixou de ser só preferência
+       de quem desenvolve quando o aplicativo passou a ser aberto por atalho:
+       não há build empacotado no macOS, então o uso normal É o modo dev, e a
+       janela nascia com metade da tela tomada pelo inspetor.
+
+       Agora é opt-in por `DJURIS_DEVTOOLS=1`, que o `npm run dev:electron`
+       liga e o atalho não. Continua a um atalho de teclado de distância
+       (Cmd+Option+I) e no menu, que o `autoHideMenuBar` esconde mas mantém. */
+    if (process.env.DJURIS_DEVTOOLS === "1") {
+      mainWindow.webContents.openDevTools({ mode: "bottom" });
+    }
   } else {
     mainWindow.loadFile(path.join(__dirname, "..", "dist", "index.html"));
   }

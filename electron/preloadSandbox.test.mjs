@@ -50,3 +50,27 @@ test("o recuo dos semáforos chega por argumento, não por import", () => {
   const fonte = readFileSync(PRELOAD, "utf8");
   assert.match(fonte, /recuo-semaforos/, "o preload precisa ler o argumento que o main injeta");
 });
+
+test("o DevTools não abre sozinho — é opt-in por variável", () => {
+  /*
+   * O inspetor abria SEMPRE em modo dev. Isso era preferência de quem
+   * desenvolve até o aplicativo passar a ser aberto por atalho: como não há
+   * build empacotado no macOS, o uso normal É o modo dev, e a janela nascia
+   * com metade da tela tomada.
+   *
+   * O teste lê o main COMPILADO e exige que a chamada esteja sob a condição.
+   * Sem isso, um `openDevTools` solto volta na primeira refatoração e ninguém
+   * percebe até abrir o aplicativo.
+   */
+  const fonte = readFileSync(path.join(RAIZ, "dist-electron", "main.js"), "utf8");
+  const chamadas = [...fonte.matchAll(/openDevTools\s*\(/g)];
+  assert.equal(chamadas.length, 1, "esperava uma única chamada a openDevTools");
+
+  const antes = fonte.slice(0, chamadas[0].index);
+  const guarda = antes.lastIndexOf("DJURIS_DEVTOOLS");
+  assert.ok(guarda !== -1, "openDevTools precisa estar sob DJURIS_DEVTOOLS");
+  assert.ok(
+    chamadas[0].index - guarda < 200,
+    "a guarda tem de ser a condição imediata, não uma menção distante"
+  );
+});
