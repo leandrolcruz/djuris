@@ -719,6 +719,67 @@ def cmd_reidratar(args) -> int:
     return 0
 
 
+def cmd_tarjar(args) -> int:
+    """
+    Escreve um PDF com os dados pessoais COBERTOS, não substituídos.
+
+    Diferente do `anonimizar`, que devolve texto: aqui a saída é o próprio
+    documento, com a página rasterizada e o retângulo queimado por cima. É o
+    que serve para juntar aos autos ou mandar a um cliente.
+
+    Rasterizar não é detalhe de implementação — é a diferença entre redação e
+    enfeite. Retângulo desenhado sobre texto preservado se desfaz com um
+    seleciona-e-copia, e documento público já vazou exatamente assim.
+    """
+    import tarja_pdf
+
+    caminho = Path(args.arquivo)
+    if not caminho.exists():
+        print(f"erro: {caminho} não existe", file=sys.stderr)
+        return 1
+    if caminho.suffix.lower() != ".pdf":
+        print(f"erro: tarjar só trabalha com PDF (recebi {caminho.suffix!r}).", file=sys.stderr)
+        print(
+            "Para outros formatos, use `anonimizar`, que devolve texto.",
+            file=sys.stderr,
+        )
+        return 1
+
+    destino = args.output or str(caminho.with_name(f"{caminho.stem}_tarjado.pdf"))
+    if destino != "-" and Path(destino).resolve() == caminho.resolve():
+        print("erro: a saída é o próprio arquivo de entrada.", file=sys.stderr)
+        return 1
+
+    entidades = _entidades(args.entities)
+
+    with local.MotorLocal(quieto=args.quiet) as ctx:
+        def detectar(texto: str):
+            if not texto.strip():
+                return []
+            achados = ctx.engine.anonymize(
+                text=texto,
+                entities=entidades,
+                politica_mascara="placeholder",
+            )["entities_found"]
+            return [(e["start"], e["end"], e["type"]) for e in achados]
+
+        relatorio = tarja_pdf.tarjar(str(caminho), destino, detectar, dpi=args.dpi)
+
+    print(f"{caminho} -> {destino}", file=sys.stderr)
+    print(
+        f"{relatorio.tarjas} tarja(s) em {relatorio.paginas} página(s): "
+        f"{', '.join(f'{k}={v}' for k, v in sorted(relatorio.por_tipo.items())) or 'nenhuma'}",
+        file=sys.stderr,
+    )
+    # Dito toda vez, porque é o limite que separa esta saída de uma garantia: a
+    # tarja cobre o que o detector achou, e o que ele não achou segue visível.
+    print(
+        "Confira o PDF antes de enviar: a tarja aplica a detecção, não a repete.",
+        file=sys.stderr,
+    )
+    return 0
+
+
 def cmd_ocr(args) -> int:
     modo, sessao = _resolver(args)
     caminho = Path(args.imagem)
@@ -871,6 +932,17 @@ def construir_parser() -> argparse.ArgumentParser:
     )
     p.set_defaults(func=cmd_reidratar)
 
+    p = sub.add_parser(
+        "tarjar", parents=[pai, anonimizacao],
+        help="PDF com os dados pessoais COBERTOS (tarja queimada, não texto).",
+    )
+    p.add_argument("arquivo", help="O PDF a tarjar.")
+    p.add_argument(
+        "--dpi", type=int, default=150,
+        help="Resolução da rasterização (padrão: 150).",
+    )
+    p.set_defaults(func=cmd_tarjar)
+
     p = sub.add_parser("ocr", parents=[pai], help="Reconhece o texto de uma imagem.")
     p.add_argument("imagem")
     p.set_defaults(func=cmd_ocr)
@@ -893,7 +965,9 @@ def main(argv: list[str] | None = None) -> int:
     # Forma clássica preservada: `djuris arquivo.txt -o saida.txt`
     # continua valendo. Sem isto, quem já usa a CLI em script veria o comando
     # quebrar da noite para o dia — e o custo de manter é uma linha.
-    comandos = {"anonimizar", "ler", "ocr", "status", "conectar", "mcp", "reidratar"}
+    comandos = {
+        "anonimizar", "ler", "ocr", "status", "conectar", "mcp", "reidratar", "tarjar",
+    }
     if not argv or (argv[0] not in comandos and not argv[0].startswith("-")):
         argv = ["anonimizar", *argv]
     elif argv and argv[0].startswith("-") and argv[0] not in {"-h", "--help"}:
