@@ -109,6 +109,27 @@ O nome dos autos é **dobrado para minúsculas**: `--autos Caso-Ana` e
 insensíveis a maiúsculas e ext4 não é — sem dobrar, a mesma sequência de
 comandos produziria um mapa no Mac e dois no Linux.
 
+## Certidão de anonimização
+
+```bash
+djuris anonimizar peca.pdf --offline --certidao
+djuris tarjar autos.pdf --offline --certidao
+```
+
+Grava, ao lado do arquivo gerado, um `.certidao.md` com o que foi feito: os dois
+SHA-256 (origem e saída), a contagem por TIPO, a política, o motor e o modelo, a
+base normativa e o escopo da busca.
+
+**Ela não contém nenhum valor mascarado** — só contagem. Listá-los faria dela o
+índice de dados pessoais que a anonimização existe para evitar, viajando anexado
+ao arquivo que os escondeu.
+
+Três campos que não são enfeite: o **motor**, porque anonimizar em spaCy
+acreditando ter BERT é o risco que este projeto documenta; o **escopo**, porque
+com `-e` a ausência de um tipo não é "não havia", é "não foi procurado"; e o
+**limite**, escrito na própria certidão — ela registra o procedimento, não
+garante que nada escapou.
+
 ## Tarja de redação em PDF
 
 ```bash

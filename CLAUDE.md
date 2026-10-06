@@ -1248,6 +1248,13 @@ Tailwind para dentro do vídeo.
   a âncora e o número, e o nome dentro da assinatura ICP-Brasil (`NOME:CPF`),
   que aparece em toda peça do PJe. **Ver o documento pega o que a lista não
   pega.**
+- ~~Certidão de anonimização~~ — **feita em 06/10/2026** (`certidao.py`,
+  `--certidao` no `anonimizar` e no `tarjar`). Contagem por tipo e os dois
+  SHA-256, nunca valor. A primeira execução real denunciou um defeito
+  pré-existente: contou 4 ocorrências num texto de 5, porque o ENDEREÇO tinha
+  engolido a placa — o lookahead do logradouro aceita `$`, e sem outro
+  terminador na linha o menor match ia até o fim dela. **Subnotificar é o
+  sintoma de mascarar demais**, e foi a certidão que o tornou visível.
 - Extensão de navegador para o PJe — o **contrato existe** (`docs/api-local.md`)
   e a escolha foi HTTP local com pareamento; falta escrever a extensão.
 - O vazamento residual da auditoria de 14/08 **continua**: o CPF
